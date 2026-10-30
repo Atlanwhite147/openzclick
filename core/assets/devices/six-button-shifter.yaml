@@ -1,0 +1,30 @@
+# Declarative definition of a controller device.
+#
+# Six buttons: two for the transmission, four for navigating the interface.
+# The raw byte carries the hardware button number; the value carries the
+# normalised id from the protocol contract.
+
+id: six-button-shifter
+name: Six-button shifter
+manufacturer: Generic
+
+services:
+  - 0000ffe0-0000-1000-8000-00805f9b34fb
+
+characteristics:
+  buttons: 0000ffe1-0000-1000-8000-00805f9b34fb
+  haptics: 0000ffe2-0000-1000-8000-00805f9b34fb
+  battery: 0000180f-0000-1000-8000-00805f9b34fb
+
+decoder: raw-bytes
+
+raw_to_button:
+  0x10: 0x01 # up
+  0x11: 0x02 # down
+  0x12: 0x10 # navigate up
+  0x13: 0x11 # navigate down
+  0x14: 0x14 # confirm
+  0x15: 0x15 # back
+
+wake_on_press: true
+sleep_after_seconds: 600
