@@ -1,0 +1,26 @@
+# Declarative definition of a controller device.
+#
+# Two physical buttons only: cassette up and cassette down.
+# The normalised button ids are the ones from the protocol contract
+# (0x01 = up, 0x02 = down); the values are deliberately numeric so that this
+# file depends on no code at all.
+
+id: two-button-controller
+name: Two-button controller
+manufacturer: Generic
+
+services:
+  - 0000fff0-0000-1000-8000-00805f9b34fb
+
+characteristics:
+  buttons: 0000fff1-0000-1000-8000-00805f9b34fb
+  battery: 0000180f-0000-1000-8000-00805f9b34fb
+
+decoder: raw-bytes
+
+raw_to_button:
+  0x01: 0x01 # up
+  0x02: 0x02 # down
+
+wake_on_press: true
+sleep_after_seconds: 300
