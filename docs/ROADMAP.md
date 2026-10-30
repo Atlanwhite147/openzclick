@@ -21,7 +21,7 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 ### 3. Trainer proxy
 The bridge connects to the smart trainer, applies the resistance of the selected gear, and presents itself to the training application as an ordinary trainer. This is the only path that works on iPhone, because iOS allows a Bluetooth peripheral without any Apple entitlement.
 
-Sub-steps: FTMS control point client, FTMS peripheral, then the control loop between the two. The physics already exists in the gear engine.
+State: the FTMS codec and the virtual trainer logic are implemented and tested (`docs/trainer-proxy.md`), with a scripted ride that runs without hardware. What remains is the Bluetooth part: an FTMS client towards the real trainer, a GATT server that exposes the service to the application, and the control loop between them.
 
 ### 4. iPhone multicast entitlement
 Not code: a request to Apple, with the paperwork written in `docs/ios-multicast.md`. Until it is granted, iOS listens but cannot announce.

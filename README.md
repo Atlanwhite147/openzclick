@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-310%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-325%20passing-brightgreen)](#status)
 
 </div>
 
@@ -38,6 +38,7 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 | **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
 | **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls if needed |
 | **Keyboard fallback** | on a Linux desktop, X11 and XTest turn button presses into real key presses, verified against a live X server |
+| **Becomes the trainer** | FTMS decoded and encoded in pure Dart: the bridge can drive the real machine and impersonate a trainer, which is the only route that works on iPhone |
 | **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
 | **Settings that survive a restart** | gear profile, current gear, tap positions and publishers resume where you left them |
 | **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
@@ -127,6 +128,20 @@ Applications that accept neither the network protocol nor a Bluetooth controller
 
 Details, default bindings and how to write the Windows or macOS port: [docs/injection.md](docs/injection.md).
 
+## Becoming the trainer
+
+Two applications never share a trainer, and iOS forbids synthetic input. So the bridge can take the machine, apply the resistance of the selected gear, and present itself to the training application as an ordinary FTMS trainer. The application then needs no virtual shifting at all.
+
+The protocol layer is implemented and tested in pure Dart; the Bluetooth halves are the remaining work.
+
+```
+grade 4 %, gear 6   -> resistance 36.7 %  -> 07 25 written on the real trainer
+shift up, gear 9    -> resistance 62.6 %  -> 07 3f
+ergometer 240 W     -> forwarded unchanged -> 08 f0 00
+```
+
+Details and calibration caveats: [docs/trainer-proxy.md](docs/trainer-proxy.md).
+
 ## How the link works
 
 **Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
@@ -148,7 +163,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 | Module | State | Tests |
 |---|---|---|
 | `core/` | protocol, session, gear engine, mapping, gestures | 217 |
-| `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
+| `transports/` | mDNS responder, TCP server, FTMS trainer proxy; Bluetooth stays an interface | 86 |
 | `app/` | pairing, gears, publishing, injection, diagnostics on the four platforms | 22 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.

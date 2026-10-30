@@ -15,4 +15,6 @@ export 'mdns_advertiser.dart';
 export 'mdns_tcp_transport.dart';
 export 'tcp_server.dart';
 export 'trainer_proxy.dart';
+export 'trainer/ftms.dart';
+export 'trainer/virtual_trainer.dart';
 export 'transport.dart';
