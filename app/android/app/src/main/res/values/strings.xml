@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="injection_service_description">Lets openzclick tap the on-screen gear controls of your training application. It reads nothing.</string>
+    <string name="injection_service_label">openzclick taps</string>
+</resources>

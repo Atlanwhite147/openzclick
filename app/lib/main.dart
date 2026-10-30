@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 import 'ble/controller_connection.dart';
+import 'net/android_injection.dart';
 import 'net/network_publisher.dart';
 import 'state/app_state.dart';
 
@@ -301,6 +302,51 @@ class TargetScreen extends StatelessWidget {
                 onChanged: (_) => state.togglePublishing(),
               ),
             ),
+            Card(
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    title: const Text('Tap the application controls'),
+                    subtitle: Text(
+                      state.injection.error ??
+                          (state.injection.running
+                              ? 'Taps are injected at the configured positions'
+                              : 'For applications that only accept taps'),
+                    ),
+                    value: state.injection.running,
+                    onChanged: state.injection.supported
+                        ? (_) => state.toggleInjection()
+                        : null,
+                  ),
+                  if (state.injection.running)
+                    for (final Action action in <Action>[
+                      Action.shiftUp,
+                      Action.shiftDown,
+                      Action.steerLeft,
+                      Action.steerRight,
+                    ])
+                      ListTile(
+                        dense: true,
+                        title: Text(action.label),
+                        trailing: Text(
+                          '${(state.injection.positions[action]![0] * 100).round()} %'
+                          ' / ${(state.injection.positions[action]![1] * 100).round()} %',
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                        onTap: () => _editPosition(context, state, action),
+                      ),
+                  if (state.injection.supported)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TextButton.icon(
+                        onPressed: AndroidInjection.openSettings,
+                        icon: const Icon(Icons.accessibility_new, size: 18),
+                        label: const Text('Open accessibility settings'),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             ListTile(
               dense: true,
               title: const Text('Last action'),
@@ -343,6 +389,56 @@ class TargetScreen extends StatelessWidget {
       },
     );
   }
+}
+
+/// Asks for the relative position of [action] and stores it.
+Future<void> _editPosition(
+  BuildContext context,
+  AppState state,
+  Action action,
+) async {
+  double x = state.injection.positions[action]![0];
+  double y = state.injection.positions[action]![1];
+
+  await showDialog<void>(
+    context: context,
+    builder: (BuildContext context) => StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) => AlertDialog(
+        title: Text(action.label),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text('Horizontal ${(x * 100).round()} %'),
+            Slider(
+              value: x,
+              onChanged: (double value) => setState(() => x = value),
+            ),
+            Text('Vertical ${(y * 100).round()} %'),
+            Slider(
+              value: y,
+              onChanged: (double value) => setState(() => y = value),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () async {
+              state.injection.setPosition(action, x, y);
+              await state.injection.test(action);
+            },
+            child: const Text('Test'),
+          ),
+          FilledButton(
+            onPressed: () {
+              state.injection.setPosition(action, x, y);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Diagnostics section: codec test bench and build facts.

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart' hide Action;
 import 'package:openzclick_core/openzclick_core.dart';
 
 import '../ble/controller_connection.dart';
+import '../net/android_injection.dart';
+import '../net/injection_publisher.dart';
 import '../net/network_publisher.dart';
 
 /// Shared application state: one gear engine, one keymap, one controller link.
@@ -22,6 +24,12 @@ class AppState extends ChangeNotifier {
 
   /// Network publication towards a training application.
   final NetworkPublisher publisher = NetworkPublisher();
+
+  /// Local injection towards an application that only accepts taps.
+  final InjectionPublisher injection = InjectionPublisher(
+    injector:
+        AndroidInjection.supported ? AndroidInjection() : UnsupportedInjector(),
+  );
 
   /// Turns button states into gear changes and direction choices.
   late final ButtonGestureDetector gestures;
@@ -52,6 +60,7 @@ class AppState extends ChangeNotifier {
         keymap = Keymap.defaults('default') {
     controller.onChanged = notifyListeners;
     publisher.onChanged = notifyListeners;
+    injection.onChanged = notifyListeners;
     gestures = ButtonGestureDetector(
       onAction: _onAction,
       doubleTapWindow: doubleTapWindow ?? const Duration(milliseconds: 320),
@@ -70,6 +79,7 @@ class AppState extends ChangeNotifier {
       case Action.steerLeft:
       case Action.steerRight:
         await publisher.publish(action);
+        await injection.publish(action);
         notifyListeners();
       default:
         notifyListeners();
@@ -93,6 +103,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Starts or stops the local tap injection.
+  Future<void> toggleInjection() async {
+    if (injection.running) {
+      await injection.stop();
+    } else {
+      await injection.start();
+    }
+    notifyListeners();
+  }
+
   /// Starts or stops the network publication.
   Future<void> togglePublishing() async {
     if (publisher.running) {
@@ -107,6 +127,7 @@ class AppState extends ChangeNotifier {
   void shiftUp() {
     engine.shiftUp();
     unawaited(publisher.publish(Action.shiftUp));
+    unawaited(injection.publish(Action.shiftUp));
     notifyListeners();
   }
 
@@ -114,6 +135,7 @@ class AppState extends ChangeNotifier {
   void shiftDown() {
     engine.shiftDown();
     unawaited(publisher.publish(Action.shiftDown));
+    unawaited(injection.publish(Action.shiftDown));
     notifyListeners();
   }
 
@@ -163,6 +185,8 @@ class AppState extends ChangeNotifier {
   void dispose() {
     controller.onChanged = null;
     publisher.onChanged = null;
+    injection.onChanged = null;
+    injection.stop();
     gestures.dispose();
     publisher.dispose();
     _buttonSubscription?.cancel();
