@@ -1,4 +1,7 @@
 name: iOS build
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
@@ -52,3 +55,28 @@ jobs:
           path: app/build/ios/ipa/openzclick-unsigned.ipa
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    needs: ipa
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: openzclick-ios-unsigned
+          path: dist
+
+      - name: Publish or refresh the latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: dist/openzclick-unsigned.ipa
+          body: |
+            Unsigned iOS build of openzclick, produced by the `iOS build` workflow.
+
+            Install with Sideloadly or AltStore using a free Apple ID (the signature
+            expires after 7 days) or a paid developer account.
