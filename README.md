@@ -52,6 +52,35 @@ cd ../transports && dart pub get && dart test
 cd ../app && flutter pub get && flutter run -d linux   # or windows, macos, android, ios
 ```
 
+## Buttons: gears and intersections
+
+A two-button controller carries more than two actions:
+
+| Gesture | Action |
+|---|---|
+| single tap on the upper button | shift up |
+| single tap on the lower button | shift down |
+| double tap on the upper button | choose the left direction at an intersection |
+| double tap on the lower button | choose the right direction at an intersection |
+
+The detector lives in `core/lib/src/mapping/button_gestures.dart` and is covered by unit tests; the double-tap window is injectable, so it can be tuned per controller.
+
+## Publishing on the network
+
+`transports/` now ships a complete implementation in pure Dart, identical on every platform: an mDNS/DNS-SD responder (`DartMdnsAdvertiser`) plus the TCP server, both on `dart:io` only.
+
+- the app announces `openzclick._openbikecontrol._tcp.local` with its port, version, role and button list;
+- a training application connects over TCP and sends an application info frame;
+- every gear change or direction choice is sent as an OpenBikeControl button frame.
+
+Check the link without a phone:
+
+```bash
+cd transports && dart run tool/net_probe.dart 47123
+```
+
+Then browse `_openbikecontrol._tcp` with any mDNS tool.
+
 ## How the controller link works
 
 1. Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`).

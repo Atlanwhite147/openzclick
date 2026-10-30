@@ -2,5 +2,6 @@
 library;
 
 export 'action.dart';
+export 'button_gestures.dart';
 export 'key_injector.dart';
 export 'keymap.dart';

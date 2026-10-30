@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 import 'ble/controller_connection.dart';
+import 'net/network_publisher.dart';
 import 'state/app_state.dart';
 
 void main() => runApp(const OpenZclickApp());
@@ -262,7 +263,7 @@ class ControllersScreen extends StatelessWidget {
   }
 }
 
-/// Target section: keymap and the outgoing protocol.
+/// Target section: network publication and the outgoing protocol.
 class TargetScreen extends StatelessWidget {
   /// Creates the screen for [state].
   const TargetScreen({required this.state, super.key});
@@ -272,31 +273,54 @@ class TargetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<MapEntry<int, Action>> entries =
-        state.keymap.bindings.entries.toList()
-          ..sort(
-            (MapEntry<int, Action> a, MapEntry<int, Action> b) =>
-                a.key.compareTo(b.key),
-          );
+    return ListenableBuilder(
+      listenable: state,
+      builder: (BuildContext context, _) {
+        final NetworkPublisher publisher = state.publisher;
+        final List<MapEntry<int, Action>> entries =
+            state.keymap.bindings.entries.toList()
+              ..sort(
+                (MapEntry<int, Action> a, MapEntry<int, Action> b) =>
+                    a.key.compareTo(b.key),
+              );
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: <Widget>[
-        const Text(
-          'Network transport is implemented in the transports package. '
-          'Advertising stays off until you start it explicitly.',
-        ),
-        const SizedBox(height: 12),
-        for (final MapEntry<int, Action> entry in entries)
-          ListTile(
-            dense: true,
-            leading: Text(
-              '0x${entry.key.toRadixString(16).padLeft(2, '0')}',
-              style: const TextStyle(fontFamily: 'monospace'),
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            Card(
+              child: SwitchListTile(
+                title: const Text('Publish on the network'),
+                subtitle: Text(
+                  publisher.error ??
+                      (publisher.running
+                          ? 'OpenBikeControl on port ${publisher.port}'
+                              ' - ${publisher.peers} client(s)'
+                          : 'Announces the bridge over mDNS and accepts TCP'),
+                ),
+                value: publisher.running,
+                onChanged: (_) => state.togglePublishing(),
+              ),
             ),
-            title: Text(entry.value.label),
-          ),
-      ],
+            ListTile(
+              dense: true,
+              title: const Text('Last action'),
+              trailing: Text(state.lastAction.label),
+            ),
+            const Divider(height: 24),
+            const Text('Button mapping'),
+            const SizedBox(height: 8),
+            for (final MapEntry<int, Action> entry in entries)
+              ListTile(
+                dense: true,
+                leading: Text(
+                  '0x${entry.key.toRadixString(16).padLeft(2, '0')}',
+                  style: const TextStyle(fontFamily: 'monospace'),
+                ),
+                title: Text(entry.value.label),
+              ),
+          ],
+        );
+      },
     );
   }
 }

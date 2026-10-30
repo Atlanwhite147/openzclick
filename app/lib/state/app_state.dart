@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Action;
 import 'package:openzclick_core/openzclick_core.dart';
 
 import '../ble/controller_connection.dart';
+import '../net/network_publisher.dart';
 
 /// Shared application state: one gear engine, one keymap, one controller link.
 ///
@@ -19,6 +20,15 @@ class AppState extends ChangeNotifier {
   /// Bluetooth link to the physical controller.
   final ControllerConnection controller = ControllerConnection();
 
+  /// Network publication towards a training application.
+  final NetworkPublisher publisher = NetworkPublisher();
+
+  /// Turns button states into gear changes and direction choices.
+  late final ButtonGestureDetector gestures;
+
+  /// Last action produced by the controller, for display.
+  Action lastAction = Action.none;
+
   /// Last protocol frame produced by the test bench, as a hex string.
   String lastFrame = '';
 
@@ -31,14 +41,39 @@ class AppState extends ChangeNotifier {
   StreamSubscription<ClickButtons>? _buttonSubscription;
 
   /// Creates the state, optionally with a specific profile.
-  AppState({GearProfile? profile})
+  ///
+  /// [doubleTapWindow] is forwarded to the gesture detector so that tests can
+  /// shorten it.
+  AppState({GearProfile? profile, Duration? doubleTapWindow})
       : engine = GearEngine(
           profile: profile ?? GearProfile.road12,
           initialGear: 5,
         ),
         keymap = Keymap.defaults('default') {
     controller.onChanged = notifyListeners;
+    publisher.onChanged = notifyListeners;
+    gestures = ButtonGestureDetector(
+      onAction: _onAction,
+      doubleTapWindow: doubleTapWindow ?? const Duration(milliseconds: 320),
+    );
     _buttonSubscription = controller.buttons.listen(handleButtons);
+  }
+
+  /// Applies an action coming from the gesture detector.
+  Future<void> _onAction(Action action) async {
+    lastAction = action;
+    switch (action) {
+      case Action.shiftUp:
+        shiftUp();
+      case Action.shiftDown:
+        shiftDown();
+      case Action.steerLeft:
+      case Action.steerRight:
+        await publisher.publish(action);
+        notifyListeners();
+      default:
+        notifyListeners();
+    }
   }
 
   /// Applies a button state coming from the physical controller.
@@ -46,20 +81,31 @@ class AppState extends ChangeNotifier {
   /// Exposed for tests: the Bluetooth link feeds it through the stream.
   void handleButtons(ClickButtons buttons) {
     lastButtons = buttons;
-    if (buttons.up && !buttons.down) shiftUp();
-    if (buttons.down && !buttons.up) shiftDown();
+    gestures.feed(buttons);
+    notifyListeners();
+  }
+
+  /// Starts or stops the network publication.
+  Future<void> togglePublishing() async {
+    if (publisher.running) {
+      await publisher.stop();
+    } else {
+      await publisher.start();
+    }
     notifyListeners();
   }
 
   /// Shifts up.
   void shiftUp() {
     engine.shiftUp();
+    unawaited(publisher.publish(Action.shiftUp));
     notifyListeners();
   }
 
   /// Shifts down.
   void shiftDown() {
     engine.shiftDown();
+    unawaited(publisher.publish(Action.shiftDown));
     notifyListeners();
   }
 
@@ -108,6 +154,9 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     controller.onChanged = null;
+    publisher.onChanged = null;
+    gestures.dispose();
+    publisher.dispose();
     _buttonSubscription?.cancel();
     controller.dispose();
     super.dispose();

@@ -23,27 +23,43 @@ void main() {
     expect(find.text('7 / 12'), findsOneWidget);
   });
 
-  test('a pressed up button shifts up once', () {
-    final AppState state = AppState();
+  test('a single tap on up shifts up', () async {
+    final AppState state = AppState(
+      doubleTapWindow: const Duration(milliseconds: 20),
+    );
     final int before = state.engine.gearIndex;
     state.handleButtons(const ClickButtons(up: true, down: false));
+    state.handleButtons(ClickButtons.released);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
     expect(state.engine.gearIndex, before + 1);
     state.dispose();
   });
 
-  test('a pressed down button shifts down once', () {
-    final AppState state = AppState();
+  test('a single tap on down shifts down', () async {
+    final AppState state = AppState(
+      doubleTapWindow: const Duration(milliseconds: 20),
+    );
     final int before = state.engine.gearIndex;
     state.handleButtons(const ClickButtons(up: false, down: true));
+    state.handleButtons(ClickButtons.released);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
     expect(state.engine.gearIndex, before - 1);
     state.dispose();
   });
 
-  test('both buttons pressed do not shift', () {
-    final AppState state = AppState();
+  test('a double tap chooses a direction instead of shifting', () async {
+    final AppState state = AppState(
+      doubleTapWindow: const Duration(milliseconds: 40),
+    );
     final int before = state.engine.gearIndex;
-    state.handleButtons(const ClickButtons(up: true, down: true));
+    state.handleButtons(const ClickButtons(up: true, down: false));
+    state.handleButtons(ClickButtons.released);
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    state.handleButtons(const ClickButtons(up: true, down: false));
+    state.handleButtons(ClickButtons.released);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(state.engine.gearIndex, before);
+    expect(state.lastAction, Action.steerLeft);
     state.dispose();
   });
 

@@ -5,4 +5,5 @@
 /// application calls `start()`.
 library;
 
+export 'src/dart_mdns_advertiser.dart';
 export 'src/openzclick_transports.dart';
