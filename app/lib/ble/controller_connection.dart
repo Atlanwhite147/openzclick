@@ -42,6 +42,14 @@ class ControllerConnection {
   final StreamController<ClickButtons> _buttons =
       StreamController<ClickButtons>.broadcast();
 
+  /// True once the handshake completed with encryption enabled.
+  bool encrypted = false;
+
+  ControllerKeyPair? _keyPair;
+  ControllerCrypto? _crypto;
+  BluetoothCharacteristic? _tx;
+  bool _handshakeSeen = false;
+
   StreamSubscription<List<int>>? _frameSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   final List<ScanResult> _found = <ScanResult>[];
@@ -132,11 +140,31 @@ class ControllerConnection {
       if (rx == null || tx == null) {
         throw StateError('controller service found but channels are missing');
       }
+      _tx = tx;
 
       await rx.setNotifyValue(true);
       _frameSubscription = rx.onValueReceived.listen(_onFrame);
 
-      await tx.write(ControllerHandshake.plainRequest());
+      // Ask for an encrypted session first; some firmware only answers the
+      // plain handshake, so the plain request is sent as a fallback below.
+      _keyPair = ControllerCrypto.generateKeyPair();
+      _crypto = null;
+      encrypted = false;
+      _handshakeSeen = false;
+      await tx.write(
+        ControllerHandshake.encryptedRequest(_keyPair!.publicKeyBytes),
+      );
+
+      Future<void>.delayed(const Duration(seconds: 3), () async {
+        if (!_handshakeSeen) {
+          try {
+            await _tx?.write(ControllerHandshake.plainRequest());
+          } catch (_) {
+            // The link may already be gone; the status reflects it.
+          }
+        }
+      });
+
       status = ControllerStatus.ready;
       _notify();
     } catch (e) {
@@ -159,14 +187,30 @@ class ControllerConnection {
         }
       }
       if (startsWithRideOn) {
-        // Plain mode confirmed; nothing else to do.
+        _handshakeSeen = true;
+        final List<int>? deviceKey =
+            ControllerHandshake.parseDevicePublicKey(frame);
+        if (deviceKey != null && _keyPair != null) {
+          _crypto = ControllerCrypto.derive(
+            devicePublicKeyBytes: deviceKey,
+            localKeyPair: _keyPair!,
+          );
+          encrypted = true;
+        }
         status = ControllerStatus.ready;
         _notify();
         return;
       }
     }
 
-    final ControllerMessage? message = ControllerCodec.decode(frame);
+    List<int> payload = frame;
+    if (_crypto != null) {
+      final List<int>? decrypted = _crypto!.decryptFrame(frame);
+      if (decrypted == null) return;
+      payload = decrypted;
+    }
+
+    final ControllerMessage? message = ControllerCodec.decode(payload);
     if (message is ClickMessage) {
       _buttons.add(message.buttons);
     } else if (message is BatteryMessage) {
@@ -187,6 +231,10 @@ class ControllerConnection {
       // The device may already be gone; nothing to repair.
     }
     device = null;
+    _crypto = null;
+    _keyPair = null;
+    _tx = null;
+    encrypted = false;
     status = ControllerStatus.idle;
     batteryPercent = null;
     _notify();

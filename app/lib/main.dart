@@ -214,9 +214,10 @@ class ControllersScreen extends StatelessWidget {
                 title: Text('Controller: ${link.status.name}'),
                 subtitle: Text(
                   link.error ??
-                      (link.batteryPercent == null
-                          ? 'Two-button Bluetooth controller'
-                          : 'Battery ${link.batteryPercent} %'),
+                      (link.status == ControllerStatus.ready
+                          ? '${link.encrypted ? 'encrypted' : 'plain'} session'
+                              '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
+                          : 'Two-button Bluetooth controller'),
                 ),
                 trailing: link.status == ControllerStatus.ready
                     ? TextButton(
