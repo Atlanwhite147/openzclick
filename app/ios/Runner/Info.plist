@@ -6,6 +6,10 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>openzclick connects to your Bluetooth handlebar controller to send gear changes.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>openzclick uses Bluetooth to talk to your indoor cycling controller.</string>
 	<key>CFBundleDisplayName</key>
 	<string>openzclick</string>
 	<key>CFBundleExecutable</key>

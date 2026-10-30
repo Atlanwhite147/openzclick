@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' hide Action;
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
+import 'ble/controller_connection.dart';
 import 'state/app_state.dart';
 
 void main() => runApp(const OpenZclickApp());
@@ -67,7 +69,7 @@ class _HomeShellState extends State<HomeShell> {
     final AppState state = widget.state;
     final List<Widget> pages = <Widget>[
       TrainerScreen(state: state),
-      const ControllersScreen(),
+      ControllersScreen(state: state),
       TargetScreen(state: state),
       DiagnosticsScreen(state: state),
     ];
@@ -182,37 +184,77 @@ class TrainerScreen extends StatelessWidget {
   }
 }
 
-/// Controllers section: built-in device definitions.
+/// Controllers section: Bluetooth discovery and connection.
 class ControllersScreen extends StatelessWidget {
-  /// Creates the screen.
-  const ControllersScreen({super.key});
+  /// Creates the screen for [state].
+  const ControllersScreen({required this.state, super.key});
+
+  /// Shared application state.
+  final AppState state;
 
   @override
   Widget build(BuildContext context) {
-    final List<DeviceDefinition> devices = DeviceRegistry.builtin;
+    return ListenableBuilder(
+      listenable: state,
+      builder: (BuildContext context, _) {
+        final ControllerConnection link = state.controller;
+        final bool busy = link.status == ControllerStatus.scanning ||
+            link.status == ControllerStatus.connecting;
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: devices.length + 1,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (BuildContext context, int index) {
-        if (index == 0) {
-          return const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Declarative definitions shipped with the core. The BLE input '
-              'backend is not wired yet: pairing arrives in milestone M1.',
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            Card(
+              child: ListTile(
+                leading: Icon(
+                  link.status == ControllerStatus.ready
+                      ? Icons.bluetooth_connected
+                      : Icons.bluetooth,
+                ),
+                title: Text('Controller: ${link.status.name}'),
+                subtitle: Text(
+                  link.error ??
+                      (link.batteryPercent == null
+                          ? 'Two-button Bluetooth controller'
+                          : 'Battery ${link.batteryPercent} %'),
+                ),
+                trailing: link.status == ControllerStatus.ready
+                    ? TextButton(
+                        onPressed: link.disconnect,
+                        child: const Text('Disconnect'),
+                      )
+                    : null,
+              ),
             ),
-          );
-        }
-        final DeviceDefinition device = devices[index - 1];
-        return ListTile(
-          leading: const Icon(Icons.videogame_asset),
-          title: Text(device.name),
-          subtitle: Text(
-            '${device.id} - ${device.manufacturer} - '
-            '${device.serviceUuids.length} service(s)',
-          ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: busy ? null : link.scan,
+              icon: const Icon(Icons.search),
+              label: const Text('Scan for controllers'),
+            ),
+            const SizedBox(height: 8),
+            for (final ScanResult result in link.found)
+              ListTile(
+                leading: const Icon(Icons.videogame_asset),
+                title: Text(
+                  result.device.platformName.isEmpty
+                      ? result.device.remoteId.toString()
+                      : result.device.platformName,
+                ),
+                subtitle: Text(result.device.remoteId.toString()),
+                trailing: TextButton(
+                  onPressed: busy ? null : () => link.connect(result.device),
+                  child: const Text('Connect'),
+                ),
+              ),
+            const Divider(height: 32),
+            Text('Last buttons: ${state.lastButtons ?? 'none'}'),
+            const SizedBox(height: 8),
+            const Text(
+              'Declarative definitions shipped with the core are listed in the '
+              'Target tab. The controller link above is the live input path.',
+            ),
+          ],
         );
       },
     );

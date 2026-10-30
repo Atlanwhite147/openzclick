@@ -5,5 +5,6 @@
 library;
 
 export 'button_ids.dart';
+export 'controller_protocol.dart';
 export 'codec.dart';
 export 'messages.dart';
