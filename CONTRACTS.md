@@ -84,6 +84,8 @@ class ObcCodec {
 }
 ```
 
+Frame layout on the wire: `[type] [body length] [body]`. The length byte counts the body only. `0x01` bodies are `(id, value)` pairs sorted by ascending id; `0x02` is `[battery][connected]`; `0x03` is `[pattern][duration/10 ms][intensity]`; `0x04` is `[len][appId][len][version][n][buttons]` in UTF-8. The decoder treats the declared length as authoritative: a complete but invalid frame is skipped as a block, a truncated frame returns null.
+
 Validation rules: maximum length 20 bytes for `0x01` (discard and resynchronise beyond that); unknown bytes ignored; `0x04` rejected when lengths are inconsistent.
 
 ### `shifting/`

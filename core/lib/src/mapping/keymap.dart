@@ -5,29 +5,11 @@
 /// press received by a transport.
 library;
 
+import '../protocol/button_ids.dart';
 import 'action.dart';
 
 /// Protocol button identifiers, duplicated here as private constants so the
 /// mapping layer stays self-contained (no dependency on the protocol layer).
-const int _buttonShiftUp = 0x01;
-const int _buttonShiftDown = 0x02;
-const int _buttonGearSet = 0x03;
-const int _buttonNavigateUp = 0x10;
-const int _buttonNavigateDown = 0x11;
-const int _buttonConfirm = 0x14;
-const int _buttonBack = 0x15;
-const int _buttonMenu = 0x16;
-const int _buttonHome = 0x17;
-const int _buttonSteerLeft = 0x18;
-const int _buttonSteerRight = 0x19;
-const int _buttonEmote = 0x20;
-const int _buttonScreenshot = 0x24;
-const int _buttonIncreaseDifficulty = 0x30;
-const int _buttonDecreaseDifficulty = 0x31;
-const int _buttonPause = 0x33;
-const int _buttonResume = 0x34;
-const int _buttonChangeMode = 0x38;
-const int _buttonToggleHud = 0x44;
 
 /// Elementary pairing between a hardware button and an action.
 ///
@@ -133,23 +115,23 @@ class Keymap {
 }
 
 const Map<int, Action> _defaultBindings = <int, Action>{
-  _buttonShiftUp: Action.shiftUp,
-  _buttonShiftDown: Action.shiftDown,
-  _buttonGearSet: Action.gearSet,
-  _buttonNavigateUp: Action.navigateUp,
-  _buttonNavigateDown: Action.navigateDown,
-  _buttonConfirm: Action.confirm,
-  _buttonBack: Action.back,
-  _buttonMenu: Action.menu,
-  _buttonHome: Action.home,
-  _buttonSteerLeft: Action.steerLeft,
-  _buttonSteerRight: Action.steerRight,
-  _buttonEmote: Action.emote,
-  _buttonScreenshot: Action.screenshot,
-  _buttonIncreaseDifficulty: Action.increaseDifficulty,
-  _buttonDecreaseDifficulty: Action.decreaseDifficulty,
-  _buttonPause: Action.pause,
-  _buttonResume: Action.resume,
-  _buttonChangeMode: Action.changeMode,
-  _buttonToggleHud: Action.toggleHud,
+  ButtonIds.shiftUp: Action.shiftUp,
+  ButtonIds.shiftDown: Action.shiftDown,
+  ButtonIds.gearSet: Action.gearSet,
+  ButtonIds.navigateUp: Action.navigateUp,
+  ButtonIds.navigateDown: Action.navigateDown,
+  ButtonIds.confirm: Action.confirm,
+  ButtonIds.back: Action.back,
+  ButtonIds.menu: Action.menu,
+  ButtonIds.home: Action.home,
+  ButtonIds.steerLeft: Action.steerLeft,
+  ButtonIds.steerRight: Action.steerRight,
+  ButtonIds.emote: Action.emote,
+  ButtonIds.screenshot: Action.screenshot,
+  ButtonIds.increaseDifficulty: Action.increaseDifficulty,
+  ButtonIds.decreaseDifficulty: Action.decreaseDifficulty,
+  ButtonIds.pause: Action.pause,
+  ButtonIds.resume: Action.resume,
+  ButtonIds.changeMode: Action.changeMode,
+  ButtonIds.hudToggle: Action.toggleHud,
 };
