@@ -1,0 +1,68 @@
+name: Android build
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Show artifact
+        working-directory: app
+        run: ls -lh build/app/outputs/flutter-apk/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openzclick-android-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish or refresh the latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: app/build/app/outputs/flutter-apk/app-release.apk
+          body: |
+            Unattended builds of openzclick, produced by CI.
+
+            - `app-release.apk` - Android, sideload directly (debug signing key)
+            - `openzclick-unsigned.ipa` - iOS, sign with Sideloadly or AltStore
