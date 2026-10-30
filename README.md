@@ -83,6 +83,14 @@ cd transports && dart run tool/net_probe.dart 47123
 
 Then browse `_openbikecontrol._tcp` with any mDNS tool.
 
+![Publishing](docs/screenshots/publish.png)
+
+Verified on Android 13: the app announces itself, a client connects over TCP, completes the application info handshake, and receives `01 02 01 01` when a gear changes and `01 02 18 01` when the left direction is chosen.
+
+On Android the multicast lock is requested from the host through a small channel, because the system filters multicast traffic otherwise; every other platform needs nothing.
+
+The receiving application must speak the OpenBikeControl protocol. Applications that only accept keyboard input need the local injection transport instead, which is still an interface.
+
 ## How the controller link works
 
 1. Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`).
