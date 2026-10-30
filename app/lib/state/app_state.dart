@@ -85,6 +85,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sends a direction choice, used by the diagnostics screen and by the
+  /// double-tap gesture.
+  Future<void> sendDirection(Action action) async {
+    lastAction = action;
+    await publisher.publish(action);
+    notifyListeners();
+  }
+
   /// Starts or stops the network publication.
   Future<void> togglePublishing() async {
     if (publisher.running) {

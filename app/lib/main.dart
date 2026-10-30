@@ -307,6 +307,26 @@ class TargetScreen extends StatelessWidget {
               trailing: Text(state.lastAction.label),
             ),
             const Divider(height: 24),
+            const Text('Send a direction'),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: () => state.sendDirection(Action.steerLeft),
+                    child: const Text('Left'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: () => state.sendDirection(Action.steerRight),
+                    child: const Text('Right'),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
             const Text('Button mapping'),
             const SizedBox(height: 8),
             for (final MapEntry<int, Action> entry in entries)
