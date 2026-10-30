@@ -135,7 +135,24 @@ class TrainerScreen extends StatelessWidget {
             _MetricCard(
               label: 'Gear',
               value: '${engine.gearNumber} / ${engine.gearCount}',
-              hint: engine.profile.label,
+              hint: null,
+              below: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: engine.profile.id,
+                  isDense: true,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  onChanged: (String? id) {
+                    if (id != null) state.setProfile(id);
+                  },
+                  items: <DropdownMenuItem<String>>[
+                    for (final GearProfile profile in GearProfile.builtin)
+                      DropdownMenuItem<String>(
+                        value: profile.id,
+                        child: Text(profile.label),
+                      ),
+                  ],
+                ),
+              ),
             ),
             _MetricCard(
               label: 'Ratio',
@@ -155,26 +172,7 @@ class TrainerScreen extends StatelessWidget {
                 value: '${resistance.toStringAsFixed(0)} W',
                 hint: 'simulated power at this gear',
               ),
-            const SizedBox(height: 12),
-            Row(
-              children: <Widget>[
-                const Expanded(child: Text('Gear profile')),
-                DropdownButton<String>(
-                  value: engine.profile.id,
-                  onChanged: (String? id) {
-                    if (id != null) state.setProfile(id);
-                  },
-                  items: <DropdownMenuItem<String>>[
-                    for (final GearProfile profile in GearProfile.builtin)
-                      DropdownMenuItem<String>(
-                        value: profile.id,
-                        child: Text(profile.label),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -498,11 +496,19 @@ class DiagnosticsScreen extends StatelessWidget {
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value, this.hint});
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    this.hint,
+    this.below,
+  });
 
   final String label;
   final String value;
   final String? hint;
+
+  /// Optional control displayed under the value.
+  final Widget? below;
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +517,14 @@ class _MetricCard extends StatelessWidget {
       child: ListTile(
         title: Text(label),
         subtitle: hint == null ? null : Text(hint!),
-        trailing: Text(value, style: Theme.of(context).textTheme.titleLarge),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: <Widget>[
+            Text(value, style: Theme.of(context).textTheme.titleLarge),
+            ?below,
+          ],
+        ),
       ),
     );
   }
