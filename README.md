@@ -1,117 +1,129 @@
+<div align="center">
+
 # openzclick
 
-A free bridge between indoor cycling controllers and training apps: controller buttons change virtual gears, the smart trainer follows the resistance.
+**Use your indoor cycling controller buttons with any training app.**<br>
+Gears go up and down, intersection directions get chosen, the smart trainer follows.
 
-A single codebase for Android, iOS, Windows and macOS.
+[![CI](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml)
+[![Android build](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml)
+[![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
+[![Tests](https://img.shields.io/badge/tests-294%20passing-brightgreen)](#status)
 
-## Status
+</div>
 
-| Module | Contents | State |
-|---|---|---|
-| `core/` | binary codec, controller protocol, ECDH/HKDF/AES-CCM session, gear engine, mapping, device definitions | implemented, 212 tests |
-| `transports/` | mDNS/TCP network transport, Bluetooth/injection/proxy interfaces | network implemented and tested, the rest are interfaces |
-| `app/` | Flutter app: controller pairing, virtual gears, diagnostics | working on the four platforms, 6 widget tests |
+---
 
-The app pairs a two-button Bluetooth controller, decodes its notifications (plain and encrypted sessions) and turns them into gear changes. Publishing to a training app over the network is implemented in `transports/` but not yet wired into the app; on iOS it also requires Apple's multicast entitlement.
+A two-button controller bought for one application usually stops working as soon as you change application. openzclick reads the controller over Bluetooth, turns its button presses into gear changes, and publishes them on the local network with an open protocol, so the same buttons drive every training application that speaks it.
 
-## Screenshots
+No account, no subscription, no telemetry. One Dart codebase for Android, iOS, Windows and macOS.
 
-| Trainer | Controllers | Diagnostics |
-|---|---|---|
-| ![Trainer](docs/screenshots/trainer.png) | ![Controllers](docs/screenshots/controllers.png) | ![Diagnostics](docs/screenshots/diagnostics.png) |
+<div align="center">
 
-Captured on Android 13 from the release APK.
+| Trainer | Controllers | Direction | Publishing |
+|---|---|---|---|
+| ![Trainer](docs/screenshots/trainer.png) | ![Controllers](docs/screenshots/controllers.png) | ![Diagnostics](docs/screenshots/diagnostics.png) | ![Publishing](docs/screenshots/publish.png) |
+
+</div>
+
+## Features
+
+| | |
+|---|---|
+| **Gears from two buttons** | single tap shifts up or down, from a gear profile (12-speed road, 8-speed flat, 24-speed hill) |
+| **Intersection choices** | double tap sends a left or right direction without leaving the hoods |
+| **Encrypted controller sessions** | ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, with a plain fallback for older firmware |
+| **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
+| **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
+| **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
 
 ## Download
 
-Every push to `main` builds an Android APK and an unsigned iOS application, and publishes both as release assets:
+| Platform | File | Notes |
+|---|---|---|
+| Android | [`app-release.apk`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/app-release.apk) | sideload directly, updates install over the previous version |
+| iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | sign with Sideloadly or AltStore, 7 days with a free Apple ID |
 
-**https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa**
-
-The APK is signed with the repository's community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), so updates install over the previous version. That key is public by design and must never be used to publish on a store.
-
-The IPA must be signed with Sideloadly or AltStore and a free Apple ID: the signature lasts 7 days, then it must be signed again. A paid developer account extends it to one year and allows ad-hoc distribution.
-
-## Layout
-
-```
-openzclick/
-├─ core/            # pure Dart, no I/O
-├─ transports/      # network, Bluetooth, local injection, trainer proxy
-├─ app/             # Flutter: android, ios, windows, macos
-├─ docs/            # specification and architecture notes
-└─ CONTRACTS.md     # interface signatures between modules
-```
+Both files are rebuilt on every push to `main`. The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
 
 ## Getting started
 
 ```bash
-# core and transports
+git clone https://github.com/Atlanwhite147/openzclick.git
+cd openzclick
+
+# protocol and transports
 cd core && dart pub get && dart test
 cd ../transports && dart pub get && dart test
 
 # application
-cd ../app && flutter pub get && flutter run -d linux   # or windows, macos, android, ios
+cd ../app && flutter pub get
+flutter run -d linux      # or windows, macos, android, ios
 ```
 
-## Buttons: gears and intersections
+Requirements: Flutter stable (Dart 3.13 or newer). No Android SDK or Xcode needed for the protocol work.
 
-A two-button controller carries more than two actions:
+## Architecture
 
-| Gesture | Action |
-|---|---|
-| single tap on the upper button | shift up |
-| single tap on the lower button | shift down |
-| double tap on the upper button | choose the left direction at an intersection |
-| double tap on the lower button | choose the right direction at an intersection |
+```
+openzclick/
+├─ core/          # pure Dart, no I/O: codec, session, gear engine, mapping, gestures
+├─ transports/    # dart:io: mDNS responder, TCP server, Bluetooth/injection/proxy interfaces
+├─ app/           # Flutter shell: pairing, gears, publishing, diagnostics
+├─ docs/          # specification, architecture notes, screenshots
+└─ CONTRACTS.md   # interface signatures between the modules
+```
 
-The detector lives in `core/lib/src/mapping/button_gestures.dart` and is covered by unit tests; the double-tap window is injectable, so it can be tuned per controller.
+Three rules keep the code portable:
 
-## Publishing on the network
+1. **The core never performs I/O.** Everything can be tested without Bluetooth or a network.
+2. **One output, one transport.** Implementations are wired at runtime, never selected by platform conditionals.
+3. **No brand logic in the core.** Devices are described by declarative definition files.
 
-`transports/` now ships a complete implementation in pure Dart, identical on every platform: an mDNS/DNS-SD responder (`DartMdnsAdvertiser`) plus the TCP server, both on `dart:io` only.
+## How the link works
 
-- the app announces `openzclick._openbikecontrol._tcp.local` with its port, version, role and button list;
-- a training application connects over TCP and sends an application info frame;
-- every gear change or direction choice is sent as an OpenBikeControl button frame.
+**Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
 
-Check the link without a phone:
+**Training application side.** The application announces `openzclick._openbikecontrol._tcp.local` with its port, version, role and button list. A client connects over TCP, sends an application info frame, and receives one frame per action: `01 02 01 01` for shift up pressed, `01 02 18 01` for a left direction.
+
+Check the publication without a phone:
 
 ```bash
 cd transports && dart run tool/net_probe.dart 47123
 ```
 
-Then browse `_openbikecontrol._tcp` with any mDNS tool.
+Then browse `_openbikecontrol._tcp` with any mDNS browser and connect a client to the printed port.
 
-![Publishing](docs/screenshots/publish.png)
+Protocol facts are implemented in Dart from public interoperability notes; no third-party code is copied. Cryptographic primitives come from `pointycastle`.
 
-Verified on Android 13: the app announces itself, a client connects over TCP, completes the application info handshake, and receives `01 02 01 01` when a gear changes and `01 02 18 01` when the left direction is chosen.
+## Status
 
-On Android the multicast lock is requested from the host through a small channel, because the system filters multicast traffic otherwise; every other platform needs nothing.
+| Module | State | Tests |
+|---|---|---|
+| `core/` | protocol, session, gear engine, mapping, gestures | 217 |
+| `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
+| `app/` | pairing, gears, publishing, diagnostics on the four platforms | 6 |
 
-The receiving application must speak the OpenBikeControl protocol. Applications that only accept keyboard input need the local injection transport instead, which is still an interface.
-
-## How the controller link works
-
-1. Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`).
-2. Connect and subscribe to the synchronous receive channel.
-3. Send the handshake: an encrypted request carrying an ephemeral P-256 public key, with a plain `RideOn` fallback after three seconds.
-4. If the device answers with its public key, derive the session (ECDH, HKDF-SHA256, AES-CCM with a 4-byte MAC) and decrypt every frame; otherwise parse frames in the clear.
-5. Decode button notifications (protobuf varints) and emit gear changes.
-
-Protocol facts are reimplemented in Dart from public interoperability notes; no third-party code is copied. The cryptographic primitives come from `pointycastle`.
-
-## Principles
-
-- The core performs no I/O: it can be tested without hardware or Bluetooth.
-- One output = one `Transport` implementation, wired at runtime.
-- No brand-specific conditionals in the core: devices are described by declarative definition files.
-- Field protocols are unauthenticated: network advertising is off by default and must be enabled explicitly.
+Verified on Android 13: installation, first frame, gear changes, direction choices, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
 ## Roadmap
 
-See `docs/spec.md`. Done: protocol core, controller input, gear engine, gear profiles, app shell. Next: native Bluetooth peripheral backend, mDNS advertiser, keyboard/touch injection, FTMS trainer proxy.
+- [x] binary protocol, encrypted sessions, gear engine
+- [x] two-button gestures, direction choices
+- [x] network publication in the shared core
+- [x] continuous Android and iOS builds
+- [ ] local injection transport for applications that only accept a keyboard
+- [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
+- [ ] iPhone multicast entitlement
+
+The full specification lives in [docs/spec.md](docs/spec.md).
+
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it explains the module boundaries, the test expectations and how to report a controller that does not pair.
 
 ## License
 
-MIT (see `LICENSE`).
+MIT, see [LICENSE](LICENSE).

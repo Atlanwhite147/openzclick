@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a behaviour, a device or an application to support
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do
+      description: Describe the ride, not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How you imagine it
+      description: Optional. Keep the module boundaries in mind: the core stays free of I/O.
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware involved
+      description: Controller, trainer or application that would need to be supported.

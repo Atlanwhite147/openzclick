@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Do not paste pairing keys, tokens or personal identifiers.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [Android, iOS, Windows, macOS, Linux, Not platform specific]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: APK from the latest release, or the commit hash
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: controller
+    attributes:
+      label: Controller and firmware
+      description: Model, firmware version, and the state shown in the Controllers screen.
+  - type: textarea
+    id: application
+    attributes:
+      label: Training application
+      description: Name, version and platform, if the problem happens after the bridge.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Diagnostic output
+      description: Diagnostics screen content or probe output, without personal data.
+      render: text
