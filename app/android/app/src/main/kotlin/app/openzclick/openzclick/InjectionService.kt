@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import io.flutter.plugin.common.MethodCall
@@ -52,6 +53,7 @@ class InjectionService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, 40))
             .build()
         val accepted = dispatchGesture(gesture, null, null)
+        Log.i(TAG, "tap at \${x.toInt()},\${y.toInt()} accepted=\$accepted")
         onDone(accepted)
     }
 
@@ -68,6 +70,9 @@ class InjectionService : AccessibilityService() {
         @Volatile
         var instance: InjectionService? = null
 
+        /** Log tag used by the diagnostic screen and by `adb logcat`. */
+        const val TAG = "openzclick-injection"
+
         /** Channel name shared with the Dart side. */
         const val CHANNEL = "openzclick/injection"
 
@@ -80,6 +85,7 @@ class InjectionService : AccessibilityService() {
                 "ready" -> result.success(isReady())
                 "tap" -> {
                     val service = instance
+                    Log.i(TAG, "tap request x=\${call.argument<Double>("x")} y=\${call.argument<Double>("y")} service=\${service != null}")
                     if (service == null) {
                         result.error("disabled", "injection service is not enabled", null)
                         return

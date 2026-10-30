@@ -29,6 +29,7 @@ class AppState extends ChangeNotifier {
   final InjectionPublisher injection = InjectionPublisher(
     injector:
         AndroidInjection.supported ? AndroidInjection() : UnsupportedInjector(),
+    readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
   );
 
   /// Turns button states into gear changes and direction choices.

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:openzclick_core/openzclick_core.dart';
 import 'package:openzclick_transports/openzclick_transports.dart';
 
@@ -24,7 +26,13 @@ class UnsupportedInjector implements KeyInjector {
 /// coordinates, so a single configuration survives a change of screen.
 class InjectionPublisher {
   /// Creates a publisher.
-  InjectionPublisher({required this.injector});
+  ///
+  /// [readiness] is asked before starting: some platforms need a permission or
+  /// a service that the user enables once.
+  InjectionPublisher({required this.injector, this.readiness});
+
+  /// Optional check performed before the first injection.
+  final Future<bool> Function()? readiness;
 
   /// Injector supplied by the platform.
   final KeyInjector injector;
@@ -89,6 +97,13 @@ class InjectionPublisher {
   Future<void> start() async {
     error = null;
     _dirty = false;
+    final Future<bool> Function()? check = readiness;
+    if (check != null && !await check()) {
+      error = 'the injection service is not enabled yet';
+      running = false;
+      _notify();
+      return;
+    }
     try {
       final LocalInjectionTransport transport = LocalInjectionTransport(
         injector: injector,
@@ -126,6 +141,7 @@ class InjectionPublisher {
       error = null;
     } catch (e) {
       error = e.toString();
+      debugPrint('openzclick: injection of ${action.name} failed: $e');
     }
     _notify();
   }
