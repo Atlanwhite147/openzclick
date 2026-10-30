@@ -1,0 +1,11 @@
+.dart_tool/
+.packages
+build/
+.idea/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+app/android/.gradle/
+app/ios/Pods/
+app/macos/Pods/
+.DS_Store
