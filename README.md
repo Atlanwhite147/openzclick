@@ -67,6 +67,12 @@ Requirements: Flutter stable (Dart 3.13 or newer). No Android SDK or Xcode neede
 
 ## Architecture
 
+<div align="center">
+
+![Architecture](docs/architecture.svg)
+
+</div>
+
 ```
 openzclick/
 ├─ core/          # pure Dart, no I/O: codec, session, gear engine, mapping, gestures
