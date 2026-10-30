@@ -24,11 +24,13 @@ Captured on Android 13 from the release APK.
 
 ## Download
 
-Every push to `main` builds an unsigned iOS application and publishes it as a release asset:
+Every push to `main` builds an Android APK and an unsigned iOS application, and publishes both as release assets:
 
 **https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa**
 
-Install it with Sideloadly or AltStore and a free Apple ID: the signature lasts 7 days, then it must be signed again. A paid developer account extends it to one year and allows ad-hoc distribution.
+The APK is signed with the repository's community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), so updates install over the previous version. That key is public by design and must never be used to publish on a store.
+
+The IPA must be signed with Sideloadly or AltStore and a free Apple ID: the signature lasts 7 days, then it must be signed again. A paid developer account extends it to one year and allows ad-hoc distribution.
 
 ## Layout
 

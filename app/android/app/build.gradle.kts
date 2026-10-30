@@ -29,11 +29,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("community") {
+            // Stable key for continuous builds of this repository, so that an
+            // updated APK installs over the previous one without uninstalling.
+            // It is public by design and must never be used for a store release.
+            storeFile = file("../keystore/openzclick-test.jks")
+            storePassword = "openzclick"
+            keyAlias = "openzclick"
+            keyPassword = "openzclick"
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("community")
         }
     }
 }
