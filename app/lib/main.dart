@@ -325,9 +325,12 @@ class TargetScreen extends StatelessWidget {
                 subtitle: Text(
                   publisher.error ??
                       (publisher.running
-                          ? 'OpenBikeControl on port ${publisher.port}'
+                          ? '${publisher.address ?? 'this device'}:${publisher.listeningPort}'
                                 ' - ${publisher.peers} client(s)'
-                          : 'Announces the bridge over mDNS and accepts TCP'),
+                                '${publisher.advertise ? ' - announced over mDNS' : ' - enter this address in the application'}'
+                          : publisher.advertise
+                          ? 'Announces the bridge over mDNS and accepts TCP'
+                          : 'Accepts TCP on port ${publisher.port}, without mDNS'),
                 ),
                 value: publisher.running,
                 onChanged: (_) => state.togglePublishing(),
