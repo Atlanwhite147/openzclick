@@ -363,11 +363,15 @@ class TargetScreen extends StatelessWidget {
                         dense: true,
                         title: Text(action.label),
                         trailing: Text(
-                          '${(state.injection.positions[action]![0] * 100).round()} %'
-                          ' / ${(state.injection.positions[action]![1] * 100).round()} %',
+                          state.injection.usesKeys
+                              ? state.injection.keys![action] ?? '-'
+                              : '${(state.injection.positions[action]![0] * 100).round()} %'
+                                    ' / ${(state.injection.positions[action]![1] * 100).round()} %',
                           style: const TextStyle(fontFamily: 'monospace'),
                         ),
-                        onTap: () => _editPosition(context, state, action),
+                        onTap: state.injection.usesKeys
+                            ? null
+                            : () => _editPosition(context, state, action),
                       ),
                   if (state.injection.supported)
                     Padding(

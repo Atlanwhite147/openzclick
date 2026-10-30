@@ -15,6 +15,14 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Linux keyboard and pointer injection through X11 and XTest, verified against a live X server.
+- Key bindings for desktop hosts, so the same actions reach applications that only listen to shortcuts.
+- `docs/injection.md` and `docs/ROADMAP.md`, including the port contract for Windows and macOS.
+
+### Fixed
+- The X11 injector no longer fails when the display is unavailable after a first attempt.
+
+### Added
 - Stable listening port (47123) and the local address shown in the application, so a client can be configured by hand.
 - iOS: local network permission description and declared Bonjour service.
 - iOS: the publisher listens without announcing, since multicast needs Apple's entitlement.

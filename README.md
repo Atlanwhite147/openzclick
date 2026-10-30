@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-309%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-310%20passing-brightgreen)](#status)
 
 </div>
 
@@ -37,6 +37,7 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 | **Encrypted controller sessions** | ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, with a plain fallback for older firmware |
 | **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
 | **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls if needed |
+| **Keyboard fallback** | on a Linux desktop, X11 and XTest turn button presses into real key presses, verified against a live X server |
 | **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
 | **Settings that survive a restart** | gear profile, current gear, tap positions and publishers resume where you left them |
 | **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
@@ -113,6 +114,19 @@ Some applications expose no protocol and no keyboard shortcut: the only way to c
 
 Verified on Android 13: a request is dispatched as a real touch (`tap at 182,603 accepted=true` in the log) and the application reacts exactly as if a finger had touched the screen. Android only allows this through an accessibility service; no root, no shell command, and the service never reads the screen.
 
+## Injection, when nothing else works
+
+Applications that accept neither the network protocol nor a Bluetooth controller get driven directly: a tap on Android, a keystroke on a desktop.
+
+| Host | Keyboard | Pointer | State |
+|---|---|---|---|
+| Linux, X11 | XTest | XTest | implemented and verified |
+| Android | not allowed by the platform | accessibility service | implemented and verified |
+| Windows, macOS | - | - | **open to a contributor** |
+| iOS | - | - | impossible, the platform forbids synthetic input |
+
+Details, default bindings and how to write the Windows or macOS port: [docs/injection.md](docs/injection.md).
+
 ## How the link works
 
 **Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
@@ -135,7 +149,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, gear engine, mapping, gestures | 217 |
 | `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
-| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 21 |
+| `app/` | pairing, gears, publishing, injection, diagnostics on the four platforms | 22 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
@@ -152,7 +166,7 @@ Verified on Android 13: installation, first frame, gear changes, direction choic
 
 ![Injection](docs/screenshots/injection.png)
 
-The full specification lives in [docs/spec.md](docs/spec.md).
+The detailed roadmap, including what is open to a first contribution, lives in [docs/ROADMAP.md](docs/ROADMAP.md). The specification is in [docs/spec.md](docs/spec.md).
 
 ## Contributing
 

@@ -47,6 +47,10 @@ cd transports && dart run tool/net_probe.dart 47123
 
 If the probe is discovered and answers, the bridge is fine and the receiving side is the problem. If it is not discovered, the network is.
 
+## Looking for a first task
+
+`docs/ROADMAP.md` lists the work that is well bounded and useful. The Windows and macOS injectors are the two that block the most riders: each is one file implementing `KeyInjector`, with a test.
+
 ## Code style
 
 - Dart formatting is enforced by `dart format`; run it before committing.

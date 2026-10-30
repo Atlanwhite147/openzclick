@@ -49,6 +49,22 @@ void main() {
     expect(failing.error, contains('tap injection'));
   });
 
+  test('sends keys when built for a desktop host', () async {
+    final MemoryKeyInjector keyboard = MemoryKeyInjector();
+    final InjectionPublisher keys = InjectionPublisher(
+      injector: keyboard,
+      keys: InjectionPublisher.defaultKeys,
+    );
+    await keys.start();
+    await keys.publish(Action.shiftUp);
+    await keys.publish(Action.steerLeft);
+    expect(keys.usesKeys, isTrue);
+    expect(
+      keyboard.inputs.whereType<InjectedKey>().map((InjectedKey k) => k.key),
+      <String>['i', 'Left'],
+    );
+  });
+
   test('a platform without injector is not supported', () {
     expect(
       InjectionPublisher(injector: UnsupportedInjector()).supported,

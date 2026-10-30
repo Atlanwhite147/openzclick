@@ -7,6 +7,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
 import '../net/injection_publisher.dart';
+import '../net/x11_injection.dart';
 import '../net/network_publisher.dart';
 import '../settings/settings_store.dart';
 
@@ -23,6 +24,9 @@ class AppState extends ChangeNotifier {
   /// Keymap used by the target screen to display button bindings.
   final Keymap keymap;
 
+  /// Linux backend for keyboard and pointer injection, null elsewhere.
+  final X11Injection? _x11 = Platform.isLinux ? X11Injection() : null;
+
   /// Bluetooth link to the physical controller.
   final ControllerConnection controller = ControllerConnection();
 
@@ -35,11 +39,15 @@ class AppState extends ChangeNotifier {
   );
 
   /// Local injection towards an application that only accepts taps.
-  final InjectionPublisher injection = InjectionPublisher(
-    injector: AndroidInjection.supported
-        ? AndroidInjection()
-        : UnsupportedInjector(),
+  late final InjectionPublisher injection = InjectionPublisher(
+    injector:
+        _x11 ??
+        (AndroidInjection.supported
+            ? AndroidInjection()
+            : UnsupportedInjector()),
+    availability: _x11 == null ? null : () => _x11.available,
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
+    keys: _x11 == null ? null : InjectionPublisher.defaultKeys,
   );
 
   /// Turns button states into gear changes and direction choices.

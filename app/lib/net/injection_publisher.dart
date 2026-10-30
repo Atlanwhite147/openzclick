@@ -28,16 +28,45 @@ class InjectionPublisher {
   ///
   /// [readiness] is asked before starting: some platforms need a permission or
   /// a service that the user enables once.
-  InjectionPublisher({required this.injector, this.readiness});
+  ///
+  /// [keys] switches the publisher from taps to key presses: each action is
+  /// then translated into the key listed here, which is how desktop hosts
+  /// drive an application that listens to shortcuts.
+  InjectionPublisher({
+    required this.injector,
+    this.readiness,
+    this.availability,
+    Map<Action, String>? keys,
+  }) : keys = keys == null ? null : Map<Action, String>.unmodifiable(keys);
+
+  /// Default desktop bindings, matching the shortcuts of common training
+  /// applications.
+  static const Map<Action, String> defaultKeys = <Action, String>{
+    Action.shiftUp: 'i',
+    Action.shiftDown: 'k',
+    Action.steerLeft: 'Left',
+    Action.steerRight: 'Right',
+  };
+
+  /// Key bound to each action, null when the publisher injects taps.
+  final Map<Action, String>? keys;
 
   /// Optional check performed before the first injection.
   final Future<bool> Function()? readiness;
+
+  /// Optional synchronous test of the platform capability, used by the user
+  /// interface to disable the switch instead of failing later.
+  final bool Function()? availability;
 
   /// Injector supplied by the platform.
   final KeyInjector injector;
 
   /// True when the platform provides a working injector.
-  bool get supported => injector is! UnsupportedInjector;
+  bool get supported =>
+      injector is! UnsupportedInjector && (availability?.call() ?? true);
+
+  /// True when actions are sent as key presses rather than taps.
+  bool get usesKeys => keys != null;
 
   /// Default positions, roughly the lower right corner of a riding screen.
   static const Map<Action, List<double>> defaultPositions =
@@ -103,11 +132,17 @@ class InjectionPublisher {
       return;
     }
     try {
+      final Map<Action, String>? bindings = keys;
       final LocalInjectionTransport transport = LocalInjectionTransport(
         injector: injector,
         targets: <Action, InjectionTarget>{
-          for (final MapEntry<Action, List<double>> entry in positions.entries)
-            entry.key: PointTarget(entry.value[0], entry.value[1]),
+          if (bindings != null)
+            for (final MapEntry<Action, String> entry in bindings.entries)
+              entry.key: KeyTarget(entry.value)
+          else
+            for (final MapEntry<Action, List<double>> entry
+                in positions.entries)
+              entry.key: PointTarget(entry.value[0], entry.value[1]),
         },
       );
       await transport.start();
