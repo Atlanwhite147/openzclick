@@ -14,6 +14,14 @@ A single codebase for Android, iOS, Windows and macOS.
 
 The app pairs a two-button Bluetooth controller, decodes its notifications (plain and encrypted sessions) and turns them into gear changes. Publishing to a training app over the network is implemented in `transports/` but not yet wired into the app; on iOS it also requires Apple's multicast entitlement.
 
+## Screenshots
+
+| Trainer | Controllers | Diagnostics |
+|---|---|---|
+| ![Trainer](docs/screenshots/trainer.png) | ![Controllers](docs/screenshots/controllers.png) | ![Diagnostics](docs/screenshots/diagnostics.png) |
+
+Captured on Android 13 from the release APK.
+
 ## Download
 
 Every push to `main` builds an unsigned iOS application and publishes it as a release asset:
