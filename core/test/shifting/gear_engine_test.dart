@@ -28,9 +28,12 @@ void main() {
     });
 
     test('initialGear is clamped to the valid range', () {
-      expect(GearEngine(profile: GearProfile.road12, initialGear: 99).gearIndex, 11);
-      expect(GearEngine(profile: GearProfile.road12, initialGear: -5).gearIndex, 0);
-      expect(GearEngine(profile: GearProfile.road12, initialGear: 4).gearIndex, 4);
+      expect(GearEngine(profile: GearProfile.road12, initialGear: 99).gearIndex,
+          11);
+      expect(GearEngine(profile: GearProfile.road12, initialGear: -5).gearIndex,
+          0);
+      expect(
+          GearEngine(profile: GearProfile.road12, initialGear: 4).gearIndex, 4);
     });
 
     test('shiftUp / shiftDown move and report the change', () {
@@ -124,11 +127,13 @@ void main() {
     });
 
     test('in ERG the returned resistance is the current target', () {
-      final engine = GearEngine(profile: GearProfile.road12, mode: RidingMode.erg);
+      final engine =
+          GearEngine(profile: GearProfile.road12, mode: RidingMode.erg);
       engine.bumpErg(45);
       expect(engine.ergTargetWatts, 245);
       expect(
-        engine.targetResistance(gradePercent: 12, riderWeightKg: 80, speedKmh: 30),
+        engine.targetResistance(
+            gradePercent: 12, riderWeightKg: 80, speedKmh: 30),
         245.0,
       );
     });
@@ -139,8 +144,8 @@ void main() {
       final engine = GearEngine(profile: GearProfile.road12, initialGear: 6);
       double previous = -1;
       for (final double grade in <double>[0, 2, 4, 6, 8, 12]) {
-        final double resistance =
-            engine.targetResistance(gradePercent: grade, riderWeightKg: 75, speedKmh: 25);
+        final double resistance = engine.targetResistance(
+            gradePercent: grade, riderWeightKg: 75, speedKmh: 25);
         expect(resistance, greaterThan(previous), reason: 'grade $grade %');
         previous = resistance;
       }
@@ -216,7 +221,8 @@ void main() {
     test('extreme case: clamped to 1500 W', () {
       final engine = GearEngine(profile: GearProfile.road12, initialGear: 11);
       expect(
-        engine.targetResistance(gradePercent: 25, riderWeightKg: 250, speedKmh: 120),
+        engine.targetResistance(
+            gradePercent: 25, riderWeightKg: 250, speedKmh: 120),
         maxResistanceWatts,
       );
     });
@@ -233,7 +239,8 @@ void main() {
         expect(resistance.isFinite, isTrue);
       }
       expect(
-        engine.targetResistance(gradePercent: -20, riderWeightKg: 75, speedKmh: 60),
+        engine.targetResistance(
+            gradePercent: -20, riderWeightKg: 75, speedKmh: 60),
         0,
       );
     });
@@ -252,7 +259,8 @@ void main() {
     test('zero speed: zero power', () {
       final engine = GearEngine(profile: GearProfile.road12, initialGear: 6);
       expect(
-        engine.targetResistance(gradePercent: 10, riderWeightKg: 75, speedKmh: 0),
+        engine.targetResistance(
+            gradePercent: 10, riderWeightKg: 75, speedKmh: 0),
         0,
       );
     });

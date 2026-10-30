@@ -40,7 +40,8 @@ Future<void> main(List<String> args) async {
   });
 
   await transport.start();
-  stdout.writeln('listening on ${transport.listeningPort}, announcing _openbikecontrol._tcp');
+  stdout.writeln(
+      'listening on ${transport.listeningPort}, announcing _openbikecontrol._tcp');
 
   // Demonstrates the outgoing direction: two gear changes, then a direction.
   Timer.periodic(const Duration(seconds: 4), (Timer timer) async {

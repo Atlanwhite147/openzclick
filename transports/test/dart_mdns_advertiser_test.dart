@@ -6,8 +6,7 @@ import 'package:test/test.dart';
 void main() {
   group('DnsWire names', () {
     test('encodes labels with a length prefix and a terminator', () {
-      expect(DnsWire.encodeName('a.bc'),
-          <int>[1, 97, 2, 98, 99, 0]);
+      expect(DnsWire.encodeName('a.bc'), <int>[1, 97, 2, 98, 99, 0]);
     });
 
     test('round-trips a dotted name', () {
@@ -38,7 +37,8 @@ void main() {
   group('DnsWire questions', () {
     test('parses a PTR question', () {
       final List<int> query = DnsWire.buildQuery('_openbikecontrol._tcp.local');
-      final List<({String name, int type})> questions = DnsWire.parseQuestions(query);
+      final List<({String name, int type})> questions =
+          DnsWire.parseQuestions(query);
       expect(questions, hasLength(1));
       expect(questions.first.name, '_openbikecontrol._tcp.local');
       expect(questions.first.type, DnsType.ptr);
@@ -81,6 +81,9 @@ void main() {
       await advertiser.register(service);
       await advertiser.register(service);
       await advertiser.unregister();
-    }, skip: Platform.isLinux ? false : 'multicast binding is platform dependent');
+    },
+        skip: Platform.isLinux
+            ? false
+            : 'multicast binding is platform dependent');
   });
 }

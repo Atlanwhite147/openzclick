@@ -102,8 +102,7 @@ class ClickButtons {
   int get hashCode => Object.hash(up, down);
 
   @override
-  String toString() =>
-      'ClickButtons(up: $up, down: $down)';
+  String toString() => 'ClickButtons(up: $up, down: $down)';
 }
 
 /// Decoded message from the controller.

@@ -37,8 +37,10 @@ class AndroidInjection implements KeyInjector {
     if (!supported) {
       throw UnsupportedError('tap injection is only available on Android');
     }
-    final bool? accepted =
-        await _channel.invokeMethod<bool>('tap', <String, double>{'x': x, 'y': y});
+    final bool? accepted = await _channel.invokeMethod<bool>(
+      'tap',
+      <String, double>{'x': x, 'y': y},
+    );
     if (accepted != true) {
       throw StateError('the accessibility service refused the tap');
     }

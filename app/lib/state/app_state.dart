@@ -30,8 +30,9 @@ class AppState extends ChangeNotifier {
 
   /// Local injection towards an application that only accepts taps.
   final InjectionPublisher injection = InjectionPublisher(
-    injector:
-        AndroidInjection.supported ? AndroidInjection() : UnsupportedInjector(),
+    injector: AndroidInjection.supported
+        ? AndroidInjection()
+        : UnsupportedInjector(),
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
   );
 
@@ -62,11 +63,11 @@ class AppState extends ChangeNotifier {
   /// [doubleTapWindow] is forwarded to the gesture detector so that tests can
   /// shorten it.
   AppState({GearProfile? profile, Duration? doubleTapWindow})
-      : engine = GearEngine(
-          profile: profile ?? GearProfile.road12,
-          initialGear: 5,
-        ),
-        keymap = Keymap.defaults('default') {
+    : engine = GearEngine(
+        profile: profile ?? GearProfile.road12,
+        initialGear: 5,
+      ),
+      keymap = Keymap.defaults('default') {
     controller.onChanged = notifyListeners;
     publisher.onChanged = notifyListeners;
     injection.onChanged = () {
@@ -190,7 +191,8 @@ class AppState extends ChangeNotifier {
     final GearProfile profile =
         GearProfile.byId(snapshot.profileId) ?? GearProfile.road12;
     engine = GearEngine(profile: profile, initialGear: snapshot.gearIndex);
-    for (final MapEntry<Action, List<double>> entry in snapshot.positions.entries) {
+    for (final MapEntry<Action, List<double>> entry
+        in snapshot.positions.entries) {
       injection.setPosition(entry.key, entry.value[0], entry.value[1]);
     }
     if (snapshot.publishOnStart) await publisher.start();

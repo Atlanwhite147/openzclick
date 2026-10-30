@@ -7,16 +7,22 @@ void main() {
     test('structural equality', () {
       const a = ButtonBinding(buttonId: 0x01, action: Action.shiftUp);
       const b = ButtonBinding(buttonId: 0x01, action: Action.shiftUp);
-      const c = ButtonBinding(buttonId: 0x01, action: Action.shiftUp, analogAction: 3);
+      const c = ButtonBinding(
+          buttonId: 0x01, action: Action.shiftUp, analogAction: 3);
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
       expect(a, isNot(equals(c)));
     });
 
     test('analogAction is optional', () {
-      expect(const ButtonBinding(buttonId: 0x1B, action: Action.steerLeft).analogAction, isNull);
       expect(
-        const ButtonBinding(buttonId: 0x1B, action: Action.steerLeft, analogAction: 1).analogAction,
+          const ButtonBinding(buttonId: 0x1B, action: Action.steerLeft)
+              .analogAction,
+          isNull);
+      expect(
+        const ButtonBinding(
+                buttonId: 0x1B, action: Action.steerLeft, analogAction: 1)
+            .analogAction,
         1,
       );
     });
@@ -26,7 +32,10 @@ void main() {
     test('actionFor returns the mapped action or none', () {
       final Keymap keymap = Keymap(
         appId: 'target-a',
-        bindings: const <int, Action>{0x01: Action.shiftUp, 0x14: Action.confirm},
+        bindings: const <int, Action>{
+          0x01: Action.shiftUp,
+          0x14: Action.confirm
+        },
       );
       expect(keymap.appId, 'target-a');
       expect(keymap.actionFor(0x01), Action.shiftUp);
@@ -44,7 +53,8 @@ void main() {
     test('defaults covers every action except none', () {
       final Keymap keymap = Keymap.defaults('target-a');
       final Set<Action> mapped = keymap.bindings.values.toSet();
-      expect(mapped, containsAll(Action.values.where((Action a) => a != Action.none)));
+      expect(mapped,
+          containsAll(Action.values.where((Action a) => a != Action.none)));
       expect(mapped.contains(Action.none), isFalse);
       expect(keymap.actionFor(0x01), Action.shiftUp);
       expect(keymap.actionFor(0x02), Action.shiftDown);
@@ -56,7 +66,10 @@ void main() {
     test('overrides replace or disable a button', () {
       final Keymap keymap = Keymap.defaults(
         'target-a',
-        overrides: const <int, Action>{0x01: Action.shiftDown, 0x14: Action.none},
+        overrides: const <int, Action>{
+          0x01: Action.shiftDown,
+          0x14: Action.none
+        },
       );
       expect(keymap.actionFor(0x01), Action.shiftDown);
       expect(keymap.actionFor(0x14), Action.none);
@@ -64,7 +77,8 @@ void main() {
     });
 
     test('fromBindings: the last binding wins', () {
-      final Keymap keymap = Keymap.fromBindings('target-a', const <ButtonBinding>[
+      final Keymap keymap =
+          Keymap.fromBindings('target-a', const <ButtonBinding>[
         ButtonBinding(buttonId: 0x01, action: Action.shiftUp),
         ButtonBinding(buttonId: 0x01, action: Action.menu),
         ButtonBinding(buttonId: 0x10, action: Action.navigateUp),
@@ -81,7 +95,10 @@ void main() {
     test('buttonIds and bindingList are sorted', () {
       final Keymap keymap = Keymap(
         appId: 'target-a',
-        bindings: const <int, Action>{0x14: Action.confirm, 0x01: Action.shiftUp},
+        bindings: const <int, Action>{
+          0x14: Action.confirm,
+          0x01: Action.shiftUp
+        },
       );
       expect(keymap.buttonIds, <int>[0x01, 0x14]);
       expect(
@@ -95,14 +112,16 @@ void main() {
 
     test('withOverrides does not modify the original table', () {
       final Keymap original = Keymap.defaults('target-a');
-      final Keymap modified = original.withOverrides(const <int, Action>{0x01: Action.menu});
+      final Keymap modified =
+          original.withOverrides(const <int, Action>{0x01: Action.menu});
       expect(modified.actionFor(0x01), Action.menu);
       expect(original.actionFor(0x01), Action.shiftUp);
       expect(modified.appId, original.appId);
     });
 
     test('rejects an empty app identifier', () {
-      expect(() => Keymap(appId: ' ', bindings: const <int, Action>{}), throwsArgumentError);
+      expect(() => Keymap(appId: ' ', bindings: const <int, Action>{}),
+          throwsArgumentError);
       expect(() => Keymap.empty(''), throwsArgumentError);
     });
   });

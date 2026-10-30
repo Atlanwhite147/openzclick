@@ -101,7 +101,10 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Controllers',
           ),
           NavigationDestination(icon: Icon(Icons.lan), label: 'Target'),
-          NavigationDestination(icon: Icon(Icons.terminal), label: 'Diagnostics'),
+          NavigationDestination(
+            icon: Icon(Icons.terminal),
+            label: 'Diagnostics',
+          ),
         ],
       ),
     );
@@ -157,7 +160,9 @@ class TrainerScreen extends StatelessWidget {
             _MetricCard(
               label: 'Ratio',
               value: engine.currentRatio.ratio.toStringAsFixed(2),
-              hint: engine.bigChainringActive ? 'big chainring' : 'small chainring',
+              hint: engine.bigChainringActive
+                  ? 'big chainring'
+                  : 'small chainring',
             ),
             _MetricCard(
               label: 'Mode',
@@ -226,7 +231,8 @@ class ControllersScreen extends StatelessWidget {
       listenable: state,
       builder: (BuildContext context, _) {
         final ControllerConnection link = state.controller;
-        final bool busy = link.status == ControllerStatus.scanning ||
+        final bool busy =
+            link.status == ControllerStatus.scanning ||
             link.status == ControllerStatus.connecting;
 
         return ListView(
@@ -244,7 +250,7 @@ class ControllersScreen extends StatelessWidget {
                   link.error ??
                       (link.status == ControllerStatus.ready
                           ? '${link.encrypted ? 'encrypted' : 'plain'} session'
-                              '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
+                                '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
                           : 'Two-button Bluetooth controller'),
                 ),
                 trailing: link.status == ControllerStatus.ready
@@ -305,11 +311,10 @@ class TargetScreen extends StatelessWidget {
       builder: (BuildContext context, _) {
         final NetworkPublisher publisher = state.publisher;
         final List<MapEntry<int, Action>> entries =
-            state.keymap.bindings.entries.toList()
-              ..sort(
-                (MapEntry<int, Action> a, MapEntry<int, Action> b) =>
-                    a.key.compareTo(b.key),
-              );
+            state.keymap.bindings.entries.toList()..sort(
+              (MapEntry<int, Action> a, MapEntry<int, Action> b) =>
+                  a.key.compareTo(b.key),
+            );
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -321,7 +326,7 @@ class TargetScreen extends StatelessWidget {
                   publisher.error ??
                       (publisher.running
                           ? 'OpenBikeControl on port ${publisher.port}'
-                              ' - ${publisher.peers} client(s)'
+                                ' - ${publisher.peers} client(s)'
                           : 'Announces the bridge over mDNS and accepts TCP'),
                 ),
                 value: publisher.running,

@@ -12,7 +12,8 @@ class GearRatio implements Comparable<GearRatio> {
   ///
   /// [ratio] must be strictly positive: zero, a negative value or `NaN`
   /// violate the shifting engine's invariant.
-  const GearRatio(this.ratio) : assert(ratio > 0, 'A ratio must be strictly positive');
+  const GearRatio(this.ratio)
+      : assert(ratio > 0, 'A ratio must be strictly positive');
 
   /// Applies a multiplicative factor (the virtual chainring, for example).
   GearRatio scaledBy(double factor) => GearRatio(ratio * factor);

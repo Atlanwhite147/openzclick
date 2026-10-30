@@ -160,7 +160,8 @@ class GearEngine {
   /// The value is remembered even in SIM mode: it is applied as is when
   /// switching to ERG.
   int bumpErg(int deltaWatts) {
-    _ergWatts = (_ergWatts + deltaWatts).clamp(minErgWatts, maxErgWatts).toInt();
+    _ergWatts =
+        (_ergWatts + deltaWatts).clamp(minErgWatts, maxErgWatts).toInt();
     return _ergWatts;
   }
 
@@ -183,13 +184,16 @@ class GearEngine {
   }) {
     if (_mode == RidingMode.erg) return _ergWatts.toDouble();
 
-    final double grade = _sanitize(gradePercent, 0, -maxGradePercent, maxGradePercent);
-    final double weight = _sanitize(riderWeightKg, 75, minRiderWeightKg, maxRiderWeightKg);
+    final double grade =
+        _sanitize(gradePercent, 0, -maxGradePercent, maxGradePercent);
+    final double weight =
+        _sanitize(riderWeightKg, 75, minRiderWeightKg, maxRiderWeightKg);
     final double speed = _sanitize(speedKmh, 0, 0, maxSpeedKmh) / 3.6;
 
     final double slope = math.atan(grade / 100);
     final double gravityForce = weight * _gravity * math.sin(slope);
-    final double rollingForce = _rollingCoefficient * weight * _gravity * math.cos(slope);
+    final double rollingForce =
+        _rollingCoefficient * weight * _gravity * math.cos(slope);
     final double aeroForce = 0.5 * _airDensity * _dragArea * speed * speed;
     final double totalForce = gravityForce + rollingForce + aeroForce;
 
@@ -203,7 +207,8 @@ class GearEngine {
   }
 
   @override
-  String toString() => 'GearEngine(${profile.id}, gear ${gearIndex + 1}/$gearCount, '
+  String toString() =>
+      'GearEngine(${profile.id}, gear ${gearIndex + 1}/$gearCount, '
       'ratio ${currentRatio.ratio.toStringAsFixed(3)}, mode ${mode.name})';
 }
 

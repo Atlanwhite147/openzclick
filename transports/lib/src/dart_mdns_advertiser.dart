@@ -79,7 +79,8 @@ abstract final class DnsWire {
       final int end = index + 1 + length;
       if (end > data.length) break;
       if (result.isNotEmpty) result.write('.');
-      result.write(utf8.decode(data.sublist(index + 1, end), allowMalformed: true));
+      result.write(
+          utf8.decode(data.sublist(index + 1, end), allowMalformed: true));
       index = end;
       if (++guard > 128) break;
     }
@@ -109,7 +110,8 @@ abstract final class DnsWire {
     if (data.length < 12) return const <({String name, int type})>[];
     final int count = (data[4] << 8) | data[5];
     int offset = 12;
-    final List<({String name, int type})> questions = <({String name, int type})>[];
+    final List<({String name, int type})> questions =
+        <({String name, int type})>[];
     for (int i = 0; i < count && offset < data.length; i++) {
       final ({String name, int next}) decoded = decodeName(data, offset);
       offset = decoded.next;
@@ -264,7 +266,8 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
     final MdnsService? service = _service;
     if (service != null) {
       // Goodbye packet: same records, TTL 0.
-      _send(_buildResponse(questions: const <({String name, int type})>[], goodbye: true));
+      _send(_buildResponse(
+          questions: const <({String name, int type})>[], goodbye: true));
     }
     _service = null;
     _socket?.close();
@@ -279,7 +282,8 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
         DnsWire.parseQuestions(datagram.data);
     if (questions.isEmpty) return;
 
-    final List<({String name, int type})> matching = questions.where(_matches).toList();
+    final List<({String name, int type})> matching =
+        questions.where(_matches).toList();
     if (matching.isEmpty) return;
 
     final List<int> response = _buildResponse(questions: matching);
@@ -310,7 +314,8 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
     bool goodbye = false,
   }) {
     final MdnsService? service = _service;
-    final _DnsWriter writer = _DnsWriter()..header(questionCount: questions.length);
+    final _DnsWriter writer = _DnsWriter()
+      ..header(questionCount: questions.length);
 
     // Echo the questions so that caches match them.
     for (final ({String name, int type}) question in questions) {
@@ -348,7 +353,8 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
       service.port & 0xFF,
       ...DnsWire.encodeName(host),
     ];
-    writer.answer(name: instance, type: DnsType.srv, ttl: effectiveTtl, rdata: srv);
+    writer.answer(
+        name: instance, type: DnsType.srv, ttl: effectiveTtl, rdata: srv);
 
     // TXT: key=value pairs.
     final List<int> txt = <int>[];
@@ -358,7 +364,8 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
       txt.addAll(entry);
     });
     if (txt.isEmpty) txt.add(0);
-    writer.answer(name: instance, type: DnsType.txt, ttl: effectiveTtl, rdata: txt);
+    writer.answer(
+        name: instance, type: DnsType.txt, ttl: effectiveTtl, rdata: txt);
 
     // A: host -> IPv4 addresses.
     for (final String address in _resolved) {

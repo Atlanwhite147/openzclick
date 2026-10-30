@@ -222,8 +222,7 @@ class DeviceDefinition {
     }
     for (final service in serviceUuids) {
       if (!_uuidPattern.hasMatch(service)) {
-        throw DeviceDefinitionException(
-            'invalid service UUID "$service"');
+        throw DeviceDefinitionException('invalid service UUID "$service"');
       }
     }
     if (characteristics.isEmpty) {

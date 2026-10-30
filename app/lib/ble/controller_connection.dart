@@ -78,7 +78,9 @@ class ControllerConnection {
     _scanSubscription = FlutterBluePlus.onScanResults.listen(
       (List<ScanResult> results) {
         for (final ScanResult result in results) {
-          if (_found.every((ScanResult r) => r.device.remoteId != result.device.remoteId)) {
+          if (_found.every(
+            (ScanResult r) => r.device.remoteId != result.device.remoteId,
+          )) {
             _found.add(result);
           }
         }
@@ -188,8 +190,9 @@ class ControllerConnection {
       }
       if (startsWithRideOn) {
         _handshakeSeen = true;
-        final List<int>? deviceKey =
-            ControllerHandshake.parseDevicePublicKey(frame);
+        final List<int>? deviceKey = ControllerHandshake.parseDevicePublicKey(
+          frame,
+        );
         if (deviceKey != null && _keyPair != null) {
           _crypto = ControllerCrypto.derive(
             devicePublicKeyBytes: deviceKey,

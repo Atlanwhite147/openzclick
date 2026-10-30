@@ -2,14 +2,15 @@ import 'package:openzclick_core/src/shifting/gear_profile.dart';
 import 'package:openzclick_core/src/shifting/gear_ratio.dart';
 import 'package:test/test.dart';
 
-List<GearRatio> _ratios(int count) =>
-    List<GearRatio>.generate(count, (int index) => GearRatio(1.0 + index * 0.05));
+List<GearRatio> _ratios(int count) => List<GearRatio>.generate(
+    count, (int index) => GearRatio(1.0 + index * 0.05));
 
 void main() {
   group('GearProfile', () {
     test('built-in profiles match the contract', () {
       final List<GearProfile> profiles = GearProfile.builtin;
-      expect(profiles.map((GearProfile p) => p.id), <String>['road-12', 'hill-24', 'flat-8']);
+      expect(profiles.map((GearProfile p) => p.id),
+          <String>['road-12', 'hill-24', 'flat-8']);
       expect(GearProfile.road12.gearCount, 12);
       expect(GearProfile.hillClimb24.gearCount, 24);
       expect(GearProfile.flat8.gearCount, 8);
@@ -48,7 +49,8 @@ void main() {
     test('virtual chainring declared on the built-in profiles', () {
       for (final GearProfile profile in GearProfile.builtin) {
         expect(profile.hasBigChainring, isTrue, reason: profile.id);
-        expect(profile.bigChainringFactor!.ratio, greaterThan(1.0), reason: profile.id);
+        expect(profile.bigChainringFactor!.ratio, greaterThan(1.0),
+            reason: profile.id);
       }
     });
 
@@ -58,7 +60,8 @@ void main() {
         label: 'Test',
         gears: _ratios(3),
       );
-      expect(() => profile.gears.add(const GearRatio(9)), throwsUnsupportedError);
+      expect(
+          () => profile.gears.add(const GearRatio(9)), throwsUnsupportedError);
       expect(profile.gearCount, 3);
     });
 
@@ -71,15 +74,18 @@ void main() {
 
     test('rejects an empty or too long gear list', () {
       expect(
-        () => GearProfile(id: 'vide', label: 'Vide', gears: const <GearRatio>[]),
+        () =>
+            GearProfile(id: 'vide', label: 'Vide', gears: const <GearRatio>[]),
         throwsArgumentError,
       );
       expect(
-        () => GearProfile(id: 'trop', label: 'Trop', gears: _ratios(maxGearCount + 1)),
+        () => GearProfile(
+            id: 'trop', label: 'Trop', gears: _ratios(maxGearCount + 1)),
         throwsArgumentError,
       );
       expect(
-        GearProfile(id: 'limite', label: 'Limite', gears: _ratios(maxGearCount)).gearCount,
+        GearProfile(id: 'limite', label: 'Limite', gears: _ratios(maxGearCount))
+            .gearCount,
         maxGearCount,
       );
     });
@@ -89,7 +95,10 @@ void main() {
         () => GearProfile(
           id: 'infini',
           label: 'Infini',
-          gears: <GearRatio>[const GearRatio(1.0), const GearRatio(double.infinity)],
+          gears: <GearRatio>[
+            const GearRatio(1.0),
+            const GearRatio(double.infinity)
+          ],
         ),
         throwsArgumentError,
       );

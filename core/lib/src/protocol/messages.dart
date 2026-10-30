@@ -95,8 +95,7 @@ class ButtonStateMessage {
   static const int maxFrameLength = 20;
 
   /// Maximum number of buttons per frame (one byte pair per button).
-  static const int maxButtons =
-      (maxFrameLength - obcHeaderLength) ~/ 2;
+  static const int maxButtons = (maxFrameLength - obcHeaderLength) ~/ 2;
 
   /// Button table, normalized identifier to value.
   final Map<int, int> buttons;
@@ -193,7 +192,8 @@ class DeviceStatusMessage {
 
   /// Decodes a complete `0x02` frame.
   static DeviceStatusMessage decode(List<int> bytes) {
-    final List<int> body = _checkedBody(bytes, ObcMessageType.deviceStatus.code);
+    final List<int> body =
+        _checkedBody(bytes, ObcMessageType.deviceStatus.code);
     if (body.length != 2) {
       throw FormatException(
         '0x02 body of ${body.length} byte(s), 2 expected',

@@ -40,7 +40,6 @@ class ControllerCrypto {
   /// P-256, the curve used by the controller.
   static final ECCurve_prime256v1 _curve = ECCurve_prime256v1();
 
-
   /// Generates a fresh key pair and returns it with its 64-byte public key.
   ///
   /// The private scalar is drawn from a cryptographically secure source and
@@ -76,7 +75,10 @@ class ControllerCrypto {
 
   static List<int> _bigIntToBytes(BigInt value, int length) {
     final Uint8List out = Uint8List(length);
-    final List<int> bytes = value.toRadixString(16).padLeft(length * 2, '0').codeUnits
+    final List<int> bytes = value
+        .toRadixString(16)
+        .padLeft(length * 2, '0')
+        .codeUnits
         .map((int c) => int.parse(String.fromCharCode(c), radix: 16))
         .toList();
     out.setRange(0, length, bytes);
@@ -124,8 +126,8 @@ class ControllerCrypto {
     final BigInt shared = agreement.calculateAgreement(devicePublicKey);
     final List<int> sharedBytes = _bigIntToBytes(shared, 32);
 
-    final List<int> effectiveSalt = salt ??
-        <int>[...devicePublicKeyBytes, ...localKeyPair.publicKeyBytes];
+    final List<int> effectiveSalt =
+        salt ?? <int>[...devicePublicKeyBytes, ...localKeyPair.publicKeyBytes];
 
     final HKDFKeyDerivator derivator = HKDFKeyDerivator(SHA256Digest())
       ..init(HkdfParameters(
@@ -134,7 +136,8 @@ class ControllerCrypto {
         Uint8List.fromList(effectiveSalt),
         Uint8List(0),
       ));
-    final Uint8List derived = derivator.process(Uint8List.fromList(sharedBytes));
+    final Uint8List derived =
+        derivator.process(Uint8List.fromList(sharedBytes));
 
     return ControllerCrypto._(
       derived.sublist(0, 32),
@@ -164,7 +167,8 @@ class ControllerCrypto {
           ),
         );
       final Uint8List out = Uint8List(cipher.getOutputSize(payload.length));
-      int len = cipher.processBytes(Uint8List.fromList(payload), 0, payload.length, out, 0);
+      int len = cipher.processBytes(
+          Uint8List.fromList(payload), 0, payload.length, out, 0);
       len += cipher.doFinal(out, len);
       return out.sublist(0, len);
     } catch (_) {
@@ -194,7 +198,8 @@ class ControllerCrypto {
         ),
       );
     final Uint8List out = Uint8List(cipher.getOutputSize(message.length));
-    int len = cipher.processBytes(Uint8List.fromList(message), 0, message.length, out, 0);
+    int len = cipher.processBytes(
+        Uint8List.fromList(message), 0, message.length, out, 0);
     len += cipher.doFinal(out, len);
     return <int>[...counterBytes, ...out.sublist(0, len)];
   }

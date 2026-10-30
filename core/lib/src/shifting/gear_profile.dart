@@ -58,12 +58,14 @@ class GearProfile {
     }
     for (final gear in this.gears) {
       if (!gear.ratio.isFinite || gear.ratio <= 0) {
-        throw ArgumentError.value(gear.ratio, 'gears', 'Every ratio must be finite and strictly positive');
+        throw ArgumentError.value(gear.ratio, 'gears',
+            'Every ratio must be finite and strictly positive');
       }
     }
     final factor = bigChainringFactor;
     if (factor != null && (!factor.ratio.isFinite || factor.ratio <= 0)) {
-      throw ArgumentError.value(factor.ratio, 'bigChainringFactor', 'Chainring factor must be finite and positive');
+      throw ArgumentError.value(factor.ratio, 'bigChainringFactor',
+          'Chainring factor must be finite and positive');
     }
   }
 
@@ -80,7 +82,8 @@ class GearProfile {
   GearRatio get highest => gears.last;
 
   /// Built-in profiles, in display order.
-  static List<GearProfile> get builtin => List<GearProfile>.unmodifiable(_builtin);
+  static List<GearProfile> get builtin =>
+      List<GearProfile>.unmodifiable(_builtin);
 
   /// Looks up a built-in profile by identifier; `null` if unknown.
   static GearProfile? byId(String id) {
@@ -134,7 +137,8 @@ List<GearRatio> _progression(double lowest, double highest, int count) {
   final double logStep = (math.log(highest) - math.log(lowest)) / (count - 1);
   return List<GearRatio>.generate(
     count,
-    (index) => GearRatio(_round(math.exp(math.log(lowest) + logStep * index), 3)),
+    (index) =>
+        GearRatio(_round(math.exp(math.log(lowest) + logStep * index), 3)),
     growable: false,
   );
 }

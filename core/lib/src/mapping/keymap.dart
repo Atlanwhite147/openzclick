@@ -45,7 +45,8 @@ class ButtonBinding {
   int get hashCode => Object.hash(buttonId, action, analogAction);
 
   @override
-  String toString() => 'ButtonBinding(0x${buttonId.toRadixString(16)}, ${action.name})';
+  String toString() =>
+      'ButtonBinding(0x${buttonId.toRadixString(16)}, ${action.name})';
 }
 
 /// Button -> action mapping for a target app identified by [appId].
@@ -62,18 +63,21 @@ class Keymap {
   Keymap({required this.appId, required Map<int, Action> bindings})
       : bindings = Map<int, Action>.unmodifiable(bindings) {
     if (appId.trim().isEmpty) {
-      throw ArgumentError.value(appId, 'appId', 'App identifier must not be empty');
+      throw ArgumentError.value(
+          appId, 'appId', 'App identifier must not be empty');
     }
   }
 
   /// Empty table: every button falls back to [Action.none].
-  factory Keymap.empty(String appId) => Keymap(appId: appId, bindings: const <int, Action>{});
+  factory Keymap.empty(String appId) =>
+      Keymap(appId: appId, bindings: const <int, Action>{});
 
   /// Full default table, with targeted overrides.
   ///
   /// [overrides] replaces the default mappings button by button; an entry bound
   /// to [Action.none] disables the button.
-  factory Keymap.defaults(String appId, {Map<int, Action> overrides = const <int, Action>{}}) {
+  factory Keymap.defaults(String appId,
+      {Map<int, Action> overrides = const <int, Action>{}}) {
     return Keymap(
       appId: appId,
       bindings: <int, Action>{..._defaultBindings, ...overrides},
@@ -103,7 +107,8 @@ class Keymap {
 
   /// Pairings as a list, sorted by button identifier.
   List<ButtonBinding> get bindingList => <ButtonBinding>[
-        for (final int id in buttonIds) ButtonBinding(buttonId: id, action: bindings[id]!),
+        for (final int id in buttonIds)
+          ButtonBinding(buttonId: id, action: bindings[id]!),
       ];
 
   /// Copy with added or replaced mappings.

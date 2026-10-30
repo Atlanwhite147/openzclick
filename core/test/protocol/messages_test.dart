@@ -56,9 +56,12 @@ void main() {
         ButtonIds.steeringAngle: 255,
       });
       expect(message.encode(), <int>[
-        0x01, 0x04,
-        ButtonIds.brake, 200,
-        ButtonIds.steeringAngle, 255,
+        0x01,
+        0x04,
+        ButtonIds.brake,
+        200,
+        ButtonIds.steeringAngle,
+        255,
       ]);
     });
 
@@ -116,7 +119,10 @@ void main() {
 
     test('the decoded table is immutable', () {
       final ButtonStateMessage decoded = ButtonStateMessage.decode(<int>[
-        0x01, 0x02, ButtonIds.confirm, 1,
+        0x01,
+        0x02,
+        ButtonIds.confirm,
+        1,
       ]);
       expect(
         () => decoded.buttons[ButtonIds.shiftUp] = 1,
@@ -137,7 +143,8 @@ void main() {
 
     test('an inconsistent declared length is rejected', () {
       expect(
-        () => ButtonStateMessage.decode(<int>[0x01, 0x04, ButtonIds.shiftUp, 1]),
+        () =>
+            ButtonStateMessage.decode(<int>[0x01, 0x04, ButtonIds.shiftUp, 1]),
         throwsA(isA<FormatException>()),
       );
     });
@@ -389,7 +396,12 @@ void main() {
 
     test('the decoded button list is immutable', () {
       final AppInfoMessage decoded = AppInfoMessage.decode(<int>[
-        0x04, 0x04, 0x01, 0x61, 0x00, 0x00,
+        0x04,
+        0x04,
+        0x01,
+        0x61,
+        0x00,
+        0x00,
       ]);
       expect(decoded.appId, 'a');
       expect(decoded.supportedButtons, isEmpty);
@@ -442,7 +454,13 @@ void main() {
     test('an inconsistent version length is rejected', () {
       expect(
         () => AppInfoMessage.decode(<int>[
-          0x04, 0x05, 0x01, 0x61, 0x09, 0x31, 0x00,
+          0x04,
+          0x05,
+          0x01,
+          0x61,
+          0x09,
+          0x31,
+          0x00,
         ]),
         throwsA(isA<FormatException>()),
       );
@@ -451,7 +469,14 @@ void main() {
     test('a button count larger than the body is rejected', () {
       expect(
         () => AppInfoMessage.decode(<int>[
-          0x04, 0x06, 0x01, 0x61, 0x01, 0x62, 0x03, 0x10,
+          0x04,
+          0x06,
+          0x01,
+          0x61,
+          0x01,
+          0x62,
+          0x03,
+          0x10,
         ]),
         throwsA(isA<FormatException>()),
       );
@@ -460,7 +485,14 @@ void main() {
     test('leftover bytes are rejected', () {
       expect(
         () => AppInfoMessage.decode(<int>[
-          0x04, 0x06, 0x01, 0x61, 0x01, 0x62, 0x00, 0x99,
+          0x04,
+          0x06,
+          0x01,
+          0x61,
+          0x01,
+          0x62,
+          0x00,
+          0x99,
         ]),
         throwsA(isA<FormatException>()),
       );
@@ -469,7 +501,13 @@ void main() {
     test('a non-UTF-8 identifier is rejected', () {
       expect(
         () => AppInfoMessage.decode(<int>[
-          0x04, 0x05, 0x02, 0xFF, 0xFE, 0x00, 0x00,
+          0x04,
+          0x05,
+          0x02,
+          0xFF,
+          0xFE,
+          0x00,
+          0x00,
         ]),
         throwsA(isA<FormatException>()),
       );

@@ -26,7 +26,9 @@ void main() {
       expect(a, isNot(equals(c)));
     });
 
-    test('scaledBy applies a multiplicative factor without altering the original', () {
+    test(
+        'scaledBy applies a multiplicative factor without altering the original',
+        () {
       const base = GearRatio(1.0);
       final boosted = base.scaledBy(1.35);
       expect(boosted.ratio, closeTo(1.35, 1e-12));

@@ -41,15 +41,19 @@ void main() {
   });
 
   test('reports an injector failure without throwing', () async {
-    final InjectionPublisher failing =
-        InjectionPublisher(injector: UnsupportedInjector());
+    final InjectionPublisher failing = InjectionPublisher(
+      injector: UnsupportedInjector(),
+    );
     await failing.start();
     await failing.publish(Action.shiftUp);
     expect(failing.error, contains('tap injection'));
   });
 
   test('a platform without injector is not supported', () {
-    expect(InjectionPublisher(injector: UnsupportedInjector()).supported, isFalse);
+    expect(
+      InjectionPublisher(injector: UnsupportedInjector()).supported,
+      isFalse,
+    );
     expect(InjectionPublisher(injector: MemoryKeyInjector()).supported, isTrue);
   });
 }

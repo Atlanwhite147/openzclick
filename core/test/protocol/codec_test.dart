@@ -94,7 +94,8 @@ void main() {
       final AppInfo info = result.message as AppInfo;
       expect(info.appId, 'target-a');
       expect(info.appVersion, '1.0');
-      expect(info.supportedButtons, <int>[ButtonIds.shiftUp, ButtonIds.confirm]);
+      expect(
+          info.supportedButtons, <int>[ButtonIds.shiftUp, ButtonIds.confirm]);
       expect(info.type, ObcMessageType.appInfo);
     });
 
@@ -127,7 +128,11 @@ void main() {
 
     test('a 0x01 frame longer than 20 bytes is dropped', () {
       // 22-byte body: the frame would be 24 bytes, beyond the maximum.
-      final List<int> oversized = <int>[0x01, 0x16, ...List<int>.filled(22, 0x99)];
+      final List<int> oversized = <int>[
+        0x01,
+        0x16,
+        ...List<int>.filled(22, 0x99)
+      ];
       expect(oversized, hasLength(24));
       expect(ObcCodec.tryDecode(oversized), isNull);
       expect(ObcCodec.discardCount(oversized), 24);
@@ -136,7 +141,10 @@ void main() {
     test('the stream resumes after a malformed 0x01 frame', () {
       final List<int> frame = statusFrame();
       final List<int> buffer = <int>[
-        0x01, 0x16, ...List<int>.filled(22, 0x99), ...frame,
+        0x01,
+        0x16,
+        ...List<int>.filled(22, 0x99),
+        ...frame,
       ];
       final result = ObcCodec.tryDecode(buffer);
       expect(result, isNotNull);
@@ -147,7 +155,12 @@ void main() {
     test('a 0x01 frame with an odd body length is dropped', () {
       final List<int> frame = hapticFrame();
       final List<int> buffer = <int>[
-        0x01, 0x03, 0x99, 0x99, 0x99, ...frame,
+        0x01,
+        0x03,
+        0x99,
+        0x99,
+        0x99,
+        ...frame,
       ];
       final result = ObcCodec.tryDecode(buffer);
       expect(result, isNotNull);
@@ -160,7 +173,15 @@ void main() {
       // Body: identifier length 2, "ab", empty version, 3 buttons announced
       // but only one present.
       final List<int> buffer = <int>[
-        0x04, 0x06, 0x02, 0x61, 0x62, 0x00, 0x03, 0x05, ...frame,
+        0x04,
+        0x06,
+        0x02,
+        0x61,
+        0x62,
+        0x00,
+        0x03,
+        0x05,
+        ...frame,
       ];
       final result = ObcCodec.tryDecode(buffer);
       expect(result, isNotNull);
@@ -214,7 +235,8 @@ void main() {
       expect(firstResult.consumed, first.length);
       final List<int> rest = buffer.sublist(firstResult.consumed);
       expect(ObcCodec.tryDecode(rest), isNull);
-      expect(ObcCodec.discardCount(rest), 0, reason: 'the 0x02 frame is on its way');
+      expect(ObcCodec.discardCount(rest), 0,
+          reason: 'the 0x02 frame is on its way');
     });
 
     test('a stream of four different types drains completely', () {

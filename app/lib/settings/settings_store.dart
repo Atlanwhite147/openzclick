@@ -86,7 +86,8 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
-    for (final MapEntry<Action, List<double>> entry in snapshot.positions.entries) {
+    for (final MapEntry<Action, List<double>> entry
+        in snapshot.positions.entries) {
       await prefs.setString(
         '$_positionPrefix${entry.key.name}',
         '${entry.value[0]},${entry.value[1]}',

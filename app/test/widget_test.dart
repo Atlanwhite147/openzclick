@@ -5,7 +5,9 @@ import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 void main() {
-  testWidgets('trainer screen shows the default gear', (WidgetTester tester) async {
+  testWidgets('trainer screen shows the default gear', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const OpenZclickApp());
     await tester.pumpAndSettle();
 
@@ -13,7 +15,9 @@ void main() {
     expect(find.textContaining('/ 12'), findsWidgets);
   });
 
-  testWidgets('shift up changes the displayed gear', (WidgetTester tester) async {
+  testWidgets('shift up changes the displayed gear', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const OpenZclickApp());
     await tester.pumpAndSettle();
 

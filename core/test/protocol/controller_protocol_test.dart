@@ -4,7 +4,8 @@ import 'package:test/test.dart';
 void main() {
   group('ControllerHandshake', () {
     test('plain request is the RideOn marker', () {
-      expect(ControllerHandshake.plainRequest(), <int>[82, 105, 100, 101, 79, 110]);
+      expect(ControllerHandshake.plainRequest(),
+          <int>[82, 105, 100, 101, 79, 110]);
     });
 
     test('encrypted request appends the 64-byte public key', () {
@@ -34,7 +35,17 @@ void main() {
     });
 
     test('rejects a response with a wrong prefix', () {
-      final List<int> frame = <int>[0, 0, 0, 0, 0, 0, 1, 3, ...List<int>.filled(64, 7)];
+      final List<int> frame = <int>[
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        3,
+        ...List<int>.filled(64, 7)
+      ];
       expect(ControllerHandshake.parseDevicePublicKey(frame), isNull);
     });
 
@@ -42,7 +53,9 @@ void main() {
       final List<int> frame = <int>[
         ...ControllerHandshake.rideOn,
         ...ControllerHandshake.responseStart,
-        1, 2, 3,
+        1,
+        2,
+        3,
       ];
       expect(ControllerHandshake.parseDevicePublicKey(frame), isNull);
     });
@@ -88,7 +101,8 @@ void main() {
     });
 
     test('an empty body means nothing pressed', () {
-      expect(ControllerCodec.parseClickNotification(<int>[]), ClickButtons.released);
+      expect(ControllerCodec.parseClickNotification(<int>[]),
+          ClickButtons.released);
     });
   });
 
@@ -111,11 +125,15 @@ void main() {
 
     test('reports empty and disconnect notices', () {
       expect(
-        (ControllerCodec.decode(<int>[ControllerMessageType.empty])! as ControlMessage).type,
+        (ControllerCodec.decode(<int>[ControllerMessageType.empty])!
+                as ControlMessage)
+            .type,
         21,
       );
       expect(
-        (ControllerCodec.decode(<int>[ControllerMessageType.disconnect])! as ControlMessage).type,
+        (ControllerCodec.decode(<int>[ControllerMessageType.disconnect])!
+                as ControlMessage)
+            .type,
         0xFE,
       );
     });
@@ -129,7 +147,8 @@ void main() {
     });
 
     test('returns null on a truncated battery frame', () {
-      expect(ControllerCodec.decode(<int>[ControllerMessageType.battery]), isNull);
+      expect(
+          ControllerCodec.decode(<int>[ControllerMessageType.battery]), isNull);
     });
   });
 }

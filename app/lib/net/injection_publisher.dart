@@ -18,7 +18,6 @@ class UnsupportedInjector implements KeyInjector {
   }
 }
 
-
 /// Sends actions to the target application by tapping its own controls.
 ///
 /// Used when the application does not speak the network protocol: the bridge
@@ -43,15 +42,14 @@ class InjectionPublisher {
   /// Default positions, roughly the lower right corner of a riding screen.
   static const Map<Action, List<double>> defaultPositions =
       <Action, List<double>>{
-    Action.shiftUp: <double>[0.90, 0.62],
-    Action.shiftDown: <double>[0.90, 0.78],
-    Action.steerLeft: <double>[0.62, 0.34],
-    Action.steerRight: <double>[0.72, 0.34],
-  };
+        Action.shiftUp: <double>[0.90, 0.62],
+        Action.shiftDown: <double>[0.90, 0.78],
+        Action.steerLeft: <double>[0.62, 0.34],
+        Action.steerRight: <double>[0.72, 0.34],
+      };
 
   /// Relative position of every action, mutable from the settings screen.
-  final Map<Action, List<double>> positions =
-      <Action, List<double>>{
+  final Map<Action, List<double>> positions = <Action, List<double>>{
     for (final MapEntry<Action, List<double>> entry in defaultPositions.entries)
       entry.key: List<double>.of(entry.value),
   };

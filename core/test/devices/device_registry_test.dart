@@ -44,8 +44,8 @@ void main() {
             ?.id,
         'two-button-controller',
       );
-      expect(DeviceRegistry.matchingService('FFF0')?.id,
-          'two-button-controller');
+      expect(
+          DeviceRegistry.matchingService('FFF0')?.id, 'two-button-controller');
       expect(
         DeviceRegistry.matchingService(
           '{0000FFE0-0000-1000-8000-00805F9B34FB}',
@@ -111,7 +111,8 @@ void main() {
 
         final builtin = DeviceRegistry.byId(definition.id);
         expect(builtin, isNotNull,
-            reason: '${file.path} describes a device missing from the registry');
+            reason:
+                '${file.path} describes a device missing from the registry');
         expect(
           definition,
           equals(builtin),

@@ -9,6 +9,8 @@ jobs:
         with: { sdk: stable }
       - run: dart pub get
         working-directory: core
+      - run: dart format --output=none --set-exit-if-changed lib test
+        working-directory: core
       - run: dart analyze
         working-directory: core
       - run: dart test
@@ -21,6 +23,8 @@ jobs:
         with: { sdk: stable }
       - run: dart pub get
         working-directory: transports
+      - run: dart format --output=none --set-exit-if-changed lib test tool
+        working-directory: transports
       - run: dart analyze
         working-directory: transports
       - run: dart test
@@ -32,6 +36,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: flutter pub get
+        working-directory: app
+      - run: dart format --output=none --set-exit-if-changed lib test
         working-directory: app
       - run: flutter analyze
         working-directory: app
