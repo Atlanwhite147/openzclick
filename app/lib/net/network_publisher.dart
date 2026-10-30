@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:openzclick_core/openzclick_core.dart';
 import 'package:openzclick_transports/openzclick_transports.dart';
 
+import 'android_multicast.dart';
+
 /// Publishes the bridge on the local network with the OpenBikeControl protocol.
 ///
 /// One transport at a time: starting replaces the previous announcement, and
@@ -46,6 +48,7 @@ class NetworkPublisher {
   Future<void> start() async {
     error = null;
     try {
+      await AndroidMulticast.acquire();
       await _transport.start();
       running = true;
       port = _transport.listeningPort;
@@ -60,6 +63,7 @@ class NetworkPublisher {
   /// Stops the server and withdraws the announcement.
   Future<void> stop() async {
     await _transport.stop();
+    await AndroidMulticast.release();
     running = false;
     port = null;
     peers = 0;

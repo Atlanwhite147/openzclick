@@ -178,7 +178,7 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
   DartMdnsAdvertiser({
     this.hostName,
     this.addresses,
-    this.announceInterval = const Duration(seconds: 60),
+    this.announceInterval = const Duration(seconds: 20),
     this.ttl = 120,
   });
 
@@ -242,10 +242,14 @@ class DartMdnsAdvertiser implements MdnsAdvertiser {
     socket.broadcastEnabled = true;
     socket.listen(_onPacket);
 
-    // Announce twice, as recommended for UDP loss.
-    _send(_buildResponse(questions: const <({String name, int type})>[]));
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    _send(_buildResponse(questions: const <({String name, int type})>[]));
+    // Burst of three announcements: UDP loses packets, and Android filters
+    // multicast queries unless the application holds a multicast lock.
+    for (int i = 0; i < 3; i++) {
+      _send(_buildResponse(questions: const <({String name, int type})>[]));
+      if (i < 2) {
+        await Future<void>.delayed(Duration(milliseconds: 250 * (i + 1)));
+      }
+    }
 
     _timer?.cancel();
     _timer = Timer.periodic(announceInterval, (_) {
