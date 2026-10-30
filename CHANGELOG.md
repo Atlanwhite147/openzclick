@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-10-30
+
+### Added
+- Settings survive a restart: gear profile, current gear, tap positions and whether the publishers were running.
+- Gear profile selector in the trainer screen, swapping the transmission without losing the position in the block.
+- Entitlement template and procedure for multicast on iOS (`docs/ios-multicast.md`).
+
+### Changed
+- The trainer screen is more compact, so every control fits on a phone screen.
+
 ## [Unreleased]
 
 ### Added

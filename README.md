@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-300%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-306%20passing-brightgreen)](#status)
 
 </div>
 
@@ -38,6 +38,7 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 | **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
 | **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls if needed |
 | **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
+| **Settings that survive a restart** | gear profile, current gear, tap positions and publishers resume where you left them |
 | **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
 
 ## Download
@@ -121,7 +122,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, gear engine, mapping, gestures | 217 |
 | `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
-| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 12 |
+| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 18 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
@@ -130,6 +131,7 @@ Verified on Android 13: installation, first frame, gear changes, direction choic
 - [x] binary protocol, encrypted sessions, gear engine
 - [x] two-button gestures, direction choices
 - [x] network publication in the shared core
+- [x] persisted settings and gear profile selection
 - [x] continuous Android and iOS builds
 - [x] local injection transport, with an Android accessibility service driver
 - [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
