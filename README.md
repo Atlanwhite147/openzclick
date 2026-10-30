@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-306%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-309%20passing-brightgreen)](#status)
 
 </div>
 
@@ -90,6 +90,19 @@ Three rules keep the code portable:
 2. **One output, one transport.** Implementations are wired at runtime, never selected by platform conditionals.
 3. **No brand logic in the core.** Devices are described by declarative definition files.
 
+## On iPhone today
+
+iOS differs from the other platforms in two ways, and only one is a matter of code.
+
+| Capability | On iOS |
+|---|---|
+| Pairing the controller, gears, gestures, diagnostics | works |
+| Tap injection into another application | impossible: iOS exposes no equivalent of the Android accessibility service |
+| mDNS announcement | blocked until Apple grants the multicast entitlement (`docs/ios-multicast.md`) |
+| TCP server on the local network | works, after the local network permission prompt |
+
+So the bridge follows the two rules without pretending: it always listens, and when it cannot announce itself it displays the address to type into the application (`192.168.1.24:47123`). Applications that only discover services need the entitlement, or a bridge running on the machine where they run.
+
 ## When the application only accepts taps
 
 Some applications expose no protocol and no keyboard shortcut: the only way to change gear is to press their on-screen button. The bridge then turns an action into a tap at a position you configure once, expressed in percentages so it survives a change of screen.
@@ -122,7 +135,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, gear engine, mapping, gestures | 217 |
 | `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
-| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 18 |
+| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 21 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 

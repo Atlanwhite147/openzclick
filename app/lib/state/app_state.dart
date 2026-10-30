@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart' hide Action;
 import 'package:openzclick_core/openzclick_core.dart';
@@ -26,7 +27,12 @@ class AppState extends ChangeNotifier {
   final ControllerConnection controller = ControllerConnection();
 
   /// Network publication towards a training application.
-  final NetworkPublisher publisher = NetworkPublisher();
+  ///
+  /// iOS cannot announce a service without Apple's multicast entitlement, so
+  /// the publisher only listens there and the address is shown to the user.
+  final NetworkPublisher publisher = NetworkPublisher(
+    advertise: !Platform.isIOS,
+  );
 
   /// Local injection towards an application that only accepts taps.
   final InjectionPublisher injection = InjectionPublisher(

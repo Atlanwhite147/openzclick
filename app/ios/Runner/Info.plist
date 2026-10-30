@@ -4,6 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>openzclick announces the bridge on the local network so that a training application running on another device can find it.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_openbikecontrol._tcp</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

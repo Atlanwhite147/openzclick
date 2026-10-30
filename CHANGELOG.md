@@ -15,6 +15,14 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Stable listening port (47123) and the local address shown in the application, so a client can be configured by hand.
+- iOS: local network permission description and declared Bonjour service.
+- iOS: the publisher listens without announcing, since multicast needs Apple's entitlement.
+
+### Changed
+- The network publisher takes an `advertise` flag instead of always binding the mDNS socket.
+
+### Added
 - Tap injection towards applications that only accept touches, driven by an Android accessibility service, with configurable relative positions for shift up, shift down, left and right.
 - Readiness check before enabling injection, so a disabled service is reported instead of silently doing nothing.
 - Encrypted controller sessions: ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, plain fallback.

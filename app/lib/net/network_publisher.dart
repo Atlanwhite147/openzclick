@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:openzclick_core/openzclick_core.dart';
 import 'package:openzclick_transports/openzclick_transports.dart';
@@ -12,17 +13,35 @@ import 'android_multicast.dart';
 /// `dart:io`.
 class NetworkPublisher {
   /// Creates a publisher for [instanceName].
-  NetworkPublisher({this.instanceName = 'openzclick'}) {
+  NetworkPublisher({
+    this.instanceName = 'openzclick',
+    this.advertise = true,
+    this.port = defaultPort,
+  }) {
     _transport = MdnsTcpTransport(
       instanceName: instanceName,
-      advertiser: DartMdnsAdvertiser(),
+      port: port,
+      advertiser: advertise ? DartMdnsAdvertiser() : NoopMdnsAdvertiser(),
       keymap: Keymap.defaults('openzclick'),
     );
     _subscription = _transport.events.listen(_onEvent);
   }
 
+  /// Preferred port: stable, so that an application can remember it.
+  static const int defaultPort = 47123;
+
   /// Name announced on the network.
   final String instanceName;
+
+  /// Whether the service is announced with mDNS.
+  ///
+  /// iOS refuses multicast without an entitlement granted by Apple: the server
+  /// still listens, and the address is displayed so that a client can be
+  /// configured by hand.
+  final bool advertise;
+
+  /// Requested TCP port, 0 for an ephemeral one.
+  final int port;
 
   late final MdnsTcpTransport _transport;
   StreamSubscription<TransportEvent>? _subscription;
@@ -31,7 +50,10 @@ class NetworkPublisher {
   bool running = false;
 
   /// TCP port to connect to, null when stopped.
-  int? port;
+  int? listeningPort;
+
+  /// Local address to type into an application that cannot discover the service.
+  String? address;
 
   /// Number of connected applications.
   int peers = 0;
@@ -51,10 +73,12 @@ class NetworkPublisher {
       await AndroidMulticast.acquire();
       await _transport.start();
       running = true;
-      port = _transport.listeningPort;
+      listeningPort = _transport.listeningPort;
+      address = await _localAddress();
     } catch (e) {
       running = false;
-      port = null;
+      listeningPort = null;
+      address = null;
       error = e.toString();
     }
     _notify();
@@ -65,7 +89,8 @@ class NetworkPublisher {
     await _transport.stop();
     await AndroidMulticast.release();
     running = false;
-    port = null;
+    listeningPort = null;
+    address = null;
     peers = 0;
     _notify();
   }
@@ -74,6 +99,35 @@ class NetworkPublisher {
   Future<void> publish(Action action) async {
     if (!running) return;
     await _transport.emit(action);
+  }
+
+  /// First non-loopback IPv4 address, preferred over container bridges.
+  static Future<String?> _localAddress() async {
+    try {
+      final List<NetworkInterface> interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+      );
+      const List<String> excluded = <String>[
+        'docker',
+        'br-',
+        'veth',
+        'virbr',
+        'lxc',
+        'waydroid',
+        'tun',
+        'tap',
+        'tailscale',
+      ];
+      for (final NetworkInterface interface in interfaces) {
+        if (excluded.any(interface.name.startsWith)) continue;
+        for (final InternetAddress candidate in interface.addresses) {
+          if (!candidate.isLoopback) return candidate.address;
+        }
+      }
+    } catch (_) {
+      // A host without interfaces still gets a listening socket.
+    }
+    return null;
   }
 
   void _onEvent(TransportEvent event) {
