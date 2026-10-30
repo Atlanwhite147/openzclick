@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
@@ -5,6 +7,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 import 'ble/controller_connection.dart';
 import 'net/android_injection.dart';
 import 'net/network_publisher.dart';
+import 'settings/settings_store.dart';
 import 'state/app_state.dart';
 
 void main() => runApp(const OpenZclickApp());
@@ -20,6 +23,12 @@ class OpenZclickApp extends StatefulWidget {
 
 class _OpenZclickAppState extends State<OpenZclickApp> {
   final AppState _state = AppState();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_state.restore(PrefsSettingsStore()));
+  }
 
   @override
   void dispose() {
@@ -146,6 +155,25 @@ class TrainerScreen extends StatelessWidget {
                 value: '${resistance.toStringAsFixed(0)} W',
                 hint: 'simulated power at this gear',
               ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                const Expanded(child: Text('Gear profile')),
+                DropdownButton<String>(
+                  value: engine.profile.id,
+                  onChanged: (String? id) {
+                    if (id != null) state.setProfile(id);
+                  },
+                  items: <DropdownMenuItem<String>>[
+                    for (final GearProfile profile in GearProfile.builtin)
+                      DropdownMenuItem<String>(
+                        value: profile.id,
+                        child: Text(profile.label),
+                      ),
+                  ],
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,

@@ -7,6 +7,7 @@ import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
 import '../net/injection_publisher.dart';
 import '../net/network_publisher.dart';
+import '../settings/settings_store.dart';
 
 /// Shared application state: one gear engine, one keymap, one controller link.
 ///
@@ -14,7 +15,9 @@ import '../net/network_publisher.dart';
 /// and call its methods.
 class AppState extends ChangeNotifier {
   /// Gear engine used by the trainer screen and the test bench.
-  final GearEngine engine;
+  ///
+  /// Replaced when the rider changes profile, hence not final.
+  GearEngine engine;
 
   /// Keymap used by the target screen to display button bindings.
   final Keymap keymap;
@@ -47,6 +50,11 @@ class AppState extends ChangeNotifier {
   /// Last button state received from the controller.
   ClickButtons? lastButtons;
 
+  /// Persistence port, null until [restore] is called.
+  SettingsStore? store;
+
+  Timer? _persistTimer;
+
   StreamSubscription<ClickButtons>? _buttonSubscription;
 
   /// Creates the state, optionally with a specific profile.
@@ -61,7 +69,10 @@ class AppState extends ChangeNotifier {
         keymap = Keymap.defaults('default') {
     controller.onChanged = notifyListeners;
     publisher.onChanged = notifyListeners;
-    injection.onChanged = notifyListeners;
+    injection.onChanged = () {
+      _persist();
+      notifyListeners();
+    };
     gestures = ButtonGestureDetector(
       onAction: _onAction,
       doubleTapWindow: doubleTapWindow ?? const Duration(milliseconds: 320),
@@ -112,6 +123,7 @@ class AppState extends ChangeNotifier {
     } else {
       await injection.start();
     }
+    _persist();
     notifyListeners();
   }
 
@@ -122,12 +134,14 @@ class AppState extends ChangeNotifier {
     } else {
       await publisher.start();
     }
+    _persist();
     notifyListeners();
   }
 
   /// Shifts up.
   void shiftUp() {
     engine.shiftUp();
+    _persist();
     unawaited(publisher.publish(Action.shiftUp));
     unawaited(injection.publish(Action.shiftUp));
     notifyListeners();
@@ -136,9 +150,70 @@ class AppState extends ChangeNotifier {
   /// Shifts down.
   void shiftDown() {
     engine.shiftDown();
+    _persist();
     unawaited(publisher.publish(Action.shiftDown));
     unawaited(injection.publish(Action.shiftDown));
     notifyListeners();
+  }
+
+  /// Switches to another built-in profile, keeping the position in the block.
+  void setProfile(String profileId) {
+    final GearProfile? profile = GearProfile.byId(profileId);
+    if (profile == null || profile.id == engine.profile.id) return;
+    final double ratio = engine.gearCount > 1
+        ? engine.gearIndex / (engine.gearCount - 1)
+        : 0;
+    engine = GearEngine(
+      profile: profile,
+      initialGear: (ratio * (profile.gearCount - 1)).round(),
+      mode: engine.mode,
+    );
+    _persist();
+    notifyListeners();
+  }
+
+  /// Switches between simulation and ergometer modes.
+  void toggleMode() {
+    engine.setMode(
+      engine.mode == RidingMode.sim ? RidingMode.erg : RidingMode.sim,
+    );
+    _persist();
+    notifyListeners();
+  }
+
+  /// Restores the stored settings, then optionally resumes publishing.
+  Future<void> restore(SettingsStore settings) async {
+    store = settings;
+    final SettingsSnapshot? snapshot = await settings.load();
+    if (snapshot == null) return;
+
+    final GearProfile profile =
+        GearProfile.byId(snapshot.profileId) ?? GearProfile.road12;
+    engine = GearEngine(profile: profile, initialGear: snapshot.gearIndex);
+    for (final MapEntry<Action, List<double>> entry in snapshot.positions.entries) {
+      injection.setPosition(entry.key, entry.value[0], entry.value[1]);
+    }
+    if (snapshot.publishOnStart) await publisher.start();
+    if (snapshot.injectOnStart) await injection.start();
+    notifyListeners();
+  }
+
+  /// Writes the current settings, coalescing bursts of changes.
+  void _persist() {
+    final SettingsStore? settings = store;
+    if (settings == null) return;
+    _persistTimer?.cancel();
+    _persistTimer = Timer(const Duration(milliseconds: 250), () {
+      settings.save(
+        SettingsSnapshot(
+          profileId: engine.profile.id,
+          gearIndex: engine.gearIndex,
+          positions: injection.positions,
+          publishOnStart: publisher.running,
+          injectOnStart: injection.running,
+        ),
+      );
+    });
   }
 
   /// Toggles the virtual chainring.
@@ -148,13 +223,6 @@ class AppState extends ChangeNotifier {
   }
 
   /// Switches between simulation and ERG.
-  void toggleMode() {
-    engine.setMode(
-      engine.mode == RidingMode.sim ? RidingMode.erg : RidingMode.sim,
-    );
-    notifyListeners();
-  }
-
   /// Moves the ERG target by [watts].
   void bumpErg(int watts) {
     engine.bumpErg(watts);

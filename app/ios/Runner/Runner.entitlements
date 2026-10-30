@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Not referenced by the Xcode project on purpose.
+
+  Apple only accepts the multicast entitlement on request, and a provisioning
+  profile that does not contain it makes signing fail. Keep this file unwired
+  until Apple grants the entitlement, then follow docs/ios-multicast.md.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.networking.multicast</key>
+	<true/>
+</dict>
+</plist>
