@@ -53,7 +53,7 @@ class InjectionService : AccessibilityService() {
             .addStroke(GestureDescription.StrokeDescription(path, 0, 40))
             .build()
         val accepted = dispatchGesture(gesture, null, null)
-        Log.i(TAG, "tap at \${x.toInt()},\${y.toInt()} accepted=\$accepted")
+        Log.i(TAG, "tap at ${x.toInt()},${y.toInt()} accepted=$accepted")
         onDone(accepted)
     }
 
@@ -84,14 +84,14 @@ class InjectionService : AccessibilityService() {
             when (call.method) {
                 "ready" -> result.success(isReady())
                 "tap" -> {
+                    val x = call.argument<Double>("x") ?: 0.0
+                    val y = call.argument<Double>("y") ?: 0.0
                     val service = instance
-                    Log.i(TAG, "tap request x=\${call.argument<Double>("x")} y=\${call.argument<Double>("y")} service=\${service != null}")
+                    Log.i(TAG, "tap request x=$x y=$y service=${service != null}")
                     if (service == null) {
                         result.error("disabled", "injection service is not enabled", null)
                         return
                     }
-                    val x = (call.argument<Double>("x") ?: 0.0)
-                    val y = (call.argument<Double>("y") ?: 0.0)
                     service.tap(x, y) { accepted -> result.success(accepted) }
                 }
                 else -> result.notImplemented()
