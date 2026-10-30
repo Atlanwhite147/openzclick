@@ -101,6 +101,7 @@ class AppState extends ChangeNotifier {
   Future<void> sendDirection(Action action) async {
     lastAction = action;
     await publisher.publish(action);
+    await injection.publish(action);
     notifyListeners();
   }
 
