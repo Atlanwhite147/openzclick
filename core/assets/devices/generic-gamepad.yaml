@@ -1,0 +1,32 @@
+# Declarative definition of a controller device.
+#
+# Generic gamepad with an analog axis: the frame is encapsulated in UART
+# packets, hence the "uart-framed" decoder. Steering goes through the analog
+# axis (the "analog" characteristic) and not through the byte table.
+# This device does not wake up on press: it stays on and then falls asleep
+# after one minute without activity.
+
+id: generic-gamepad
+name: Generic gamepad
+manufacturer: Generic
+
+services:
+  - 0000ff00-0000-1000-8000-00805f9b34fb
+
+characteristics:
+  buttons: 0000ff01-0000-1000-8000-00805f9b34fb
+  analog: 0000ff02-0000-1000-8000-00805f9b34fb
+  battery: 0000180f-0000-1000-8000-00805f9b34fb
+
+decoder: uart-framed
+
+raw_to_button:
+  0x01: 0x18 # steer left
+  0x02: 0x19 # steer right
+  0x03: 0x1A # brake
+  0x04: 0x33 # pause
+  0x05: 0x34 # resume
+  0x06: 0x38 # change mode
+
+wake_on_press: false
+sleep_after_seconds: 60
