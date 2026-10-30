@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-294%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-300%20passing-brightgreen)](#status)
 
 </div>
 
@@ -36,6 +36,7 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 | **Intersection choices** | double tap sends a left or right direction without leaving the hoods |
 | **Encrypted controller sessions** | ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, with a plain fallback for older firmware |
 | **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
+| **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls if needed |
 | **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
 | **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
 
@@ -88,6 +89,16 @@ Three rules keep the code portable:
 2. **One output, one transport.** Implementations are wired at runtime, never selected by platform conditionals.
 3. **No brand logic in the core.** Devices are described by declarative definition files.
 
+## When the application only accepts taps
+
+Some applications expose no protocol and no keyboard shortcut: the only way to change gear is to press their on-screen button. The bridge then turns an action into a tap at a position you configure once, expressed in percentages so it survives a change of screen.
+
+1. Install the accessibility service from **Target → Open accessibility settings** (Android only, once).
+2. Enable **Tap the application controls**, then give the position of each control: shift up, shift down, left, right.
+3. Press a button on the controller, or use **Send a direction** to check the calibration.
+
+Verified on Android 13: a request is dispatched as a real touch (`tap at 182,603 accepted=true` in the log) and the application reacts exactly as if a finger had touched the screen. Android only allows this through an accessibility service; no root, no shell command, and the service never reads the screen.
+
 ## How the link works
 
 **Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
@@ -110,9 +121,9 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, gear engine, mapping, gestures | 217 |
 | `transports/` | mDNS responder, TCP server; Bluetooth, injection and proxy are interfaces | 71 |
-| `app/` | pairing, gears, publishing, diagnostics on the four platforms | 6 |
+| `app/` | pairing, gears, publishing, tap injection, diagnostics on the four platforms | 12 |
 
-Verified on Android 13: installation, first frame, gear changes, direction choices, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
+Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
 ## Roadmap
 
@@ -120,9 +131,11 @@ Verified on Android 13: installation, first frame, gear changes, direction choic
 - [x] two-button gestures, direction choices
 - [x] network publication in the shared core
 - [x] continuous Android and iOS builds
-- [ ] local injection transport for applications that only accept a keyboard
+- [x] local injection transport, with an Android accessibility service driver
 - [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
 - [ ] iPhone multicast entitlement
+
+![Injection](docs/screenshots/injection.png)
 
 The full specification lives in [docs/spec.md](docs/spec.md).
 

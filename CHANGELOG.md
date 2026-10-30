@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Tap injection towards applications that only accept touches, driven by an Android accessibility service, with configurable relative positions for shift up, shift down, left and right.
+- Readiness check before enabling injection, so a disabled service is reported instead of silently doing nothing.
 - Encrypted controller sessions: ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, plain fallback.
 - Two-button gesture detector: single tap shifts, double tap chooses a direction at an intersection.
 - mDNS/DNS-SD responder in pure Dart (`DartMdnsAdvertiser`), shared by every platform.
@@ -13,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Continuous Android and iOS builds published as release assets.
 
 ### Fixed
+- The direction buttons did not reach the injector.
 - Android: missing `INTERNET` permission refused every socket.
 - Android: multicast traffic was filtered without a multicast lock.
 - Android: every CI build was signed with a different key, which prevented updates.
