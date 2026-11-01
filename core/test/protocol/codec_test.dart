@@ -24,20 +24,20 @@ void main() {
       expect(ObcCodec.discardCount(<int>[]), 0);
     });
 
-    test('a lone type byte waits for the length', () {
+    test('a lone type byte waits for its body', () {
       expect(ObcCodec.tryDecode(<int>[0x02]), isNull);
       expect(ObcCodec.discardCount(<int>[0x02]), 0);
     });
 
     test('a partially received body waits for more', () {
-      final List<int> partial = statusFrame().sublist(0, 3);
+      final List<int> partial = statusFrame().sublist(0, 2);
       expect(ObcCodec.tryDecode(partial), isNull);
       expect(ObcCodec.discardCount(partial), 0);
     });
 
     test('the frame decodes once the buffer is completed', () {
       final List<int> frame = statusFrame();
-      expect(ObcCodec.tryDecode(frame.sublist(0, 3)), isNull);
+      expect(ObcCodec.tryDecode(frame.sublist(0, 2)), isNull);
       final ({ObcMessage message, int consumed})? result =
           ObcCodec.tryDecode(frame);
       expect(result, isNotNull);
@@ -63,7 +63,7 @@ void main() {
     test('device status', () {
       final result = ObcCodec.tryDecode(statusFrame());
       expect(result, isNotNull);
-      expect(result!.consumed, 4);
+      expect(result!.consumed, 3);
       final ObcMessage message = result.message;
       expect(message, isA<DeviceStatus>());
       final DeviceStatus status = message as DeviceStatus;
@@ -75,7 +75,7 @@ void main() {
     test('haptic command', () {
       final result = ObcCodec.tryDecode(hapticFrame());
       expect(result, isNotNull);
-      expect(result!.consumed, 5);
+      expect(result!.consumed, 4);
       final HapticCommand command = result.message as HapticCommand;
       expect(command.pattern, 1);
       expect(command.duration10ms, 2);
@@ -121,72 +121,18 @@ void main() {
     });
 
     test('bytes preceding an incomplete frame can be dropped', () {
-      final List<int> buffer = <int>[0xFF, 0x02, 0x02, 50];
+      final List<int> buffer = <int>[0xFF, 0x02, 0x32];
       expect(ObcCodec.tryDecode(buffer), isNull);
       expect(ObcCodec.discardCount(buffer), 1);
     });
 
-    test('a 0x01 frame longer than 20 bytes is dropped', () {
-      // 22-byte body: the frame would be 24 bytes, beyond the maximum.
-      final List<int> oversized = <int>[
-        0x01,
-        0x16,
-        ...List<int>.filled(22, 0x99)
-      ];
-      expect(oversized, hasLength(24));
-      expect(ObcCodec.tryDecode(oversized), isNull);
-      expect(ObcCodec.discardCount(oversized), 24);
-    });
-
-    test('the stream resumes after a malformed 0x01 frame', () {
-      final List<int> frame = statusFrame();
-      final List<int> buffer = <int>[
-        0x01,
-        0x16,
-        ...List<int>.filled(22, 0x99),
-        ...frame,
-      ];
+    test('an impossible body length is skipped, the stream continues', () {
+      // 0x02 needs exactly two body bytes: three of them cannot be a status.
+      final List<int> buffer = <int>[0x02, 0x01, 0x05, 0x07];
       final result = ObcCodec.tryDecode(buffer);
       expect(result, isNotNull);
-      expect(result!.consumed, 24 + frame.length);
-      expect(result.message, isA<DeviceStatus>());
-    });
-
-    test('a 0x01 frame with an odd body length is dropped', () {
-      final List<int> frame = hapticFrame();
-      final List<int> buffer = <int>[
-        0x01,
-        0x03,
-        0x99,
-        0x99,
-        0x99,
-        ...frame,
-      ];
-      final result = ObcCodec.tryDecode(buffer);
-      expect(result, isNotNull);
-      expect(result!.consumed, 5 + frame.length);
-      expect(result.message, isA<HapticCommand>());
-    });
-
-    test('a 0x04 frame with inconsistent lengths is dropped', () {
-      final List<int> frame = hapticFrame();
-      // Body: identifier length 2, "ab", empty version, 3 buttons announced
-      // but only one present.
-      final List<int> buffer = <int>[
-        0x04,
-        0x06,
-        0x02,
-        0x61,
-        0x62,
-        0x00,
-        0x03,
-        0x05,
-        ...frame,
-      ];
-      final result = ObcCodec.tryDecode(buffer);
-      expect(result, isNotNull);
-      expect(result!.consumed, 8 + frame.length);
-      expect(result.message, isA<HapticCommand>());
+      expect(result!.consumed, 4);
+      expect(result.message, isA<ButtonState>());
     });
 
     test('an isolated unknown type is dropped', () {
@@ -194,16 +140,29 @@ void main() {
       expect(ObcCodec.discardCount(<int>[0x05]), 1);
     });
 
-    test('a 20-byte 0x01 frame is still accepted', () {
+    test('a 19-byte 0x01 frame is accepted as a whole', () {
       final Map<int, int> buttons = <int, int>{
         for (int i = 0; i < ButtonStateMessage.maxButtons; i++) 0x10 + i: 1,
       };
       final List<int> frame = ButtonStateMessage(buttons).encode();
-      expect(frame, hasLength(20));
+      expect(frame, hasLength(19));
       final result = ObcCodec.tryDecode(frame);
       expect(result, isNotNull);
-      expect(result!.consumed, 20);
+      expect(result!.consumed, 19);
       expect((result.message as ButtonState).buttons, buttons);
+    });
+
+    test('a button frame beyond the maximum never locks the stream', () {
+      final List<int> oversized = <int>[
+        0x01,
+        for (int i = 0; i < 11; i++) ...<int>[0x10 + i, 0x01],
+      ];
+      final result = ObcCodec.tryDecode(oversized);
+      expect(result, isNotNull);
+      expect(
+        (result!.message as ButtonState).buttons,
+        hasLength(lessThanOrEqualTo(ButtonStateMessage.maxButtons)),
+      );
     });
   });
 
@@ -224,12 +183,34 @@ void main() {
       expect(rest.sublist(secondResult.consumed), isEmpty);
     });
 
+    test('two button frames coalesced in one read stay apart', () {
+      final List<int> first =
+          ButtonStateMessage(<int, int>{ButtonIds.shiftUp: 1}).encode();
+      final List<int> second =
+          ButtonStateMessage(<int, int>{ButtonIds.shiftDown: 1}).encode();
+      final List<int> buffer = <int>[...first, ...second];
+
+      final firstResult = ObcCodec.tryDecode(buffer)!;
+      expect(firstResult.consumed, first.length);
+      expect(
+        (firstResult.message as ButtonState).buttons,
+        <int, int>{ButtonIds.shiftUp: 1},
+      );
+
+      final secondResult =
+          ObcCodec.tryDecode(buffer.sublist(firstResult.consumed))!;
+      expect(
+        (secondResult.message as ButtonState).buttons,
+        <int, int>{ButtonIds.shiftDown: 1},
+      );
+    });
+
     test('partial frames at the end of the stream are kept', () {
       final List<int> first = buttonFrame();
       final List<int> second = statusFrame();
       final List<int> buffer = <int>[
         ...first,
-        ...second.sublist(0, 2),
+        ...second.sublist(0, 1),
       ];
       final firstResult = ObcCodec.tryDecode(buffer)!;
       expect(firstResult.consumed, first.length);

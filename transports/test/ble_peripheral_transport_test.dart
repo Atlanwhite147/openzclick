@@ -142,10 +142,10 @@ void main() {
           backend.notifications.single;
       expect(first.uuid, BleGatt.buttonStateUuid);
       // 0x02 is the default button for Action.shiftDown.
-      expect(first.value, <int>[0x01, 0x02, 0x02, 0x01]);
+      expect(first.value, <int>[0x01, 0x02, 0x01]);
 
       await transport.release(Action.shiftDown);
-      expect(backend.notifications.last.value, <int>[0x01, 0x02, 0x02, 0x00]);
+      expect(backend.notifications.last.value, <int>[0x01, 0x02, 0x00]);
     });
 
     test('releases a press automatically when configured', () async {
@@ -177,7 +177,7 @@ void main() {
       final ({String uuid, List<int> value}) last =
           backend.notifications.single;
       expect(last.uuid, BleGatt.deviceStatusUuid);
-      expect(last.value, <int>[0x02, 0x02, 73, 0x01]);
+      expect(last.value, <int>[0x02, 73, 0x01]);
     });
 
     test('reports a connected central and reassembles split writes', () async {

@@ -70,32 +70,45 @@ void main() {
   });
 
   group('MdnsTxt', () {
-    test('builds deterministic records with sorted button identifiers', () {
-      final Map<String, String> txt = MdnsTxt.build(
-        name: 'bridge',
-        supportedButtons: <int>[0x10, 0x01, 0x44, 0x02],
-      );
+    test('builds the records of the mDNS specification', () {
+      final Map<String, String> txt = MdnsTxt.build(name: 'bridge');
 
       expect(txt[MdnsTxt.versionKey], '1');
       expect(txt[MdnsTxt.nameKey], 'bridge');
-      expect(txt[MdnsTxt.roleKey], 'bridge');
-      expect(txt[MdnsTxt.buttonsKey], '01,02,10,44');
+      expect(txt[MdnsTxt.serviceUuidsKey], MdnsTxt.serviceUuid);
+      expect(txt[MdnsTxt.manufacturerKey], 'openzclick');
+      expect(txt[MdnsTxt.modelKey], 'bridge');
+      expect(txt[MdnsTxt.idKey], isNotEmpty);
+      MdnsTxt.validate(txt);
+    });
+
+    test('the identifier only depends on the announced name', () {
       expect(
-        txt[MdnsTxt.buttonsKey],
-        MdnsTxt.build(name: 'bridge', supportedButtons: <int>[
-          0x44,
-          0x10,
-          0x02,
-          0x01
-        ])[MdnsTxt.buttonsKey],
+        MdnsTxt.build(name: 'bridge')[MdnsTxt.idKey],
+        MdnsTxt.build(name: 'bridge')[MdnsTxt.idKey],
+      );
+      expect(
+        MdnsTxt.build(name: 'bridge')[MdnsTxt.idKey],
+        isNot(MdnsTxt.build(name: 'other')[MdnsTxt.idKey]),
+      );
+      expect(
+        MdnsTxt.build(name: 'bridge', id: 'aabbccddeeff')[MdnsTxt.idKey],
+        'aabbccddeeff',
       );
     });
 
-    test('builds an empty button list without failing', () {
-      final Map<String, String> txt =
-          MdnsTxt.build(name: 'bridge', supportedButtons: const <int>[]);
-      expect(txt[MdnsTxt.buttonsKey], '');
-      MdnsTxt.validate(txt);
+    test('uses exactly the keys of the specification', () {
+      expect(
+        MdnsTxt.build(name: 'bridge').keys.toSet(),
+        <String>{
+          'version',
+          'id',
+          'name',
+          'service-uuids',
+          'manufacturer',
+          'model',
+        },
+      );
     });
 
     test('rejects an over long value, a long key and non ASCII text', () {
@@ -106,7 +119,7 @@ void main() {
         throwsArgumentError,
       );
       expect(
-        () => MdnsTxt.validate(<String, String>{'toolongkey': 'v'}),
+        () => MdnsTxt.validate(<String, String>{'a-key-that-is-too-long': 'v'}),
         throwsArgumentError,
       );
       expect(
@@ -134,7 +147,7 @@ void main() {
         instanceName: 'one',
         serviceType: '_openbikecontrol._tcp',
         port: 1000,
-        txt: MdnsTxt.build(name: 'one', supportedButtons: const <int>[]),
+        txt: MdnsTxt.build(name: 'one'),
       );
       final MdnsService second = MdnsService(
         instanceName: 'two',

@@ -14,6 +14,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- Frames now match the OpenBikeControl specification byte for byte: the length byte this project added after the type byte is gone, so an application that implements the specification reads our messages instead of a body length mistaken for a button identifier.
+- The mDNS announcement carries the TXT record the specification describes (`version`, `id`, `name`, `service-uuids`, `manufacturer`, `model`) instead of short private keys, so a conforming browser finds the bridge and its model.
+- Application info frames carry their format version byte, and a frame announcing another version is rejected instead of misread.
+- The stream decoder works without a length field: a buffer that decodes whole is one message, two messages coalesced in one read stay apart, and an undecodable write no longer accumulates in the buffer of a peer.
+
 ### Added
 - FTMS trainer proxy: control point codec, simulation parameters, target power and resistance, Indoor Bike Data.
 - Virtual trainer that turns the application's requests into resistance setpoints for the real machine, through the gear engine.

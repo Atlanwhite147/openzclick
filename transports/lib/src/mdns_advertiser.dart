@@ -70,63 +70,94 @@ class MdnsService {
 
 /// Building and validation of the announcement TXT records.
 ///
-/// Keys are deliberately short: a DNS-SD TXT record fits in 255 bytes overall,
-/// key and value included.
+/// The keys and their contents follow the OpenBikeControl mDNS specification:
+/// `version`, `id`, `name`, `service-uuids`, `manufacturer` and `model`. A TXT
+/// record fits in 255 bytes overall, key and value included.
 abstract final class MdnsTxt {
-  /// Protocol version exposed in the TXT record, key `v`.
-  static const String versionKey = 'v';
+  /// Protocol version exposed in the TXT record, key `version`.
+  static const String versionKey = 'version';
 
   /// Current application protocol version.
   static const String currentVersion = '1';
 
-  /// Human readable name of the bridge, key `n`.
-  static const String nameKey = 'n';
+  /// Human readable name of the bridge, key `name`.
+  static const String nameKey = 'name';
 
-  /// Role of the advertiser, key `r`. Always `bridge` for this package.
-  static const String roleKey = 'r';
+  /// Unique device identifier, key `id`. Derived from the advertised name, so
+  /// that one bridge keeps a stable identifier across restarts.
+  static const String idKey = 'id';
 
-  /// Role announced by the bridge.
-  static const String bridgeRole = 'bridge';
+  /// Service UUIDs the device exposes, key `service-uuids`.
+  static const String serviceUuidsKey = 'service-uuids';
 
-  /// Supported button identifiers, key `b`.
-  ///
-  /// Format: two-digit uppercase hexadecimal identifiers, comma separated and
-  /// sorted ascending (`01,02,10,14`).
-  static const String buttonsKey = 'b';
+  /// OpenBikeControl GATT service UUID, the only one announced today.
+  static const String serviceUuid = 'd273f680-d548-419d-b9d1-fa0472345229';
+
+  /// Manufacturer of the device, key `manufacturer`.
+  static const String manufacturerKey = 'manufacturer';
+
+  /// Manufacturer announced by the bridge.
+  static const String manufacturer = 'openzclick';
+
+  /// Model of the device, key `model`.
+  static const String modelKey = 'model';
+
+  /// Model announced by the bridge.
+  static const String model = 'bridge';
 
   /// Maximum length of a TXT value, in bytes.
   static const int maxValueLength = 255;
 
   /// Assembles the TXT records of a bridge announcement.
   ///
-  /// [supportedButtons] is rendered deterministically (ascending order), so that
-  /// one configuration never produces two different announcements.
+  /// [id] defaults to a stable digest of [name], so that one configuration
+  /// always produces the same announcement.
   static Map<String, String> build({
     required String name,
-    required List<int> supportedButtons,
+    String? id,
     String version = currentVersion,
+    String manufacturer = MdnsTxt.manufacturer,
+    String model = MdnsTxt.model,
   }) {
-    final List<int> sorted = List<int>.of(supportedButtons)..sort();
     return <String, String>{
       versionKey: version,
+      idKey: id ?? deviceId(name),
       nameKey: name,
-      roleKey: bridgeRole,
-      buttonsKey: sorted.map(_hex2).join(','),
+      serviceUuidsKey: serviceUuid,
+      manufacturerKey: manufacturer,
+      modelKey: model,
     };
   }
 
+  /// Stable identifier of a bridge, derived from its advertised [name].
+  static String deviceId(String name) {
+    int hash = 0x811c9dc5;
+    for (final int byte in name.codeUnits) {
+      hash = (hash ^ byte) & 0xFFFFFFFF;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
+  }
+
+  /// Longest TXT key accepted.
+  ///
+  /// RFC 6763 recommends nine characters at most, but the OpenBikeControl
+  /// specification names two longer keys, `service-uuids` and `manufacturer`,
+  /// and interoperability wins over the recommendation.
+  static const int maxKeyLength = 16;
+
   /// Checks that a set of records can be announced.
   ///
-  /// Throws [ArgumentError] when a key is empty or too long, or when a value
-  /// exceeds [maxValueLength] bytes.
+  /// Throws [ArgumentError] when a key is empty or longer than
+  /// [maxKeyLength], or when a value exceeds [maxValueLength] bytes.
   static void validate(Map<String, String> txt) {
     txt.forEach((String key, String value) {
       if (key.isEmpty) {
         throw ArgumentError('empty TXT key');
       }
-      if (key.length > 9) {
+      if (key.length > maxKeyLength) {
         throw ArgumentError.value(
-            key, 'key', 'TXT key of at most 9 characters');
+            key, 'key', 'TXT key of at most $maxKeyLength characters');
       }
       for (final int unit in value.codeUnits) {
         if (unit > 0x7F) {
@@ -146,9 +177,6 @@ abstract final class MdnsTxt {
       }
     });
   }
-
-  static String _hex2(int value) =>
-      value.toRadixString(16).padLeft(2, '0').toUpperCase();
 }
 
 /// mDNS announcement contract.

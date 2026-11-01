@@ -84,9 +84,11 @@ class ObcCodec {
 }
 ```
 
-Frame layout on the wire: `[type] [body length] [body]`. The length byte counts the body only. `0x01` bodies are `(id, value)` pairs sorted by ascending id; `0x02` is `[battery][connected]`; `0x03` is `[pattern][duration/10 ms][intensity]`; `0x04` is `[len][appId][len][version][n][buttons]` in UTF-8. The decoder treats the declared length as authoritative: a complete but invalid frame is skipped as a block, a truncated frame returns null.
+Frame layout on the wire, exactly as the OpenBikeControl specification defines it: `[type] [body]`, with no length field. `0x01` bodies are `(id, value)` pairs sorted by ascending id; `0x02` is `[battery][connected]`; `0x03` is `[pattern][duration/10 ms][intensity]`; `0x04` is `[version=0x01][len][appId][len][appVersion][n][buttons]` in UTF-8.
 
-Validation rules: maximum length 20 bytes for `0x01` (discard and resynchronise beyond that); unknown bytes ignored; `0x04` rejected when lengths are inconsistent.
+Since nothing on the wire delimits a frame, the transport does: one write carries one message, as the reference implementation assumes. The decoder still recovers from real streams. A buffer that decodes whole is one message, which keeps a multi-button press in a single frame; otherwise the shortest prefix that decodes and leaves a usable remainder wins, which keeps two messages coalesced in one read apart. A frame shorter than its type allows is kept while it may still be completed, everything undecodable is dropped, and unknown bytes are ignored so the scan resynchronises on the next type byte.
+
+Validation rules: maximum length 20 bytes for `0x01`; `0x04` rejected when its lengths are inconsistent or its format version is not `0x01`.
 
 ### `shifting/`
 

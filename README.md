@@ -146,7 +146,7 @@ Details and calibration caveats: [docs/trainer-proxy.md](docs/trainer-proxy.md).
 
 **Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
 
-**Training application side.** The application announces `openzclick._openbikecontrol._tcp.local` with its port, version, role and button list. A client connects over TCP, sends an application info frame, and receives one frame per action: `01 02 01 01` for shift up pressed, `01 02 18 01` for a left direction.
+**Training application side.** The bridge announces `openzclick._openbikecontrol._tcp.local` with the TXT record of the specification (`version`, `id`, `name`, `service-uuids`, `manufacturer`, `model`). A client connects over TCP, sends an application info frame, and receives one frame per action, with no length field on the wire: `01 01 01` for shift up pressed, `01 18 01` for a steer left. One write carries one message, which is what delimits frames in a protocol that has no length byte.
 
 Check the publication without a phone:
 
@@ -162,8 +162,8 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 
 | Module | State | Tests |
 |---|---|---|
-| `core/` | protocol, session, gear engine, mapping, gestures | 217 |
-| `transports/` | mDNS responder, TCP server, FTMS trainer proxy; Bluetooth stays an interface | 86 |
+| `core/` | protocol, session, gear engine, mapping, gestures | 216 |
+| `transports/` | mDNS responder, TCP server, FTMS trainer proxy; Bluetooth stays an interface | 87 |
 | `app/` | pairing, gears, publishing, injection, diagnostics on the four platforms | 22 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.

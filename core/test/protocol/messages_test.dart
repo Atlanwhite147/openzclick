@@ -31,9 +31,9 @@ void main() {
   });
 
   group('ButtonStateMessage - encoding', () {
-    test('a minimal frame encodes the header alone', () {
+    test('a minimal frame is the type byte alone', () {
       final ButtonStateMessage message = ButtonStateMessage(<int, int>{});
-      expect(message.encode(), <int>[0x01, 0x00]);
+      expect(message.encode(), <int>[0x01]);
     });
 
     test('encoding is sorted by ascending identifier', () {
@@ -43,7 +43,7 @@ void main() {
         ButtonIds.shiftUp: 1,
       });
       expect(message.encode(), <int>[
-        0x01, 0x06, // type, body length
+        0x01, // type byte
         ButtonIds.shiftUp, 0x01,
         ButtonIds.shiftDown, 0x00,
         ButtonIds.confirm, 0x01,
@@ -57,7 +57,6 @@ void main() {
       });
       expect(message.encode(), <int>[
         0x01,
-        0x04,
         ButtonIds.brake,
         200,
         ButtonIds.steeringAngle,
@@ -72,8 +71,8 @@ void main() {
       final List<int> frame = ButtonStateMessage(buttons).encode();
       expect(ButtonStateMessage.maxButtons, 9);
       expect(ButtonStateMessage.maxFrameLength, 20);
-      expect(frame, hasLength(20));
-      expect(frame[1], 18);
+      expect(frame, hasLength(19));
+      expect(frame.skip(1), hasLength(18));
     });
 
     test('ten buttons exceed the maximum frame', () {
@@ -120,7 +119,6 @@ void main() {
     test('the decoded table is immutable', () {
       final ButtonStateMessage decoded = ButtonStateMessage.decode(<int>[
         0x01,
-        0x02,
         ButtonIds.confirm,
         1,
       ]);
@@ -141,19 +139,7 @@ void main() {
       );
     });
 
-    test('an inconsistent declared length is rejected', () {
-      expect(
-        () =>
-            ButtonStateMessage.decode(<int>[0x01, 0x04, ButtonIds.shiftUp, 1]),
-        throwsA(isA<FormatException>()),
-      );
-    });
-
-    test('a truncated frame is rejected', () {
-      expect(
-        () => ButtonStateMessage.decode(<int>[0x01]),
-        throwsA(isA<FormatException>()),
-      );
+    test('an empty frame is rejected', () {
       expect(
         () => ButtonStateMessage.decode(<int>[]),
         throwsA(isA<FormatException>()),
@@ -162,17 +148,17 @@ void main() {
 
     test('an odd-length body is rejected', () {
       expect(
-        () => ButtonStateMessage.decode(<int>[0x01, 0x03, 0x10, 0x01, 0x11]),
+        () => ButtonStateMessage.decode(<int>[0x01, 0x10, 0x01, 0x11]),
         throwsA(isA<FormatException>()),
       );
     });
 
     test('a frame longer than 20 bytes is rejected', () {
       final List<int> oversized = <int>[
-        0x01, 0x16, // 22-byte body: 24 in total
+        0x01, // 22-byte body: 23 in total
         for (int i = 0; i < 11; i++) ...<int>[0x10 + i, 0x01],
       ];
-      expect(oversized, hasLength(24));
+      expect(oversized, hasLength(23));
       expect(
         () => ButtonStateMessage.decode(oversized),
         throwsA(isA<FormatException>()),
@@ -194,7 +180,7 @@ void main() {
         battery: 85,
         connected: true,
       );
-      expect(message.encode(), <int>[0x02, 0x02, 85, 0x01]);
+      expect(message.encode(), <int>[0x02, 85, 0x01]);
     });
 
     test('encoding of a disconnected state', () {
@@ -202,7 +188,7 @@ void main() {
         battery: 0,
         connected: false,
       );
-      expect(message.encode(), <int>[0x02, 0x02, 0x00, 0x00]);
+      expect(message.encode(), <int>[0x02, 0x00, 0x00]);
     });
 
     test('unknown battery encodes as 0xFF', () {
@@ -210,7 +196,7 @@ void main() {
         battery: DeviceStatusMessage.unknownBattery,
         connected: true,
       );
-      expect(message.encode(), <int>[0x02, 0x02, 0xFF, 0x01]);
+      expect(message.encode(), <int>[0x02, 0xFF, 0x01]);
     });
 
     test('round trip on the bounds', () {
@@ -242,25 +228,25 @@ void main() {
 
     test('an invalid battery is rejected at decoding', () {
       expect(
-        () => DeviceStatusMessage.decode(<int>[0x02, 0x02, 200, 0x01]),
+        () => DeviceStatusMessage.decode(<int>[0x02, 200, 0x01]),
         throwsA(isA<FormatException>()),
       );
     });
 
     test('an invalid connection flag is rejected', () {
       expect(
-        () => DeviceStatusMessage.decode(<int>[0x02, 0x02, 50, 0x02]),
+        () => DeviceStatusMessage.decode(<int>[0x02, 50, 0x02]),
         throwsA(isA<FormatException>()),
       );
     });
 
     test('a body of the wrong length is rejected', () {
       expect(
-        () => DeviceStatusMessage.decode(<int>[0x02, 0x03, 50, 0x01, 0x00]),
+        () => DeviceStatusMessage.decode(<int>[0x02, 50, 0x01, 0x00]),
         throwsA(isA<FormatException>()),
       );
       expect(
-        () => DeviceStatusMessage.decode(<int>[0x02, 0x01, 50]),
+        () => DeviceStatusMessage.decode(<int>[0x02, 50]),
         throwsA(isA<FormatException>()),
       );
     });
@@ -281,7 +267,7 @@ void main() {
         duration10ms: 10,
         intensity: 200,
       );
-      expect(message.encode(), <int>[0x03, 0x03, 0x02, 10, 200]);
+      expect(message.encode(), <int>[0x03, 0x02, 10, 200]);
     });
 
     test('round trip on the bounds', () {
@@ -319,11 +305,11 @@ void main() {
 
     test('a body of the wrong length is rejected', () {
       expect(
-        () => HapticMessage.decode(<int>[0x03, 0x02, 1, 2]),
+        () => HapticMessage.decode(<int>[0x03, 1, 2]),
         throwsA(isA<FormatException>()),
       );
       expect(
-        () => HapticMessage.decode(<int>[0x03, 0x04, 1, 2, 3, 4]),
+        () => HapticMessage.decode(<int>[0x03, 1, 2, 3, 4]),
         throwsA(isA<FormatException>()),
       );
     });
@@ -349,7 +335,8 @@ void main() {
         supportedButtons: <int>[ButtonIds.shiftUp, ButtonIds.navigateUp],
       );
       expect(message.encode(), <int>[
-        0x04, 0x12, // type, body length
+        0x04, // type byte
+        0x01, // format version
         0x08, ...'target-a'.codeUnits,
         0x05, ...'1.2.0'.codeUnits,
         0x02, ButtonIds.shiftUp, ButtonIds.navigateUp,
@@ -374,7 +361,7 @@ void main() {
         appVersion: '',
         supportedButtons: const <int>[],
       );
-      expect(message.encode(), <int>[0x04, 0x03, 0x00, 0x00, 0x00]);
+      expect(message.encode(), <int>[0x04, 0x01, 0x00, 0x00, 0x00]);
       final AppInfoMessage decoded = AppInfoMessage.decode(message.encode());
       expect(decoded.appId, isEmpty);
       expect(decoded.appVersion, isEmpty);
@@ -397,7 +384,7 @@ void main() {
     test('the decoded button list is immutable', () {
       final AppInfoMessage decoded = AppInfoMessage.decode(<int>[
         0x04,
-        0x04,
+        0x01,
         0x01,
         0x61,
         0x00,
@@ -441,12 +428,12 @@ void main() {
     test('a truncated identifier is rejected at decoding', () {
       // Declared identifier length larger than the available body.
       expect(
-        () => AppInfoMessage.decode(<int>[0x04, 0x04, 0x07, 0x61, 0x62, 0x63]),
+        () => AppInfoMessage.decode(<int>[0x04, 0x01, 0x07, 0x61, 0x62, 0x63]),
         throwsA(isA<FormatException>()),
       );
       // Empty body: missing length.
       expect(
-        () => AppInfoMessage.decode(<int>[0x04, 0x00]),
+        () => AppInfoMessage.decode(<int>[0x04]),
         throwsA(isA<FormatException>()),
       );
     });
@@ -455,7 +442,7 @@ void main() {
       expect(
         () => AppInfoMessage.decode(<int>[
           0x04,
-          0x05,
+          0x01,
           0x01,
           0x61,
           0x09,
@@ -470,7 +457,7 @@ void main() {
       expect(
         () => AppInfoMessage.decode(<int>[
           0x04,
-          0x06,
+          0x01,
           0x01,
           0x61,
           0x01,
@@ -486,7 +473,7 @@ void main() {
       expect(
         () => AppInfoMessage.decode(<int>[
           0x04,
-          0x06,
+          0x01,
           0x01,
           0x61,
           0x01,
@@ -502,10 +489,23 @@ void main() {
       expect(
         () => AppInfoMessage.decode(<int>[
           0x04,
-          0x05,
+          0x01,
           0x02,
           0xFF,
           0xFE,
+          0x00,
+          0x00,
+        ]),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('an unknown format version is rejected', () {
+      expect(
+        () => AppInfoMessage.decode(<int>[
+          0x04,
+          0x02,
+          0x00,
           0x00,
           0x00,
         ]),

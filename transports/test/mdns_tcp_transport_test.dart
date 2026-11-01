@@ -45,9 +45,9 @@ void main() {
       expect(service.instanceName, 'bridge-test');
       expect(service.txt[MdnsTxt.versionKey], MdnsTxt.currentVersion);
       expect(service.txt[MdnsTxt.nameKey], 'bridge-test');
-      expect(service.txt[MdnsTxt.roleKey], 'bridge');
-      // Button identifiers are announced sorted, whatever the keymap order.
-      expect(service.txt[MdnsTxt.buttonsKey], startsWith('01,'));
+      expect(service.txt[MdnsTxt.serviceUuidsKey], MdnsTxt.serviceUuid);
+      expect(service.txt[MdnsTxt.manufacturerKey], MdnsTxt.manufacturer);
+      expect(service.txt[MdnsTxt.idKey], isNotEmpty);
       expect(transport.isAdvertising, isTrue);
     });
 
@@ -121,12 +121,12 @@ void main() {
       await log.next<TransportConnected>();
 
       await transport.emit(Action.shiftUp);
-      final List<int> press = <int>[0x01, 0x02, 0x01, 0x01];
+      final List<int> press = <int>[0x01, 0x01, 0x01];
       expect(await first.take(press.length), press);
       expect(await second.take(press.length), press);
 
       await transport.release(Action.shiftUp);
-      final List<int> releaseFrame = <int>[0x01, 0x02, 0x01, 0x00];
+      final List<int> releaseFrame = <int>[0x01, 0x01, 0x00];
       expect(await first.take(releaseFrame.length), releaseFrame);
       expect(await second.take(releaseFrame.length), releaseFrame);
 
@@ -140,8 +140,8 @@ void main() {
       await log.next<TransportConnected>();
 
       await transport.publishStatus(battery: 42, connected: false);
-      final List<int> frame = await client.take(4);
-      expect(frame, <int>[0x02, 0x02, 42, 0x00]);
+      final List<int> frame = await client.take(3);
+      expect(frame, <int>[0x02, 42, 0x00]);
 
       await client.close();
     });
@@ -202,8 +202,8 @@ void main() {
 
       await transport.emit(Action.confirm);
       // 0x14 is the default button for Action.confirm.
-      expect(await client.take(4), <int>[0x01, 0x02, 0x14, 0x01]);
-      expect(await client.take(4), <int>[0x01, 0x02, 0x14, 0x00]);
+      expect(await client.take(3), <int>[0x01, 0x14, 0x01]);
+      expect(await client.take(3), <int>[0x01, 0x14, 0x00]);
 
       await client.close();
     });

@@ -32,31 +32,33 @@ enum ObcMessageType {
   }
 }
 
-/// Length of the header common to all frames: a type byte followed by a body
-/// length byte.
-const int obcHeaderLength = 2;
+/// Length of the header common to all frames: a single type byte.
+///
+/// The OpenBikeControl specification puts no length field on the wire: a frame
+/// is a type byte followed by its body, and one write carries exactly one
+/// frame. The transport is therefore what delimits messages.
+const int obcHeaderLength = 1;
 
-/// Builds a complete `[type][length][body]` frame.
+/// Builds a complete `[type][body]` frame.
 List<int> _frame(int typeCode, List<int> body) {
   if (body.length > 0xFF) {
     throw ArgumentError.value(
       body.length,
       'body',
-      'body must fit in the length byte (0..255)',
+      'body must fit in one frame (0..255 bytes)',
     );
   }
-  return <int>[typeCode, body.length, ...body];
+  return <int>[typeCode, ...body];
 }
 
 /// Checks a frame header and returns its body.
 ///
 /// Throws a [FormatException] if the type does not match [expectedType] or if
-/// the declared length does not match the number of bytes supplied.
+/// the frame is empty.
 List<int> _checkedBody(List<int> bytes, int expectedType) {
   if (bytes.length < obcHeaderLength) {
     throw FormatException(
-      'truncated frame: ${bytes.length} byte(s), $obcHeaderLength-byte header '
-      'expected',
+      'truncated frame: ${bytes.length} byte(s), a type byte expected',
     );
   }
   final int type = bytes[0];
@@ -64,13 +66,6 @@ List<int> _checkedBody(List<int> bytes, int expectedType) {
     throw FormatException(
       'unexpected message type: 0x${type.toRadixString(16)}, '
       '0x${expectedType.toRadixString(16)} expected',
-    );
-  }
-  final int declared = bytes[1];
-  final int actual = bytes.length - obcHeaderLength;
-  if (declared != actual) {
-    throw FormatException(
-      'declared length $declared inconsistent with $actual body byte(s)',
     );
   }
   return bytes.sublist(obcHeaderLength);
@@ -324,6 +319,7 @@ class AppInfoMessage {
       _requireByte(id, 'supportedButton');
     }
     final List<int> body = <int>[
+      formatVersion,
       idBytes.length,
       ...idBytes,
       versionBytes.length,
@@ -378,6 +374,13 @@ class AppInfoMessage {
       }
     }
 
+    final int version = takeLength();
+    if (version != formatVersion) {
+      throw FormatException(
+        'unsupported 0x04 format version: 0x${version.toRadixString(16)}',
+      );
+    }
+
     final String appId = readString('appId');
     final String appVersion = readString('appVersion');
     final int count = takeLength();
@@ -394,6 +397,9 @@ class AppInfoMessage {
       supportedButtons: buttons,
     );
   }
+
+  /// Format version of a `0x04` body, first byte per the specification.
+  static const int formatVersion = 0x01;
 
   /// Converts the message into the decoded [AppInfo] variant.
   AppInfo toMessage() => AppInfo(

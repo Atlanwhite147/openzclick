@@ -255,6 +255,17 @@ class FramedTcpServer {
     if (peer == null) {
       return;
     }
+    if (chunk.length > maxBufferBytes) {
+      // A single write larger than the cap cannot be a frame: no point
+      // buffering it, the peer is not speaking the protocol.
+      _emit(PeerFault(
+        peerId: peerId,
+        message: 'buffer for $peerId overflowed '
+            '(${chunk.length} bytes in one write)',
+      ));
+      unawaited(closePeer(peerId, reason: 'buffer overflow'));
+      return;
+    }
     peer.buffer.addAll(chunk);
     while (true) {
       final ({ObcMessage message, int consumed})? decoded =

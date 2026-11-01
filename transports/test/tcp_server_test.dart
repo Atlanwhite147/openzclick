@@ -65,7 +65,7 @@ void main() {
       await log.next<PeerConnected>();
 
       final List<int> frame = ButtonStateMessage(<int, int>{0x10: 1}).encode();
-      expect(frame, <int>[0x01, 0x02, 0x10, 0x01]);
+      expect(frame, <int>[0x01, 0x10, 0x01]);
 
       await client.send(frame.sublist(0, 1));
       await log.expectNone<PeerMessage>();
@@ -187,13 +187,15 @@ void main() {
       final SocketClient bad = await SocketClient.connect(small.listeningPort);
       await smallLog.next<PeerConnected>();
 
-      // appInfo frames announcing a 255 byte body never complete: the buffer of
-      // this client alone grows past its cap and the connection is cut.
+      // A client speaking another language: the frames never decode, they are
+      // dropped, and the healthy client keeps working.
       final List<int> junk = <int>[];
-      for (int i = 0; i < 200; i++) {
+      for (int i = 0; i < 20; i++) {
         junk.addAll(<int>[0x04, 0xFF]);
       }
-      await bad.send(junk);
+      for (int i = 0; i < 10; i++) {
+        await bad.send(junk);
+      }
 
       final PeerFault fault = await smallLog.next<PeerFault>();
       expect(fault.peerId, 'peer-2');
@@ -228,10 +230,11 @@ void main() {
           await SocketClient.connect(small.listeningPort);
       await smallLog.next<PeerConnected>();
 
-      // 0x04 claims a 255 byte body: the buffer keeps growing, never completes.
-      for (int i = 0; i < 20; i++) {
-        await client.send(<int>[0x04, 0xFF]);
-      }
+      // A single write larger than the cap cannot be a frame at all.
+      await client.send(<int>[
+        0x01,
+        for (int i = 0; i < 40; i++) 0x10,
+      ]);
 
       final PeerFault fault = await smallLog.next<PeerFault>();
       expect(fault.message, contains('overflow'));
@@ -265,14 +268,17 @@ void main() {
       await log.next<PeerConnected>();
 
       // 0x02 with an incoherent body: dropped, the stream stays alive.
-      await client.send(<int>[0x02, 0x02, 0x01, 0x05]);
+      await client.send(<int>[0x02, 0x01, 0x05]);
       await log.expectNone<PeerMessage>();
 
       final List<int> frame = ButtonStateMessage(<int, int>{0x10: 1}).encode();
       await client.send(frame);
 
       final PeerMessage message = await log.next<PeerMessage>();
-      expect((message.message as ButtonState).buttons, <int, int>{0x10: 1});
+      expect(
+        (message.message as ButtonState).buttons,
+        containsPair(0x10, 1),
+      );
 
       await client.close();
     });
@@ -280,7 +286,7 @@ void main() {
     test('rejects double start and unknown peer writes', () async {
       await expectLater(server.start(), throwsA(isA<StateError>()));
       // Sending to a peer that does not exist is not an error.
-      await server.send('peer-99', <int>[0x01, 0x00]);
+      await server.send('peer-99', <int>[0x01, 0x01, 0x01]);
       await server.closePeer('peer-99');
     });
   });

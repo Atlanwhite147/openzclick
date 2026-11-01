@@ -121,10 +121,7 @@ class MdnsTcpTransport extends ManagedTransport {
           instanceName: instanceName,
           serviceType: serviceType,
           port: server.listeningPort,
-          txt: MdnsTxt.build(
-            name: instanceName,
-            supportedButtons: keymap?.bindings.keys.toList() ?? const <int>[],
-          ),
+          txt: MdnsTxt.build(name: instanceName),
         ),
       );
     } catch (_) {
