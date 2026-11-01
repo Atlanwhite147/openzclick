@@ -9,6 +9,9 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Android tap injection through an accessibility service.
 - Linux keyboard and pointer injection through X11 and XTest.
 - Persisted settings, gear profile selection, continuous Android and iOS builds.
+- Controller link supervision: plain-handshake fallback, silence detection and
+  automatic reconnection, with the locked-controller case named instead of
+  hanging (`docs/controllers.md`).
 
 ## Next, in order
 
@@ -29,7 +32,8 @@ Not code: a request to Apple, with the paperwork written in `docs/ios-multicast.
 ## Small, well bounded, ideal for a first contribution
 
 - Battery level and firmware shown on the controller screen.
-- Automatic reconnection when the controller drops.
+- The "needs unlock" hint in the interface: the flag exists in the connection
+  (`needsUnlock`), nothing displays it yet.
 - Exportable diagnostic log, for bug reports.
 - Editing key bindings and tap positions from the interface.
 - Translations: the interface is English only, the gear profiles labels are French.

@@ -23,9 +23,23 @@ enum ControllerStatus {
 
 /// A bridge between the Bluetooth stack and the core protocol.
 ///
-/// The class owns one BLE connection at a time. It performs the plain
-/// handshake, decodes frames with [ControllerCodec] and republishes button
-/// states as a stream of [ClickButtons].
+/// The class owns one BLE connection at a time. It performs the encrypted
+/// handshake, falls back to the plain one when the firmware ignores it,
+/// decodes frames with [ControllerCodec] and republishes button states as a
+/// stream of [ClickButtons].
+///
+/// The three characteristics of the controller do not do the same job, and
+/// swapping two of them produces a link that connects and then stays silent:
+///
+/// | Characteristic | UUID suffix | Direction | Used for |
+/// |---|---|---|---|
+/// | async | `0002` | controller to host, notify | the button stream |
+/// | syncRx | `0003` | host to controller, write | handshake and commands |
+/// | syncTx | `0004` | controller to host, indicate | handshake reply and answers |
+///
+/// A controller that has never been paired in the official application may
+/// answer nothing at all: [needsUnlock] is then set and the interface must say
+/// so, because no amount of reconnecting will change it.
 class ControllerConnection {
   /// Bluetooth device currently targeted, if any.
   BluetoothDevice? device;
@@ -39,6 +53,11 @@ class ControllerConnection {
   /// Battery level reported by the controller, if received.
   int? batteryPercent;
 
+  /// True when the controller stayed completely silent after the handshake,
+  /// which almost always means it must be paired once in the official
+  /// application before it accepts any other host.
+  bool needsUnlock = false;
+
   final StreamController<ClickButtons> _buttons =
       StreamController<ClickButtons>.broadcast();
 
@@ -47,11 +66,15 @@ class ControllerConnection {
 
   ControllerKeyPair? _keyPair;
   ControllerCrypto? _crypto;
-  BluetoothCharacteristic? _tx;
-  bool _handshakeSeen = false;
+  BluetoothCharacteristic? _writeTarget;
+  final List<StreamSubscription<List<int>>> _frameSubscriptions =
+      <StreamSubscription<List<int>>>[];
+  Timer? _supervision;
+  final ControllerLinkWatchdog _watchdog = ControllerLinkWatchdog();
+  bool _reconnecting = false;
 
-  StreamSubscription<List<int>>? _frameSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
+  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   final List<ScanResult> _found = <ScanResult>[];
 
   /// Button states, emitted on every change.
@@ -114,6 +137,7 @@ class ControllerConnection {
   Future<void> connect(BluetoothDevice target) async {
     status = ControllerStatus.connecting;
     error = null;
+    needsUnlock = false;
     _notify();
     device = target;
 
@@ -125,47 +149,64 @@ class ControllerConnection {
       );
       final List<BluetoothService> services = await target.discoverServices();
 
-      BluetoothCharacteristic? rx;
-      BluetoothCharacteristic? tx;
+      BluetoothCharacteristic? asyncChannel;
+      BluetoothCharacteristic? writeTarget;
+      BluetoothCharacteristic? syncReply;
       for (final BluetoothService service in services) {
-        if (service.uuid.toString().toLowerCase() != ControllerUuids.service) {
+        final String serviceUuid = service.uuid.toString().toLowerCase();
+        if (serviceUuid != ControllerUuids.service) {
           continue;
         }
         for (final BluetoothCharacteristic characteristic
             in service.characteristics) {
           final String uuid = characteristic.uuid.toString().toLowerCase();
-          if (uuid == ControllerUuids.syncRx) rx = characteristic;
-          if (uuid == ControllerUuids.syncTx) tx = characteristic;
+          if (uuid == ControllerUuids.asyncChannel) {
+            asyncChannel = characteristic;
+          }
+          if (uuid == ControllerUuids.syncRx) writeTarget = characteristic;
+          if (uuid == ControllerUuids.syncTx) syncReply = characteristic;
         }
       }
 
-      if (rx == null || tx == null) {
+      if (asyncChannel == null || writeTarget == null) {
         throw StateError('controller service found but channels are missing');
       }
-      _tx = tx;
+      _writeTarget = writeTarget;
 
-      await rx.setNotifyValue(true);
-      _frameSubscription = rx.onValueReceived.listen(_onFrame);
+      // Buttons arrive on the asynchronous channel, the handshake reply on the
+      // synchronous one: listening to both is the difference between a link
+      // that works and a link that connects and says nothing.
+      await asyncChannel.setNotifyValue(true);
+      _frameSubscriptions.add(asyncChannel.onValueReceived.listen(_onFrame));
+      if (syncReply != null) {
+        await syncReply.setNotifyValue(true);
+        _frameSubscriptions.add(syncReply.onValueReceived.listen(_onFrame));
+      }
+      _connectionSubscription = target.connectionState.listen((
+        BluetoothConnectionState state,
+      ) {
+        if (state == BluetoothConnectionState.disconnected &&
+            status != ControllerStatus.idle) {
+          status = ControllerStatus.idle;
+          _notify();
+        }
+      });
 
       // Ask for an encrypted session first; some firmware only answers the
-      // plain handshake, so the plain request is sent as a fallback below.
+      // plain handshake, which the supervision below sends after a delay.
       _keyPair = ControllerCrypto.generateKeyPair();
       _crypto = null;
       encrypted = false;
-      _handshakeSeen = false;
-      await tx.write(
+      _watchdog.onConnected();
+      await writeTarget.write(
         ControllerHandshake.encryptedRequest(_keyPair!.publicKeyBytes),
       );
 
-      Future<void>.delayed(const Duration(seconds: 3), () async {
-        if (!_handshakeSeen) {
-          try {
-            await _tx?.write(ControllerHandshake.plainRequest());
-          } catch (_) {
-            // The link may already be gone; the status reflects it.
-          }
-        }
-      });
+      _supervision?.cancel();
+      _supervision = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => _supervise(),
+      );
 
       status = ControllerStatus.ready;
       _notify();
@@ -173,6 +214,49 @@ class ControllerConnection {
       status = ControllerStatus.failed;
       error = e.toString();
       _notify();
+    }
+  }
+
+  /// Feeds the watchdog and carries out what it asks for.
+  void _supervise() {
+    final ControllerLinkAction? action = _watchdog.onElapsed(
+      const Duration(seconds: 1),
+    );
+    switch (action) {
+      case null:
+        return;
+      case ControllerLinkAction.sendPlainHandshake:
+        unawaited(_write(ControllerHandshake.plainRequest()));
+      case ControllerLinkAction.needsUnlock:
+        needsUnlock = true;
+        _notify();
+      case ControllerLinkAction.reconnect:
+        unawaited(_reconnect());
+    }
+  }
+
+  Future<void> _write(List<int> frame) async {
+    try {
+      await _writeTarget?.write(frame);
+    } catch (e) {
+      error = e.toString();
+      _notify();
+    }
+  }
+
+  Future<void> _reconnect() async {
+    final BluetoothDevice? target = device;
+    if (target == null || _reconnecting) {
+      return;
+    }
+    _reconnecting = true;
+    error = 'controller went silent, reconnecting';
+    _notify();
+    try {
+      await _clearLink();
+      await connect(target);
+    } finally {
+      _reconnecting = false;
     }
   }
 
@@ -189,7 +273,7 @@ class ControllerConnection {
         }
       }
       if (startsWithRideOn) {
-        _handshakeSeen = true;
+        _watchdog.onFrame();
         final List<int>? deviceKey = ControllerHandshake.parseDevicePublicKey(
           frame,
         );
@@ -205,6 +289,8 @@ class ControllerConnection {
         return;
       }
     }
+
+    _watchdog.onFrame();
 
     List<int> payload = frame;
     if (_crypto != null) {
@@ -222,10 +308,25 @@ class ControllerConnection {
     }
   }
 
+  Future<void> _clearLink() async {
+    _supervision?.cancel();
+    _supervision = null;
+    for (final StreamSubscription<List<int>> subscription
+        in _frameSubscriptions) {
+      await subscription.cancel();
+    }
+    _frameSubscriptions.clear();
+    await _connectionSubscription?.cancel();
+    _connectionSubscription = null;
+    _crypto = null;
+    _keyPair = null;
+    _writeTarget = null;
+    encrypted = false;
+  }
+
   /// Closes the connection and releases the subscriptions.
   Future<void> disconnect() async {
-    await _frameSubscription?.cancel();
-    _frameSubscription = null;
+    await _clearLink();
     await _scanSubscription?.cancel();
     _scanSubscription = null;
     try {
@@ -234,12 +335,9 @@ class ControllerConnection {
       // The device may already be gone; nothing to repair.
     }
     device = null;
-    _crypto = null;
-    _keyPair = null;
-    _tx = null;
-    encrypted = false;
     status = ControllerStatus.idle;
     batteryPercent = null;
+    needsUnlock = false;
     _notify();
   }
 

@@ -12,13 +12,16 @@ abstract final class ControllerUuids {
   /// Primary service.
   static const String service = '00000001-19ca-4651-86e5-fa29dcdd09d1';
 
-  /// Asynchronous channel (notify).
+  /// Asynchronous channel, notify only: the button stream arrives here.
   static const String asyncChannel = '00000002-19ca-4651-86e5-fa29dcdd09d1';
 
-  /// Synchronous receive channel (frames from the controller).
+  /// Synchronous channel from the host to the controller, write only: this is
+  /// where the handshake and the commands go. Its name comes from the
+  /// controller's point of view, which is why it is not called transmit here.
   static const String syncRx = '00000003-19ca-4651-86e5-fa29dcdd09d1';
 
-  /// Synchronous transmit channel (handshake and commands, indicate).
+  /// Synchronous channel from the controller to the host, indicate: the
+  /// acknowledgement of the handshake and the replies arrive here.
   static const String syncTx = '00000004-19ca-4651-86e5-fa29dcdd09d1';
 
   /// Standard battery service.

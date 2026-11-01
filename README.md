@@ -10,7 +10,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-325%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-334%20passing-brightgreen)](#status)
 
 </div>
 
@@ -144,7 +144,7 @@ Details and calibration caveats: [docs/trainer-proxy.md](docs/trainer-proxy.md).
 
 ## How the link works
 
-**Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to its synchronous channel, send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
+**Controller side.** Scan for the controller service (`00000001-19ca-4651-86e5-fa29dcdd09d1`), subscribe to the asynchronous channel for buttons and to the synchronous reply channel, write the handshake to the write-only one (`docs/controllers.md` explains why swapping them gives a link that connects and stays silent), send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
 
 **Training application side.** The bridge announces `openzclick._openbikecontrol._tcp.local` with the TXT record of the specification (`version`, `id`, `name`, `service-uuids`, `manufacturer`, `model`). A client connects over TCP, sends an application info frame, and receives one frame per action, with no length field on the wire: `01 01 01` for shift up pressed, `01 18 01` for a steer left. One write carries one message, which is what delimits frames in a protocol that has no length byte.
 
@@ -162,7 +162,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 
 | Module | State | Tests |
 |---|---|---|
-| `core/` | protocol, session, gear engine, mapping, gestures | 216 |
+| `core/` | protocol, session, link supervision, gear engine, mapping, gestures | 225 |
 | `transports/` | mDNS responder, TCP server, FTMS trainer proxy; Bluetooth stays an interface | 87 |
 | `app/` | pairing, gears, publishing, injection, diagnostics on the four platforms | 22 |
 
