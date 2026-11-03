@@ -182,6 +182,30 @@ class ControllerConnection {
     return lower.contains('zwift') || lower.contains('click');
   }
 
+  /// Discovers the services, retrying while the controller service is absent.
+  ///
+  /// A connection is not a service table: some hosts, Windows first, answer
+  /// with whatever the cache held at that instant. The retries are cheap and
+  /// the alternative is a connection that reports a missing channel on a
+  /// controller that has all of them.
+  Future<List<BluetoothService>> _discoverControllerServices(
+    BluetoothDevice target,
+  ) async {
+    List<BluetoothService> services = <BluetoothService>[];
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      services = await target.discoverServices();
+      final bool found = services.any(
+        (BluetoothService service) =>
+            service.uuid.toString().toLowerCase() == ControllerUuids.service,
+      );
+      if (found) return services;
+      if (attempt < 3) {
+        await Future<void>.delayed(Duration(milliseconds: 700 * attempt));
+      }
+    }
+    return services;
+  }
+
   /// Connects to [target], discovers the service and performs the handshake.
   Future<void> connect(BluetoothDevice target) async {
     status = ControllerStatus.connecting;
@@ -196,7 +220,11 @@ class ControllerConnection {
         license: License.nonprofit,
         timeout: const Duration(seconds: 15),
       );
-      final List<BluetoothService> services = await target.discoverServices();
+      // Windows answers the first discovery after a connection with a partial
+      // table: the vendor service arrives on the second or third call. Asking
+      // once reported "channels are missing" on a controller that had them.
+      final List<BluetoothService> services =
+          await _discoverControllerServices(target);
 
       BluetoothCharacteristic? asyncChannel;
       BluetoothCharacteristic? writeTarget;
@@ -218,7 +246,13 @@ class ControllerConnection {
       }
 
       if (asyncChannel == null || writeTarget == null) {
-        throw StateError('controller service found but channels are missing');
+        final String seen = services
+            .map((BluetoothService s) => s.uuid.toString().toLowerCase())
+            .join(', ');
+        throw StateError(
+          'controller channels are missing (services seen: '
+          '${seen.isEmpty ? 'none' : seen})',
+        );
       }
       _writeTarget = writeTarget;
 
