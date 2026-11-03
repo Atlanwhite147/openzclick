@@ -65,6 +65,14 @@ detected from the bytes:
    `RideOn` marker, then sends frames in the clear. Some firmware does exactly
    this, which is why the bridge sends the plain request after three seconds
    without an answer.
+
+   A Click v2 makes this case harder than it sounds: it replies to the encrypted
+   request with a bare `RideOn` echo, six bytes and no key, and then stays
+   silent. That echo is a receipt, not an answer. A bridge that treats "a frame
+   arrived" as "the session is up" never sends the plain handshake, and the
+   controller never streams its buttons: the link is connected, quiet, and looks
+   like a broken decoder. The fallback therefore depends on the derived session
+   being null, not on the absence of bytes.
 3. **Silent.** Nothing arrives at all. Silence is not a radio problem: in the
    field it is almost always a controller that has never been paired in the
    official application, which is the well known Click v2 behaviour where the

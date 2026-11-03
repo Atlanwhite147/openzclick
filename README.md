@@ -198,7 +198,13 @@ Details and calibration caveats: [docs/trainer-proxy.md](docs/trainer-proxy.md).
 
 ## How the link works
 
-**Controller side.** Scan for the vendor service (`0000fc82-0000-1000-8000-00805f9b34fb`), subscribe to the asynchronous channel for buttons and to the synchronous reply channel, write the handshake to the write-only one (`docs/controllers.md` explains why swapping them gives a link that connects and stays silent), send an encrypted handshake carrying an ephemeral P-256 key with a plain `RideOn` fallback after three seconds. If the device answers with its public key, the session is derived with ECDH then HKDF-SHA256 and every frame is decrypted with AES-CCM; otherwise frames are parsed in the clear. Button notifications are protobuf varints.
+**Controller side.** Scan for the vendor service (`0000fc82-0000-1000-8000-00805f9b34fb`), subscribe to the asynchronous channel for buttons and to the synchronous reply channel, write the handshake to the write-only one (`docs/controllers.md` explains why swapping them gives a link that connects and stays silent). Three details each cost an evening and are now handled where they belong:
+
+- **A UUID is one identifier written three ways.** Windows reports Bluetooth SIG services short, so the vendor service comes back as `fc82` where the specification says `0000fc82-0000-1000-8000-00805f9b34fb`. Compare the canonical form, never the raw strings, or the service is present and never found.
+- **A connection is not a service table.** The first discovery right after a connection can return without the vendor service; retry it before concluding that a channel is missing.
+- **An echo is not an answer.** The encrypted request carrying an ephemeral P-256 key is answered either with the device public key, derived through ECDH then HKDF-SHA256 and decrypted with AES-CCM, or with a bare `RideOn` echo and then nothing. A Click v2 does the second: the plain six-byte handshake has to go out anyway, because that is what makes it stream its buttons. The decision rests on the derived session, not on having received bytes.
+
+Button notifications are protobuf varints: type `23`, field 1 holding the mask described below.
 
 **Training application side.** The bridge announces `openzclick._openbikecontrol._tcp.local` with the TXT record of the specification (`version`, `id`, `name`, `service-uuids`, `manufacturer`, `model`). A client connects over TCP, sends an application info frame, and receives one frame per action, with no length field on the wire: `01 01 01` for shift up pressed, `01 18 01` for a steer left. One write carries one message, which is what delimits frames in a protocol that has no length byte.
 
