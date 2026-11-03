@@ -19,11 +19,13 @@ phone or laptop browser          bridge (Windows, macOS, Linux, Android)
 
 ## On the bridge
 
-Start the publication on the Target screen. The card **Browser console** then shows the address to open and the four letter code:
+Start the publication on the Target screen. The card **Browser console** then shows a QR code, the address to open and the four letter code:
 
 ```
 ws://192.168.1.24:47124/console?token=abcd
 ```
+
+Scanning the QR with a phone opens the published page with the bridge and the code in the URL (`?bridge=192.168.1.24:47124&code=abcd`), and the page connects on its own: nothing is typed. Typing the address and the code by hand still works, for a desktop browser or a phone without a camera.
 
 Three rules make that code the only thing to protect:
 
@@ -35,7 +37,7 @@ The relay listens on `47124`, next to the TCP port `47123` the application uses.
 
 ## On the page
 
-Open the published page, go to **Target**, enter the address and the code. The address may be a bare IP (`192.168.1.24`), an IP with a port (`192.168.1.24:47124`) or a full `ws://` URL, because a rider copies whatever the bridge shows.
+Open the published page, go to **Target**, enter the address and the code (or scan the QR code of the bridge). The address may be a bare IP (`192.168.1.24`), an IP with a port (`192.168.1.24:47124`) or a full `ws://` URL, because a rider copies whatever the bridge shows.
 
 Once connected:
 

@@ -61,6 +61,9 @@ class FakeBridgeConsole implements PublisherPort, ConsoleClient {
   int get consoles => consoleConnected ? 1 : 0;
 
   @override
+  int? get consolePort => null;
+
+  @override
   String get consoleToken => '';
 
   @override

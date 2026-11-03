@@ -31,4 +31,31 @@ abstract final class ConsoleEndpoint {
     final String authority = hasPort ? trimmed : '$trimmed:$defaultPort';
     return 'ws://$authority$path?token=$cleanCode';
   }
+
+  /// Address a QR code carries, so a phone opens the page already connected.
+  ///
+  /// [page] is the published page; [host] and [port] the console of the bridge.
+  /// The rider scans, the page reads these two parameters and dials: nothing is
+  /// typed, which is the whole point of the code.
+  static String pageLink({
+    required String page,
+    required String host,
+    required int port,
+    required String code,
+  }) {
+    final String base = page.endsWith('/') ? page : '$page/';
+    return '$base?bridge=${Uri.encodeQueryComponent('$host:$port')}'
+        '&code=${Uri.encodeQueryComponent(code)}';
+  }
+
+  /// Reads the bridge coordinates out of a page URL.
+  ///
+  /// Returns `null` when the page was opened without them, which is the normal
+  /// case for someone who types the address by hand.
+  static ({String host, String code})? fromQuery(Map<String, String> query) {
+    final String host = (query['bridge'] ?? query['host'] ?? '').trim();
+    final String code = (query['code'] ?? query['token'] ?? '').trim();
+    if (host.isEmpty || code.isEmpty) return null;
+    return (host: host, code: code);
+  }
 }

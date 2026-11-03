@@ -10,7 +10,7 @@ void main() {
       advertise: false,
       port: 0,
       // No console relay: the tests below open the same fixed port.
-      consolePort: -1,
+      requestedConsolePort: -1,
     );
     await publisher.start();
     expect(publisher.running, isTrue);
@@ -28,7 +28,7 @@ void main() {
       advertise: false,
       port: 0,
       // No console relay: the tests below open the same fixed port.
-      consolePort: -1,
+      requestedConsolePort: -1,
     );
     await publisher.start();
     // A second publisher on the same UDP port would fail if the first one had
@@ -42,7 +42,7 @@ void main() {
       advertise: false,
       port: 0,
       // No console relay: the tests below open the same fixed port.
-      consolePort: -1,
+      requestedConsolePort: -1,
     );
     await publisher.publish(Action.shiftUp);
     expect(publisher.running, isFalse);
@@ -54,7 +54,7 @@ void main() {
       advertise: false,
       port: 0,
       // No console relay: the tests below open the same fixed port.
-      consolePort: -1,
+      requestedConsolePort: -1,
     );
     await publisher.start();
 

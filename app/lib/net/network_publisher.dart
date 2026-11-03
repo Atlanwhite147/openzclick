@@ -21,13 +21,13 @@ import 'publisher_port.dart';
 class NetworkPublisher implements PublisherPort {
   /// Creates a publisher for [instanceName].
   ///
-  /// [consolePort] is the WebSocket console; pass `0` for an ephemeral port, or
-  /// a negative value to serve no console at all.
+  /// [requestedConsolePort] is the WebSocket console; pass `0` for an ephemeral
+  /// port, or a negative value to serve no console at all.
   NetworkPublisher({
     this.instanceName = 'openzclick',
     this.advertise = true,
     this.port = defaultPort,
-    this.consolePort = WebSocketRelayTransport.defaultPort,
+    this.requestedConsolePort = WebSocketRelayTransport.defaultPort,
   }) {
     _transport = MdnsTcpTransport(
       instanceName: instanceName,
@@ -36,8 +36,8 @@ class NetworkPublisher implements PublisherPort {
       keymap: Keymap.defaults('openzclick'),
     );
     _subscription = _transport.events.listen(_onEvent);
-    if (consolePort >= 0) {
-      _relay = WebSocketRelayTransport(port: consolePort);
+    if (requestedConsolePort >= 0) {
+      _relay = WebSocketRelayTransport(port: requestedConsolePort);
       _relaySubscription = _relay!.events.listen(_onRelayEvent);
     }
   }
@@ -61,7 +61,7 @@ class NetworkPublisher implements PublisherPort {
   final int port;
 
   /// Requested console port; a negative value disables the console relay.
-  final int consolePort;
+  final int requestedConsolePort;
 
   late final MdnsTcpTransport _transport;
   WebSocketRelayTransport? _relay;
@@ -89,6 +89,14 @@ class NetworkPublisher implements PublisherPort {
   /// Number of connected browser consoles.
   @override
   int get consoles => _relay?.consoleCount ?? 0;
+
+  /// Port the console relay listens on, `null` when it is off.
+  @override
+  int? get consolePort {
+    final WebSocketRelayTransport? relay = _relay;
+    if (relay == null || !relay.isRunning) return null;
+    return relay.listeningPort;
+  }
 
   /// Last error, cleared on a successful start.
   @override

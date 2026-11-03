@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/main.dart';
 import 'package:openzclick/net/publisher_port.dart';
 import 'package:openzclick/state/app_state.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 /// A publisher that reports a running bridge with a console, so the card can be
@@ -36,6 +37,9 @@ class RunningBridge implements PublisherPort {
 
   @override
   int consoles = 0;
+
+  @override
+  int? get consolePort => running ? 47124 : null;
 
   @override
   String get consoleToken => 'abcd';
@@ -83,11 +87,13 @@ void main() {
     );
 
     expect(find.text('Browser console'), findsOneWidget);
-    // A rider copies this line, code included: it must be on screen as is.
+    // Scanning this link must land on the page already connected: the bridge
+    // address and the code travel in the URL.
     expect(
-      find.textContaining('ws://192.168.1.24:47124/console?token=abcd'),
+      find.textContaining('?bridge=192.168.1.24%3A47124&code=abcd'),
       findsOneWidget,
     );
+    expect(find.byType(QrImageView), findsOneWidget);
   });
 
   testWidgets('a stopped bridge says what to start', (

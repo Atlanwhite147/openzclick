@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'ble/controller_connection.dart';
 import 'net/android_injection.dart';
+import 'net/console_endpoint.dart';
 import 'net/publisher.dart';
 import 'platform/capabilities.dart';
 import 'settings/settings_store.dart';
@@ -28,7 +30,20 @@ class _OpenZclickAppState extends State<OpenZclickApp> {
   @override
   void initState() {
     super.initState();
-    unawaited(_state.restore(PrefsSettingsStore()));
+    unawaited(_start());
+  }
+
+  /// Restores the settings, then dials the bridge a QR code pointed at.
+  ///
+  /// A scanned code opens the page with `?bridge=…&code=…`: nothing is typed, and
+  /// the console connects before the rider sees the screen.
+  Future<void> _start() async {
+    await _state.restore(PrefsSettingsStore());
+    final ({String host, String code})? target = ConsoleEndpoint.fromQuery(
+      Uri.base.queryParameters,
+    );
+    if (target == null) return;
+    await _state.connectConsole(target.host, target.code);
   }
 
   @override
@@ -455,10 +470,17 @@ class TargetScreen extends StatelessWidget {
   }
 }
 
+/// Public address of the web edition, the one a QR code opens.
+///
+/// Hardcoded on purpose: a bridge has no way to discover the published page, and
+/// a rider scanning a code must land on a page that exists.
+const String webAppUrl = 'https://atlanwhite147.github.io/openzclick/';
+
 /// Card of a native bridge: where a browser console has to dial.
 ///
 /// The relay only exists while the publication runs, so the card reads the
-/// publisher state and says what to do when nothing listens yet.
+/// publisher state and says what to do when nothing listens yet. A QR code saves
+/// typing the address and the code on a phone: the page opens already connected.
 class _BridgeConsoleCard extends StatelessWidget {
   const _BridgeConsoleCard({required this.state});
 
@@ -470,23 +492,81 @@ class _BridgeConsoleCard extends StatelessWidget {
       listenable: state,
       builder: (BuildContext context, _) {
         final PublisherPort publisher = state.publisher;
-        final String? url = publisher.consoleUrl(
-          publisher.address ?? 'this-device',
-        );
+        final String host = publisher.address ?? 'this-device';
+        final int? consolePort = publisher.consolePort;
         final String code = publisher.consoleToken;
+        final bool ready = consolePort != null && code.isNotEmpty;
+        final String? link = ready
+            ? ConsoleEndpoint.pageLink(
+                page: webAppUrl,
+                host: host,
+                port: consolePort,
+                code: code,
+              )
+            : null;
         return Card(
-          child: ListTile(
-            leading: Icon(
-              publisher.consoles > 0 ? Icons.cast_connected : Icons.cast,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      publisher.consoles > 0
+                          ? Icons.cast_connected
+                          : Icons.cast,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Browser console',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (ready)
+                      Text(code, style: Theme.of(context).textTheme.titleLarge),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  ready
+                      ? 'Scan this code with a phone: the page opens and drives '
+                            'this bridge. Or enter $host:$consolePort and '
+                            'the code by hand.'
+                      : 'Start the publication to let a browser drive this bridge',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (link != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: QrImageView(
+                      data: link,
+                      size: 168,
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    link,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+                if (publisher.consoles > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '${publisher.consoles} console(s) connected',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+              ],
             ),
-            title: const Text('Browser console'),
-            subtitle: Text(
-              url == null || code.isEmpty
-                  ? 'Start the publication to let a browser drive this bridge'
-                  : 'Open the web page and enter $url '
-                        '(code $code) - ${publisher.consoles} console(s)',
-            ),
-            isThreeLine: url != null && code.isNotEmpty,
           ),
         );
       },

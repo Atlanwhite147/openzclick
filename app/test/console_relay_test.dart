@@ -21,7 +21,7 @@ void main() {
     final NetworkPublisher publisher = NetworkPublisher(
       advertise: false,
       port: 0,
-      consolePort: 0,
+      requestedConsolePort: 0,
     );
     await publisher.start();
     addTearDown(publisher.dispose);
@@ -41,7 +41,7 @@ void main() {
     final NetworkPublisher publisher = NetworkPublisher(
       advertise: false,
       port: 0,
-      consolePort: 0,
+      requestedConsolePort: 0,
     );
     await publisher.start();
     addTearDown(publisher.dispose);
@@ -66,7 +66,7 @@ void main() {
     final NetworkPublisher publisher = NetworkPublisher(
       advertise: false,
       port: 0,
-      consolePort: 0,
+      requestedConsolePort: 0,
     );
     await publisher.start();
     addTearDown(publisher.dispose);
@@ -83,7 +83,7 @@ void main() {
     final NetworkPublisher publisher = NetworkPublisher(
       advertise: false,
       port: 0,
-      consolePort: 0,
+      requestedConsolePort: 0,
     );
     await publisher.start();
     addTearDown(publisher.dispose);
@@ -120,7 +120,7 @@ void main() {
     final NetworkPublisher publisher = NetworkPublisher(
       advertise: false,
       port: 0,
-      consolePort: -1,
+      requestedConsolePort: -1,
     );
     await publisher.start();
     addTearDown(publisher.dispose);

@@ -12,7 +12,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-357%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-361%20passing-brightgreen)](#status)
 
 </div>
 
@@ -116,7 +116,7 @@ The same code runs in a tab, with nothing to install: the published page, or `fl
 | Capability | In a browser |
 |---|---|
 | Pairing the controller, gears, gestures, diagnostics | works, through Web Bluetooth (Chrome, Edge, Chrome for Android; Safari and Firefox expose no Web Bluetooth) |
-| Driving a bridge running on the local network | works: the page is the console of the bridge, over a WebSocket (`docs/console.md`) |
+| Driving a bridge running on the local network | works: the page is the console of the bridge, over a WebSocket, and a QR code on the bridge opens it already connected (`docs/console.md`) |
 | mDNS announcement, TCP server | impossible: a page cannot open a listening socket or announce a service, so a training application cannot discover it |
 | Tap or keyboard injection | impossible: a page cannot synthesise input for another application |
 | Becoming the trainer | impossible: browsers only offer the central role of Bluetooth, never the peripheral one |
@@ -182,7 +182,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, mapping, gestures | 225 |
 | `transports/` | mDNS responder, TCP server, console relay, FTMS trainer proxy; Bluetooth stays an interface | 94 |
-| `app/` | pairing, gears, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 38 |
+| `app/` | pairing, gears, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 42 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 

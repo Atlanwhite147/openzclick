@@ -58,6 +58,12 @@ abstract interface class PublisherPort {
   /// Number of connected consoles.
   int get consoles;
 
+  /// Port of the console relay, `null` when this host serves none.
+  ///
+  /// The address alone is not enough for a QR code: a phone also needs the port
+  /// to dial, and it is not the one the training application uses.
+  int? get consolePort;
+
   /// Actions typed in a console: applied exactly like a controller press.
   Stream<Action> get consoleActions;
 

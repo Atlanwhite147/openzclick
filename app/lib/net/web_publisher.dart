@@ -67,6 +67,10 @@ class WebPublisher implements PublisherPort, ConsoleClient {
   @override
   int get consoles => peers;
 
+  /// The page serves no console of its own.
+  @override
+  int? get consolePort => null;
+
   @override
   String? get error => _error;
 
