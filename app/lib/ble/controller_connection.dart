@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
@@ -118,7 +119,16 @@ class ControllerConnection {
 
     try {
       await FlutterBluePlus.startScan(
-        withServices: <Guid>[Guid(ControllerUuids.service)],
+        // In a browser the scan *is* the device chooser: a service filter would
+        // hide a controller that does not advertise that service in its
+        // advertisement packet, so the page shows every nearby device and
+        // grants the service as an optional one instead.
+        withServices: kIsWeb
+            ? const <Guid>[]
+            : <Guid>[Guid(ControllerUuids.service)],
+        webOptionalServices: kIsWeb
+            ? <Guid>[Guid(ControllerUuids.service)]
+            : const <Guid>[],
         timeout: timeout,
       );
     } catch (e) {

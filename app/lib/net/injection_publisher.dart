@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:openzclick_core/openzclick_core.dart';
-import 'package:openzclick_transports/openzclick_transports.dart';
+
+import 'injection_backend.dart';
 
 /// Injector used on platforms without a tap implementation.
 class UnsupportedInjector implements KeyInjector {
@@ -83,7 +84,7 @@ class InjectionPublisher {
       entry.key: List<double>.of(entry.value),
   };
 
-  LocalInjectionTransport? _transport;
+  InjectionBackend? _backend;
 
   /// True when taps are being injected.
   bool running = false;
@@ -111,8 +112,8 @@ class InjectionPublisher {
   Future<void> _applyPositions() async {
     if (!_dirty) return;
     final bool wasRunning = running;
-    await _transport?.stop();
-    _transport = null;
+    await _backend?.stop();
+    _backend = null;
     running = false;
     _dirty = false;
     if (wasRunning) {
@@ -132,21 +133,21 @@ class InjectionPublisher {
       return;
     }
     try {
-      final Map<Action, String>? bindings = keys;
-      final LocalInjectionTransport transport = LocalInjectionTransport(
+      final InjectionBackend? backend = createInjectionBackend(
         injector: injector,
-        targets: <Action, InjectionTarget>{
-          if (bindings != null)
-            for (final MapEntry<Action, String> entry in bindings.entries)
-              entry.key: KeyTarget(entry.value)
-          else
-            for (final MapEntry<Action, List<double>> entry
-                in positions.entries)
-              entry.key: PointTarget(entry.value[0], entry.value[1]),
-        },
+        keys: keys,
+        positions: positions,
       );
-      await transport.start();
-      _transport = transport;
+      if (backend == null) {
+        // A browser has no way to tap or type into another application: say it
+        // here instead of pretending the switch did something.
+        error = 'this host cannot inject input: no synthetic input API';
+        running = false;
+        _notify();
+        return;
+      }
+      await backend.start();
+      _backend = backend;
       running = true;
     } catch (e) {
       error = e.toString();
@@ -157,8 +158,8 @@ class InjectionPublisher {
 
   /// Stops injecting.
   Future<void> stop() async {
-    await _transport?.stop();
-    _transport = null;
+    await _backend?.stop();
+    _backend = null;
     running = false;
     _notify();
   }
@@ -167,10 +168,10 @@ class InjectionPublisher {
   Future<void> publish(Action action) async {
     if (!running) return;
     await _applyPositions();
-    final LocalInjectionTransport? transport = _transport;
-    if (transport == null) return;
+    final InjectionBackend? backend = _backend;
+    if (backend == null) return;
     try {
-      await transport.emit(action);
+      await backend.emit(action);
       error = null;
     } catch (e) {
       error = e.toString();

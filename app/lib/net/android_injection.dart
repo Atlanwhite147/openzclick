@@ -1,7 +1,6 @@
-import 'dart:io' show Platform;
-
-import 'package:openzclick_core/openzclick_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:openzclick_core/openzclick_core.dart';
 
 /// Injects taps through the Android accessibility service.
 ///
@@ -12,7 +11,8 @@ class AndroidInjection implements KeyInjector {
   static const MethodChannel _channel = MethodChannel('openzclick/injection');
 
   /// True when the platform can inject taps.
-  static bool get supported => Platform.isAndroid;
+  static bool get supported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// True when the user has enabled the accessibility service.
   static Future<bool> isReady() async {

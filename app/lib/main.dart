@@ -6,7 +6,8 @@ import 'package:openzclick_core/openzclick_core.dart';
 
 import 'ble/controller_connection.dart';
 import 'net/android_injection.dart';
-import 'net/network_publisher.dart';
+import 'net/publisher.dart';
+import 'platform/capabilities.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
 
@@ -247,11 +248,17 @@ class ControllersScreen extends StatelessWidget {
                 ),
                 title: Text('Controller: ${link.status.name}'),
                 subtitle: Text(
-                  link.error ??
-                      (link.status == ControllerStatus.ready
-                          ? '${link.encrypted ? 'encrypted' : 'plain'} session'
-                                '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
-                          : 'Two-button Bluetooth controller'),
+                  // Silence after the handshake is the one failure that no
+                  // reconnection fixes: say what the rider must do instead of
+                  // showing a connection that looks alive.
+                  link.needsUnlock
+                      ? 'No answer after the handshake: pair the controller '
+                            'once in its official application, then reconnect'
+                      : link.error ??
+                            (link.status == ControllerStatus.ready
+                                ? '${link.encrypted ? 'encrypted' : 'plain'} session'
+                                      '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
+                                : 'Two-button Bluetooth controller'),
                 ),
                 trailing: link.status == ControllerStatus.ready
                     ? TextButton(
@@ -309,7 +316,7 @@ class TargetScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (BuildContext context, _) {
-        final NetworkPublisher publisher = state.publisher;
+        final PublisherPort publisher = state.publisher;
         final List<MapEntry<int, Action>> entries =
             state.keymap.bindings.entries.toList()..sort(
               (MapEntry<int, Action> a, MapEntry<int, Action> b) =>
@@ -319,23 +326,42 @@ class TargetScreen extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[
-            Card(
-              child: SwitchListTile(
-                title: const Text('Publish on the network'),
-                subtitle: Text(
-                  publisher.error ??
-                      (publisher.running
-                          ? '${publisher.address ?? 'this device'}:${publisher.listeningPort}'
-                                ' - ${publisher.peers} client(s)'
-                                '${publisher.advertise ? ' - announced over mDNS' : ' - enter this address in the application'}'
-                          : publisher.advertise
-                          ? 'Announces the bridge over mDNS and accepts TCP'
-                          : 'Accepts TCP on port ${publisher.port}, without mDNS'),
+            if (Capabilities.canPublish)
+              Card(
+                child: SwitchListTile(
+                  title: const Text('Publish on the network'),
+                  subtitle: Text(
+                    publisher.error ??
+                        (publisher.running
+                            ? '${publisher.address ?? 'this device'}:${publisher.listeningPort}'
+                                  ' - ${publisher.peers} client(s)'
+                                  '${publisher.advertise ? ' - announced over mDNS' : ' - enter this address in the application'}'
+                            : publisher.advertise
+                            ? 'Announces the bridge over mDNS and accepts TCP'
+                            : 'Accepts TCP on port ${publisher.port}, without mDNS'),
+                  ),
+                  value: publisher.running,
+                  onChanged: (_) => state.togglePublishing(),
                 ),
-                value: publisher.running,
-                onChanged: (_) => state.togglePublishing(),
+              )
+            else
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.lan_outlined),
+                  title: Text('Publish on the network: impossible here'),
+                  subtitle: Text(
+                    'A browser cannot open a listening socket or announce a '
+                    'service, so a training application cannot discover this '
+                    'page. Pairing the controller, the gears and the diagnostics '
+                    'work; the console below drives the bridge running on your '
+                    'network, and the bridge is what the application sees.',
+                  ),
+                ),
               ),
-            ),
+            if (Capabilities.canPublish)
+              _BridgeConsoleCard(state: state)
+            else
+              _ConsoleClientCard(state: state),
             Card(
               child: Column(
                 children: <Widget>[
@@ -423,6 +449,169 @@ class TargetScreen extends StatelessWidget {
                 title: Text(entry.value.label),
               ),
           ],
+        );
+      },
+    );
+  }
+}
+
+/// Card of a native bridge: where a browser console has to dial.
+///
+/// The relay only exists while the publication runs, so the card reads the
+/// publisher state and says what to do when nothing listens yet.
+class _BridgeConsoleCard extends StatelessWidget {
+  const _BridgeConsoleCard({required this.state});
+
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: state,
+      builder: (BuildContext context, _) {
+        final PublisherPort publisher = state.publisher;
+        final String? url = publisher.consoleUrl(
+          publisher.address ?? 'this-device',
+        );
+        final String code = publisher.consoleToken;
+        return Card(
+          child: ListTile(
+            leading: Icon(
+              publisher.consoles > 0 ? Icons.cast_connected : Icons.cast,
+            ),
+            title: const Text('Browser console'),
+            subtitle: Text(
+              url == null || code.isEmpty
+                  ? 'Start the publication to let a browser drive this bridge'
+                  : 'Open the web page and enter $url '
+                        '(code $code) - ${publisher.consoles} console(s)',
+            ),
+            isThreeLine: url != null && code.isNotEmpty,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Card of the browser build: dial the bridge running on the network.
+///
+/// This is the only route that works on an iPhone, where no browser exposes Web
+/// Bluetooth: the buttons of this page reach the bridge over a WebSocket, and the
+/// bridge publishes them to the training application.
+class _ConsoleClientCard extends StatefulWidget {
+  const _ConsoleClientCard({required this.state});
+
+  final AppState state;
+
+  @override
+  State<_ConsoleClientCard> createState() => _ConsoleClientCardState();
+}
+
+class _ConsoleClientCardState extends State<_ConsoleClientCard> {
+  final TextEditingController _host = TextEditingController();
+  final TextEditingController _code = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _host.dispose();
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _connect() async {
+    setState(() => _busy = true);
+    await widget.state.connectConsole(_host.text, _code.text);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _disconnect() async {
+    setState(() => _busy = true);
+    await widget.state.disconnectConsole();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ConsoleClient? client = widget.state.consoleClient;
+    if (client == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: widget.state,
+      builder: (BuildContext context, _) {
+        final bool connected = client.consoleConnected;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      connected ? Icons.cast_connected : Icons.cast,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        connected
+                            ? 'Console connected'
+                            : 'Drive a bridge from this page',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  client.consoleError ??
+                      (connected
+                          ? client.consoleAddress ?? ''
+                          : 'Start the publication in openzclick on the machine '
+                                'where your training application runs, then '
+                                'enter the address it displays.'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (!connected) ...<Widget>[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _host,
+                    enabled: !_busy,
+                    decoration: const InputDecoration(
+                      labelText: 'Bridge address',
+                      hintText: '192.168.1.24',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _code,
+                    enabled: !_busy,
+                    decoration: const InputDecoration(
+                      labelText: 'Code shown by the bridge',
+                      hintText: 'abcd',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _connect,
+                    icon: const Icon(Icons.link),
+                    label: const Text('Connect'),
+                  ),
+                ] else
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _busy ? null : _disconnect,
+                      icon: const Icon(Icons.link_off),
+                      label: const Text('Disconnect'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );

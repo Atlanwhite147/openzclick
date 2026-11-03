@@ -42,6 +42,10 @@ dependencies:
   shared_preferences: ^2.3.2
   ffi: ^2.1.3
 
+  # WebSocket of the browser console. Only imported by the web build, but a
+  # dependency is declared where it is used, not where it happens to compile.
+  web: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

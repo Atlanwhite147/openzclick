@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart' hide Action;
 import 'package:openzclick_core/openzclick_core.dart';
 
 import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
+import '../net/desktop_injection.dart';
 import '../net/injection_publisher.dart';
-import '../net/x11_injection.dart';
-import '../net/network_publisher.dart';
+import '../net/publisher.dart';
+import '../platform/capabilities.dart';
 import '../settings/settings_store.dart';
 
 /// Shared application state: one gear engine, one keymap, one controller link.
@@ -24,30 +24,35 @@ class AppState extends ChangeNotifier {
   /// Keymap used by the target screen to display button bindings.
   final Keymap keymap;
 
-  /// Linux backend for keyboard and pointer injection, null elsewhere.
-  final X11Injection? _x11 = Platform.isLinux ? X11Injection() : null;
+  /// Desktop backend for keyboard and pointer injection, null when the host has
+  /// none (a browser, or Windows and macOS until a port exists).
+  final DesktopInjection? _desktop = createDesktopInjection();
 
   /// Bluetooth link to the physical controller.
   final ControllerConnection controller = ControllerConnection();
 
-  /// Network publication towards a training application.
+  /// Publication towards a training application.
   ///
   /// iOS cannot announce a service without Apple's multicast entitlement, so
-  /// the publisher only listens there and the address is shown to the user.
-  final NetworkPublisher publisher = NetworkPublisher(
-    advertise: !Platform.isIOS,
-  );
+  /// the publisher only listens there and the address is shown to the user. A
+  /// browser cannot publish at all: it becomes the console of a bridge instead.
+  ///
+  /// A caller may supply one, which is how the console paths are tested without
+  /// a network.
+  late final PublisherPort publisher =
+      _publisherOverride ??
+      createPublisher(advertise: Capabilities.canAnnounce);
 
   /// Local injection towards an application that only accepts taps.
   late final InjectionPublisher injection = InjectionPublisher(
     injector:
-        _x11 ??
+        _desktop?.injector ??
         (AndroidInjection.supported
             ? AndroidInjection()
             : UnsupportedInjector()),
-    availability: _x11 == null ? null : () => _x11.available,
+    availability: _desktop?.availability,
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
-    keys: _x11 == null ? null : InjectionPublisher.defaultKeys,
+    keys: _desktop == null ? null : InjectionPublisher.defaultKeys,
   );
 
   /// Turns button states into gear changes and direction choices.
@@ -71,19 +76,28 @@ class AppState extends ChangeNotifier {
   Timer? _persistTimer;
 
   StreamSubscription<ClickButtons>? _buttonSubscription;
+  StreamSubscription<Action>? _consoleSubscription;
+  StreamSubscription<Map<String, Object?>>? _bridgeSubscription;
 
   /// Creates the state, optionally with a specific profile.
   ///
   /// [doubleTapWindow] is forwarded to the gesture detector so that tests can
-  /// shorten it.
-  AppState({GearProfile? profile, Duration? doubleTapWindow})
-    : engine = GearEngine(
-        profile: profile ?? GearProfile.road12,
-        initialGear: 5,
-      ),
-      keymap = Keymap.defaults('default') {
+  /// shorten it. [publisher] replaces the publication of the host, which is how
+  /// the console paths are exercised without a bridge on the network.
+  AppState({
+    GearProfile? profile,
+    Duration? doubleTapWindow,
+    PublisherPort? publisher,
+  }) : _publisherOverride = publisher,
+       engine = GearEngine(
+         profile: profile ?? GearProfile.road12,
+         initialGear: 5,
+       ),
+       keymap = Keymap.defaults('default') {
     controller.onChanged = notifyListeners;
-    publisher.onChanged = notifyListeners;
+    // `this.` on purpose: inside the body, the constructor parameter of the same
+    // name would otherwise shadow the field.
+    this.publisher.onChanged = notifyListeners;
     injection.onChanged = () {
       _persist();
       notifyListeners();
@@ -93,6 +107,41 @@ class AppState extends ChangeNotifier {
       doubleTapWindow: doubleTapWindow ?? const Duration(milliseconds: 320),
     );
     _buttonSubscription = controller.buttons.listen(handleButtons);
+
+    // A console is an input like any other: its buttons take exactly the same
+    // path as the ones of the physical controller.
+    _consoleSubscription = this.publisher.consoleActions.listen(_onAction);
+    final ConsoleClient? client = consoleClient;
+    if (client != null) {
+      // The other way round: this host is the console, so the bridge decides
+      // the gear and the page follows, instead of drifting beside it.
+      _bridgeSubscription = client.bridgeStates.listen(_onBridgeState);
+    }
+  }
+
+  /// Publication supplied by a test, `null` on a real run.
+  final PublisherPort? _publisherOverride;
+
+  /// Applies a state published by the bridge this page is the console of.
+  void _onBridgeState(Map<String, Object?> state) {
+    final Object? rawGear = state['gearIndex'];
+    if (rawGear is! int) return;
+    final Object? rawProfile = state['profileId'];
+    final GearProfile profile = rawProfile is String
+        ? GearProfile.byId(rawProfile) ?? engine.profile
+        : engine.profile;
+    final Object? rawMode = state['mode'];
+    final RidingMode mode = rawMode == RidingMode.erg.name
+        ? RidingMode.erg
+        : RidingMode.sim;
+    if (profile.id == engine.profile.id &&
+        rawGear == engine.gearIndex &&
+        mode == engine.mode) {
+      return;
+    }
+    engine = GearEngine(profile: profile, initialGear: rawGear, mode: mode);
+    _persist();
+    notifyListeners();
   }
 
   /// Applies an action coming from the gesture detector.
@@ -157,6 +206,7 @@ class AppState extends ChangeNotifier {
   void shiftUp() {
     engine.shiftUp();
     _persist();
+    _syncConsole(Action.shiftUp);
     unawaited(publisher.publish(Action.shiftUp));
     unawaited(injection.publish(Action.shiftUp));
     notifyListeners();
@@ -166,9 +216,27 @@ class AppState extends ChangeNotifier {
   void shiftDown() {
     engine.shiftDown();
     _persist();
+    _syncConsole(Action.shiftDown);
     unawaited(publisher.publish(Action.shiftDown));
     unawaited(injection.publish(Action.shiftDown));
     notifyListeners();
+  }
+
+  /// Publishes the gear state the browser consoles display.
+  ///
+  /// Called on every change that a page can show: a console left on a shelf must
+  /// display the gear the bridge is really in, not the one it had when it
+  /// connected.
+  void _syncConsole(Action action) {
+    unawaited(
+      publisher.publishConsoleState(
+        profileId: engine.profile.id,
+        gearIndex: engine.gearIndex,
+        gearCount: engine.gearCount,
+        mode: engine.mode.name,
+        lastAction: action.label,
+      ),
+    );
   }
 
   /// Switches to another built-in profile, keeping the position in the block.
@@ -184,6 +252,7 @@ class AppState extends ChangeNotifier {
       mode: engine.mode,
     );
     _persist();
+    _syncConsole(Action.none);
     notifyListeners();
   }
 
@@ -193,6 +262,7 @@ class AppState extends ChangeNotifier {
       engine.mode == RidingMode.sim ? RidingMode.erg : RidingMode.sim,
     );
     _persist();
+    _syncConsole(Action.none);
     notifyListeners();
   }
 
@@ -211,8 +281,29 @@ class AppState extends ChangeNotifier {
     }
     if (snapshot.publishOnStart) await publisher.start();
     if (snapshot.injectOnStart) await injection.start();
+    _syncConsole(Action.none);
     notifyListeners();
   }
+
+  /// Connects this page to a bridge, as its console.
+  ///
+  /// Only the browser build is a console: the native one serves consoles.
+  Future<void> connectConsole(String host, String code) async {
+    await consoleClient?.connectConsole(host, code);
+    notifyListeners();
+  }
+
+  /// Closes the connection to the bridge.
+  Future<void> disconnectConsole() async {
+    await consoleClient?.disconnectConsole();
+    notifyListeners();
+  }
+
+  /// The bridge this page is the console of, `null` on a native host.
+  ConsoleClient? get consoleClient => switch (publisher) {
+    final ConsoleClient client => client,
+    _ => null,
+  };
 
   /// Writes the current settings, coalescing bursts of changes.
   void _persist() {
@@ -276,6 +367,8 @@ class AppState extends ChangeNotifier {
     gestures.dispose();
     publisher.dispose();
     _buttonSubscription?.cancel();
+    _consoleSubscription?.cancel();
+    _bridgeSubscription?.cancel();
     controller.dispose();
     super.dispose();
   }
