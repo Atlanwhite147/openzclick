@@ -210,6 +210,20 @@ cd transports && dart run tool/net_probe.dart 47123
 
 Then browse `_openbikecontrol._tcp` with any mDNS browser and connect a client to the printed port.
 
+### Which button is which
+
+Measured on a Click v2 (firmware 1.1.0), one button at a time, by reading the mask out of the `23 08 <varint>` notification the controller sends: a press clears its bit, every other bit stays set, so the resting frame is `23 08 ff ff ff ff 0f`.
+
+| Button | Bit | Frame while held | Used for |
+|---|---|---|---|
+| `+` (under the cluster) | 12 | `23 08 ff df ff ff 0f` | shift up |
+| `B` (bottom, pink) | 5 | `23 08 df ff ff ff 0f` | shift down |
+| `Y` (top, blue) | 6 | `23 08 bf ff ff ff 0f` | free |
+| `Z` (left, orange) | 7 | `23 08 7f ff ff ff 0f` | free |
+| `A` (right, green) | 4 | `23 08 ef ff ff ff 0f` | free |
+
+Only `+` and `B` reach the gear engine. The other three are named and covered by a test that asserts they change nothing, so a later mapping cannot happen by accident.
+
 Protocol facts are implemented in Dart from public interoperability notes; no third-party code is copied. Cryptographic primitives come from `pointycastle`.
 
 ## Status
