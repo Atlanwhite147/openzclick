@@ -9,8 +9,14 @@ library;
 
 /// Bluetooth identifiers used by the controller family.
 abstract final class ControllerUuids {
-  /// Primary service.
-  static const String service = '00000001-19ca-4651-86e5-fa29dcdd09d1';
+  /// Primary service, the vendor service the controller actually advertises.
+  ///
+  /// The `00000001-19ca-4651-86e5-fa29dcdd09d1` identifier is *not* announced
+  /// in the advertising packet: it only exists as the parent of the channels
+  /// below, inside this vendor service. A scan filtered on it never returns a
+  /// controller (measured on a Click v2, firmware 1.1.0, which advertises
+  /// `0000fc82-0000-1000-8000-00805f9b34fb`).
+  static const String service = '0000fc82-0000-1000-8000-00805f9b34fb';
 
   /// Asynchronous channel, notify only: the button stream arrives here.
   static const String asyncChannel = '00000002-19ca-4651-86e5-fa29dcdd09d1';

@@ -16,6 +16,14 @@ do the same job:
 | syncRx | `0003` | host to controller, write | handshake and commands |
 | syncTx | `0004` | controller to host, indicate | handshake reply, answers |
 
+That service is the vendor one, `0000fc82-0000-1000-8000-00805f9b34fb`, and that
+is what the controller announces in its advertising packet. The
+`00000001-19ca-4651-86e5-fa29dcdd09d1` identifier that names the channels is not
+announced anywhere: a scan filtered on it returns nothing, whatever the state of
+the controller, and the failure is silent. Measured on a Click v2, firmware
+1.1.0, which also exposes `0100`, `0101` and `0102` in the same service, one per
+pod of the pair.
+
 Two mistakes follow from the names, which come from the controller's point of
 view:
 

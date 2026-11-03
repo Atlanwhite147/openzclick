@@ -81,4 +81,24 @@ void main() {
     expect(find.text('Scan for controllers'), findsOneWidget);
     expect(find.textContaining('This page cannot use Bluetooth'), findsNothing);
   });
+
+  testWidgets('a scan that finds nothing says so instead of nothing', (
+    WidgetTester tester,
+  ) async {
+    // The scan used to return to this exact screen whether it had found a
+    // controller or not: the rider pressed Scan, the page did not move, and the
+    // only conclusion left was that the button was broken.
+    final AppState state = AppState(publisher: FakePublisher());
+    addTearDown(state.dispose);
+    state.controller.scanFoundNothing = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ControllersScreen(state: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Nothing answered'), findsOneWidget);
+  });
 }

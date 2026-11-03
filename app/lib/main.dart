@@ -320,8 +320,8 @@ class ControllersScreen extends StatelessWidget {
                             (ready
                                 ? '${link.encrypted ? 'encrypted' : 'plain'} session'
                                       '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
-                                : 'Two-button Bluetooth controller, paired with '
-                                      'the buttons below'),
+                                : 'Zwift Click or two-button Bluetooth '
+                                      'controller, paired with the buttons below'),
                 ),
                 trailing: ready
                     ? TextButton(
@@ -382,9 +382,22 @@ class ControllersScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'Put the controller in pairing mode first: hold both buttons '
-                  'until the light blinks, then tap Scan.',
+                  'Press a button on the controller first: its light blinks for '
+                  'about thirty seconds, and a scan only sees it while it '
+                  'blinks. Then tap Scan.',
                   style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            if (link.scanFoundNothing && !busy && !ready)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Nothing answered. The controller sleeps after a few seconds: '
+                  'press a button again and scan once more. A Click v2 that was '
+                  'never paired in Zwift stays silent until it has been.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ),
             for (final ScanResult result in link.found)

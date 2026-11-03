@@ -63,6 +63,12 @@ class ControllerConnection {
   /// application before it accepts any other host.
   bool needsUnlock = false;
 
+  /// True when the last scan ended without a single controller.
+  ///
+  /// A scan that finds nothing used to go back to the initial screen without
+  /// a word, which reads as "the button did nothing": say it instead.
+  bool scanFoundNothing = false;
+
   final StreamController<ClickButtons> _buttons =
       StreamController<ClickButtons>.broadcast();
 
@@ -99,6 +105,7 @@ class ControllerConnection {
   Future<void> scan({Duration timeout = const Duration(seconds: 8)}) async {
     await _scanSubscription?.cancel();
     _found.clear();
+    scanFoundNothing = false;
     status = ControllerStatus.scanning;
     error = null;
     _notify();
@@ -106,6 +113,7 @@ class ControllerConnection {
     _scanSubscription = FlutterBluePlus.onScanResults.listen(
       (List<ScanResult> results) {
         for (final ScanResult result in results) {
+          if (!_looksLikeController(result)) continue;
           if (_found.every(
             (ScanResult r) => r.device.remoteId != result.device.remoteId,
           )) {
@@ -127,13 +135,13 @@ class ControllerConnection {
 
     try {
       await FlutterBluePlus.startScan(
-        // In a browser the scan *is* the device chooser: a service filter would
-        // hide a controller that does not advertise that service in its
-        // advertisement packet, so the page shows every nearby device and
-        // grants the service as an optional one instead.
-        withServices: kIsWeb
-            ? const <Guid>[]
-            : <Guid>[Guid(ControllerUuids.service)],
+        // Never filtered by service. A service filter only matches what the
+        // device puts in its advertising packet, and a controller that omits
+        // it is simply invisible: that is not a device worth hiding, it is the
+        // one the rider is pressing. Filtering moves to
+        // [_looksLikeController], which reads both the announced services and
+        // the name.
+        withServices: const <Guid>[],
         webOptionalServices: kIsWeb
             ? <Guid>[Guid(ControllerUuids.service)]
             : const <Guid>[],
@@ -151,8 +159,27 @@ class ControllerConnection {
     }
 
     await Future<void>.delayed(timeout);
+    scanFoundNothing = _found.isEmpty;
     status = ControllerStatus.idle;
     _notify();
+  }
+
+  /// Whether [result] can be the controller this application drives.
+  ///
+  /// The advertised service is the reliable signal, but a device that keeps it
+  /// out of its advertising packet is still a controller: the name covers that
+  /// case, and a wrong candidate costs one failed connection, not a session.
+  static bool _looksLikeController(ScanResult result) {
+    for (final Guid service in result.advertisementData.serviceUuids) {
+      if (service.toString().toLowerCase() == ControllerUuids.service) {
+        return true;
+      }
+    }
+    final String name = result.advertisementData.advName.isNotEmpty
+        ? result.advertisementData.advName
+        : result.device.platformName;
+    final String lower = name.toLowerCase();
+    return lower.contains('zwift') || lower.contains('click');
   }
 
   /// Connects to [target], discovers the service and performs the handshake.
