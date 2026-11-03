@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../net/publisher_port.dart';
 import '../platform/capabilities.dart';
 import '../state/app_state.dart';
+import 'parked_gear_card.dart';
 
 /// First thing a rider sees: what to do with MyWhoosh, in order.
 ///
@@ -13,10 +14,16 @@ import '../state/app_state.dart';
 /// installed anything can finish without leaving the screen.
 class MyWhooshGuideCard extends StatelessWidget {
   /// Creates the guide for [state].
-  const MyWhooshGuideCard({required this.state, super.key});
+  ///
+  /// [onOpenNetwork] jumps to the Network tab, `null` when the card is shown
+  /// without a tab bar.
+  const MyWhooshGuideCard({required this.state, this.onOpenNetwork, super.key});
 
   /// Shared application state.
   final AppState state;
+
+  /// Jumps to the Network tab where a browser connects to a bridge.
+  final VoidCallback? onOpenNetwork;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +32,7 @@ class MyWhooshGuideCard extends StatelessWidget {
       builder: (BuildContext context, _) {
         final PublisherPort publisher = state.publisher;
         if (!Capabilities.canPublish) {
-          return const _GuideElsewhere();
+          return _GuideElsewhere(state: state, onOpenNetwork: onOpenNetwork);
         }
         final bool running = publisher.running;
         final bool connected = publisher.peers > 0;
@@ -57,35 +64,7 @@ class MyWhooshGuideCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 if (!state.physicalSetup.isComplete) ...<Widget>[
-                  // Said before the four steps, because it anchors every gear
-                  // the bridge will send: a rider who starts riding with this
-                  // unanswered finds the ride harder and concludes the gears
-                  // are broken.
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Icon(Icons.pedal_bike_outlined, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Before you start: leave the chain on a middle cog '
-                            'and set it in the Gears tab. The gears here are '
-                            'scaled from where the chain really is.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _ParkedGearNotice(state: state),
                 ],
                 _Step(
                   number: 1,
@@ -157,6 +136,60 @@ class MyWhooshGuideCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// The one setting that moves every gear, said before anything else.
+///
+/// A rider who starts riding with this unanswered finds the ride harder than
+/// the gear number says and concludes the gears are broken. It appears on both
+/// the bridge screen and the browser screen, because the browser build never
+/// reaches the four steps and would otherwise never mention it.
+class _ParkedGearNotice extends StatelessWidget {
+  const _ParkedGearNotice({required this.state});
+
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(Icons.pedal_bike_outlined, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Before you start: leave the chain on a middle cog and set it '
+                  'here. The gears are scaled from where the chain really is.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
+          // The box used to name the Gears tab and stop there, which sends a
+          // novice hunting for a tab in the middle of a first-time setup.
+          // Answering here removes the hop.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => askParkedGear(context, state),
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Answer now'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -267,17 +300,20 @@ class _Troubleshooting extends StatelessWidget {
 
 /// A plain page is not the bridge: say where the bridge has to run.
 class _GuideElsewhere extends StatelessWidget {
-  const _GuideElsewhere();
+  const _GuideElsewhere({required this.state, this.onOpenNetwork});
+
+  final AppState state;
+  final VoidCallback? onOpenNetwork;
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
+            const Row(
               children: <Widget>[
                 Icon(Icons.info_outline),
                 SizedBox(width: 12),
@@ -289,13 +325,39 @@ class _GuideElsewhere extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 8),
-            Text(
-              'This page cannot be found by MyWhoosh on its own. Either start '
-              'the bridge on a computer or an Android phone (the application '
-              'from the release page), then connect this page to it in the '
-              'Network tab; or run the page as an installed application, which '
-              'Chrome alone allows, and start the bridge here.',
+            const SizedBox(height: 8),
+            const Text(
+              'MyWhoosh needs the openzclick application running on a computer '
+              'or an Android phone: that application is the bridge it '
+              'discovers. This page then drives that bridge from here, which is '
+              'the only route that works on an iPhone.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '1. Install openzclick where MyWhoosh runs, and press Start there.'
+              '\n2. It shows a code. Scan it, or type the address it displays.',
+              style: TextStyle(fontSize: 13),
+            ),
+            if (onOpenNetwork != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: FilledButton.icon(
+                  onPressed: onOpenNetwork,
+                  icon: const Icon(Icons.link),
+                  label: const Text('Connect to my bridge'),
+                ),
+              ),
+            if (!state.physicalSetup.isComplete)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: _ParkedGearNotice(state: state),
+              ),
+            const SizedBox(height: 8),
+            const Text(
+              'Chrome on a computer can also run this page as an installed '
+              'application, and start the bridge by itself.',
+              style: TextStyle(fontSize: 12),
             ),
           ],
         ),

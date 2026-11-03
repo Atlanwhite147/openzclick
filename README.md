@@ -24,9 +24,9 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 
 <div align="center">
 
-| Trainer | Controllers | Diagnostics | Publishing |
+| Start | Gears | Controllers | Network |
 |---|---|---|---|
-| ![Trainer](docs/screenshots/trainer.png) | ![Controllers](docs/screenshots/controllers.png) | ![Diagnostics](docs/screenshots/diagnostics.png) | ![Publishing](docs/screenshots/publish.png) |
+| ![Start](docs/screenshots/trainer.png) | ![Gears](docs/screenshots/controllers.png) | ![Controllers](docs/screenshots/diagnostics.png) | ![Network](docs/screenshots/publish.png) |
 
 </div>
 

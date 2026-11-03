@@ -12,6 +12,7 @@ import 'net/publisher.dart';
 import 'platform/capabilities.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
+import 'ui/gear_panel.dart';
 import 'ui/mywhoosh_guide.dart';
 import 'ui/parked_gear_card.dart';
 
@@ -86,27 +87,36 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  // Four destinations, not five. The test bench is a developer's tool: it sat
+  // in the navigation bar next to the buttons a rider presses every ride, and
+  // that alone made the application look like something to configure. It now
+  // lives at the bottom of the Network tab, where the rest of the technical
+  // material already was.
   static const List<String> _titles = <String>[
     'MyWhoosh',
     'Gears',
     'Controllers',
     'Network',
-    'Diagnostics',
   ];
 
   @override
   Widget build(BuildContext context) {
     final AppState state = widget.state;
     final List<Widget> pages = <Widget>[
-      MyWhooshGuideScreen(state: state),
+      MyWhooshGuideScreen(
+        state: state,
+        onOpenNetwork: () => setState(() => _index = 3),
+      ),
       TrainerScreen(state: state),
       ControllersScreen(state: state),
-      TargetScreen(state: state),
-      DiagnosticsScreen(state: state),
+      TargetScreen(state: state, onOpenGuide: () => setState(() => _index = 0)),
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index])),
+      appBar: AppBar(
+        title: Text(_titles[_index]),
+        actions: <Widget>[_ReadinessChip(state: state)],
+      ),
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -122,12 +132,43 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Controllers',
           ),
           NavigationDestination(icon: Icon(Icons.lan), label: 'Network'),
-          NavigationDestination(
-            icon: Icon(Icons.terminal),
-            label: 'Diagnostics',
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// One word telling the rider whether the ride will work, on every screen.
+///
+/// Tapping it goes to the start screen, which is the only place that says what
+/// to do next. Without this the answer to "why is nothing happening" lives on a
+/// tab the rider has to guess.
+class _ReadinessChip extends StatelessWidget {
+  const _ReadinessChip({required this.state});
+
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: state,
+      builder: (BuildContext context, _) {
+        final bool ready =
+            state.publisher.running && state.physicalSetup.isComplete;
+        final ColorScheme colors = Theme.of(context).colorScheme;
+        return Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Chip(
+            avatar: Icon(
+              ready ? Icons.check_circle : Icons.error_outline,
+              size: 18,
+              color: ready ? Colors.green : colors.error,
+            ),
+            label: Text(ready ? 'Ready' : 'Not ready'),
+            labelStyle: Theme.of(context).textTheme.labelMedium,
+          ),
+        );
+      },
     );
   }
 }
@@ -135,17 +176,28 @@ class _HomeShellState extends State<HomeShell> {
 /// Landing screen: the four steps of a first ride, in order.
 class MyWhooshGuideScreen extends StatelessWidget {
   /// Creates the screen for [state].
-  const MyWhooshGuideScreen({required this.state, super.key});
+  ///
+  /// [onOpenNetwork] jumps to the Network tab, where a browser connects to a
+  /// bridge. Without it the web build only describes what to do somewhere else
+  /// and leaves the rider to find it.
+  const MyWhooshGuideScreen({
+    required this.state,
+    this.onOpenNetwork,
+    super.key,
+  });
 
   /// Shared application state.
   final AppState state;
+
+  /// Jumps to the Network tab, `null` when the host has no tab bar.
+  final VoidCallback? onOpenNetwork;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
-        MyWhooshGuideCard(state: state),
+        MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
         const SizedBox(height: 8),
         const Card(
           child: Padding(
@@ -186,97 +238,13 @@ class TrainerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: state,
-      builder: (BuildContext context, _) {
-        final GearEngine engine = state.engine;
-        final double resistance = engine.targetResistance(
-          gradePercent: 4,
-          riderWeightKg: 72,
-          speedKmh: 28,
-        );
-        final bool erg = engine.mode == RidingMode.erg;
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            ParkedGearCard(state: state),
-            _MetricCard(
-              label: 'Gear',
-              value: '${engine.gearNumber} / ${engine.gearCount}',
-              hint: null,
-              below: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: engine.profile.id,
-                  isDense: true,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  onChanged: (String? id) {
-                    if (id != null) state.setProfile(id);
-                  },
-                  items: <DropdownMenuItem<String>>[
-                    for (final GearProfile profile in GearProfile.builtin)
-                      DropdownMenuItem<String>(
-                        value: profile.id,
-                        child: Text(profile.label),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            _MetricCard(
-              label: 'Ratio',
-              value: engine.currentRatio.ratio.toStringAsFixed(2),
-              hint: engine.bigChainringActive
-                  ? 'big chainring'
-                  : 'small chainring',
-            ),
-            _MetricCard(
-              label: 'Mode',
-              value: erg ? 'ERG' : 'SIM',
-              hint: erg
-                  ? '${engine.ergTargetWatts} W target'
-                  : '4 % grade at 28 km/h',
-            ),
-            if (!erg)
-              _MetricCard(
-                label: 'Resistance',
-                value: '${resistance.toStringAsFixed(0)} W',
-                hint: 'simulated power at this gear',
-              ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                FilledButton.icon(
-                  onPressed: state.shiftUp,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Shift up'),
-                ),
-                FilledButton.icon(
-                  onPressed: state.shiftDown,
-                  icon: const Icon(Icons.remove),
-                  label: const Text('Shift down'),
-                ),
-                OutlinedButton(
-                  onPressed: state.toggleChainring,
-                  child: const Text('Chainring'),
-                ),
-                OutlinedButton(
-                  onPressed: state.toggleMode,
-                  child: const Text('Mode'),
-                ),
-                OutlinedButton(
-                  onPressed: () => state.bumpErg(5),
-                  child: const Text('+5 W'),
-                ),
-                OutlinedButton(
-                  onPressed: () => state.bumpErg(-5),
-                  child: const Text('-5 W'),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
+      builder: (BuildContext context, _) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: <Widget>[
+          ParkedGearCard(state: state),
+          GearPanel(state: state),
+        ],
+      ),
     );
   }
 }
@@ -289,12 +257,25 @@ class ControllersScreen extends StatelessWidget {
   /// Shared application state.
   final AppState state;
 
+  /// What the state machine means in words a rider uses.
+  ///
+  /// `idle`, `scanning` and `ready` are names from the code; a novice reading
+  /// "Controller: idle" has no way to know whether that is good or bad.
+  static String _statusLabel(ControllerStatus status) => switch (status) {
+    ControllerStatus.idle => 'Not connected yet',
+    ControllerStatus.scanning => 'Looking for controllers...',
+    ControllerStatus.connecting => 'Connecting...',
+    ControllerStatus.ready => 'Connected',
+    ControllerStatus.failed => 'Connection failed',
+  };
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: state,
       builder: (BuildContext context, _) {
         final ControllerConnection link = state.controller;
+        final bool ready = link.status == ControllerStatus.ready;
         final bool busy =
             link.status == ControllerStatus.scanning ||
             link.status == ControllerStatus.connecting;
@@ -305,11 +286,10 @@ class ControllersScreen extends StatelessWidget {
             Card(
               child: ListTile(
                 leading: Icon(
-                  link.status == ControllerStatus.ready
-                      ? Icons.bluetooth_connected
-                      : Icons.bluetooth,
+                  ready ? Icons.bluetooth_connected : Icons.bluetooth,
+                  color: ready ? Colors.green : null,
                 ),
-                title: Text('Controller: ${link.status.name}'),
+                title: Text(_statusLabel(link.status)),
                 subtitle: Text(
                   // Silence after the handshake is the one failure that no
                   // reconnection fixes: say what the rider must do instead of
@@ -318,12 +298,13 @@ class ControllersScreen extends StatelessWidget {
                       ? 'No answer after the handshake: pair the controller '
                             'once in its official application, then reconnect'
                       : link.error ??
-                            (link.status == ControllerStatus.ready
+                            (ready
                                 ? '${link.encrypted ? 'encrypted' : 'plain'} session'
                                       '${link.batteryPercent == null ? '' : ' - battery ${link.batteryPercent} %'}'
-                                : 'Two-button Bluetooth controller'),
+                                : 'Two-button Bluetooth controller, paired with '
+                                      'the buttons below'),
                 ),
-                trailing: link.status == ControllerStatus.ready
+                trailing: ready
                     ? TextButton(
                         onPressed: link.disconnect,
                         child: const Text('Disconnect'),
@@ -332,12 +313,34 @@ class ControllersScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: busy ? null : link.scan,
-              icon: const Icon(Icons.search),
-              label: const Text('Scan for controllers'),
-            ),
+            if (Capabilities.usesBluetoothChooser)
+              // Web Bluetooth opens the browser's own device picker: there is
+              // no list to scan, and a "Scan" button that opens a chooser is
+              // named for what the rider will see.
+              FilledButton.icon(
+                onPressed: busy ? null : link.scan,
+                icon: const Icon(Icons.bluetooth_searching),
+                label: const Text('Choose a controller'),
+              )
+            else
+              FilledButton.icon(
+                onPressed: busy ? null : link.scan,
+                icon: const Icon(Icons.search),
+                label: Text(busy ? 'Looking...' : 'Scan for controllers'),
+              ),
             const SizedBox(height: 8),
+            if (link.found.isEmpty &&
+                !busy &&
+                !ready &&
+                !Capabilities.usesBluetoothChooser)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Put the controller in pairing mode first: hold both buttons '
+                  'until the light blinks, then tap Scan.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             for (final ScanResult result in link.found)
               ListTile(
                 leading: const Icon(Icons.videogame_asset),
@@ -369,10 +372,17 @@ class ControllersScreen extends StatelessWidget {
 /// Target section: network publication and the outgoing protocol.
 class TargetScreen extends StatelessWidget {
   /// Creates the screen for [state].
-  const TargetScreen({required this.state, super.key});
+  ///
+  /// [onOpenGuide] goes back to the start screen, the only place that explains
+  /// in order what to do; the card for a browser links to it rather than
+  /// repeating four steps in the middle of a technical screen.
+  const TargetScreen({required this.state, this.onOpenGuide, super.key});
 
   /// Shared application state.
   final AppState state;
+
+  /// Jumps to the start screen, `null` when the host has no tab bar.
+  final VoidCallback? onOpenGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -408,17 +418,29 @@ class TargetScreen extends StatelessWidget {
                 ),
               )
             else
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.lan_outlined),
-                  title: Text('Publish on the network: impossible here'),
-                  subtitle: Text(
-                    'A browser cannot open a listening socket or announce a '
-                    'service, so a training application cannot discover this '
-                    'page. Pairing the controller, the gears and the diagnostics '
-                    'work; the console below drives the bridge running on your '
-                    'network, and the bridge is what the application sees.',
-                  ),
+              Card(
+                child: Column(
+                  children: <Widget>[
+                    const ListTile(
+                      leading: Icon(Icons.info_outline),
+                      title: Text('This page cannot be found by MyWhoosh'),
+                      subtitle: Text(
+                        'A browser cannot listen on the network, so MyWhoosh '
+                        'cannot discover it. Run the openzclick application on '
+                        'a computer or an Android phone: it is the bridge, and '
+                        'this page then drives it.',
+                      ),
+                    ),
+                    if (onOpenGuide != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TextButton.icon(
+                          onPressed: onOpenGuide,
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Show me the steps'),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             // A page that owns sockets *is* the bridge: it has no relay to show.
@@ -515,6 +537,30 @@ class TargetScreen extends StatelessWidget {
                 ),
                 title: Text(entry.value.label),
               ),
+            const Divider(height: 24),
+            // Kept, but folded away: this proves the codec works and is of no
+            // use to a rider, so it must not be a fifth tab beside the gear.
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              title: const Text('Protocol test bench'),
+              subtitle: const Text(
+                'Checks that a frame survives an encode and '
+                'a decode',
+              ),
+              children: <Widget>[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonal(
+                    onPressed: state.runCodecBench,
+                    child: const Text('Run the test'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _MonoBlock(label: 'Encoded frame', value: state.lastFrame),
+                _MonoBlock(label: 'Decoded back', value: state.lastDecoded),
+              ],
+            ),
           ],
         );
       },
@@ -798,69 +844,6 @@ Future<void> _editPosition(
       ),
     ),
   );
-}
-
-/// Diagnostics section: codec test bench and build facts.
-class DiagnosticsScreen extends StatelessWidget {
-  /// Creates the screen for [state].
-  const DiagnosticsScreen({required this.state, super.key});
-
-  /// Shared application state.
-  final AppState state;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: state,
-      builder: (BuildContext context, _) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          FilledButton(
-            onPressed: state.runCodecBench,
-            child: const Text('Run codec test bench'),
-          ),
-          const SizedBox(height: 12),
-          _MonoBlock(label: 'Encoded frame', value: state.lastFrame),
-          _MonoBlock(label: 'Decoded back', value: state.lastDecoded),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    this.hint,
-    this.below,
-  });
-
-  final String label;
-  final String value;
-  final String? hint;
-
-  /// Optional control displayed under the value.
-  final Widget? below;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        title: Text(label),
-        subtitle: hint == null ? null : Text(hint!),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            Text(value, style: Theme.of(context).textTheme.titleLarge),
-            ?below,
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _MonoBlock extends StatelessWidget {

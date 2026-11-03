@@ -5,8 +5,16 @@ import 'package:openzclick/main.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
+/// The gear number, read from its own key rather than from a surrounding
+/// string: the readout is now a large number and a smaller denominator, and a
+/// test looking for "7 / 12" would pin the layout instead of the behaviour.
+String gearShown(WidgetTester tester) {
+  final Widget widget = tester.widget(find.byKey(const Key('gear-number')));
+  return (widget as Text).data!;
+}
+
 void main() {
-  testWidgets('trainer screen shows the default gear', (
+  testWidgets('the gear screen shows the default gear', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const OpenZclickApp());
@@ -15,7 +23,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Gear'), findsOneWidget);
-    expect(find.textContaining('/ 12'), findsWidgets);
+    expect(gearShown(tester), '6');
   });
 
   testWidgets('shift up changes the displayed gear', (
@@ -26,18 +34,22 @@ void main() {
     await tester.tap(find.text('Gears'));
     await tester.pumpAndSettle();
 
-    // The parked-gear card sits above the buttons, so the buttons have to be
-    // scrolled into view before they exist.
-    await tester.dragUntilVisible(
-      find.text('Shift up'),
-      find.byType(ListView).first,
-      const Offset(0, -120),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Shift up'));
     await tester.pumpAndSettle();
 
-    expect(find.text('7 / 12'), findsOneWidget);
+    expect(gearShown(tester), '7');
+  });
+
+  testWidgets('there are four tabs, and none of them is a developer tool', (
+    WidgetTester tester,
+  ) async {
+    // The test bench sat in the navigation bar beside the gear, which is what
+    // made the application look like something to configure rather than use.
+    await tester.pumpWidget(const OpenZclickApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    expect(find.text('Diagnostics'), findsNothing);
   });
 
   test('a single tap on up shifts up', () async {

@@ -1,83 +1,10 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/main.dart';
-import 'package:openzclick/net/publisher_port.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick/ui/mywhoosh_guide.dart';
-import 'package:openzclick_core/openzclick_core.dart';
 
-/// A publisher whose state the test drives, so the guide can be read in each
-/// situation a rider meets: stopped, running, and with MyWhoosh attached.
-class FakePublisher implements PublisherPort {
-  @override
-  void Function()? onChanged;
-
-  @override
-  bool running = false;
-
-  @override
-  bool advertise = true;
-
-  @override
-  int port = 47123;
-
-  @override
-  int? listeningPort;
-
-  @override
-  String? address;
-
-  @override
-  int peers = 0;
-
-  @override
-  String? error;
-
-  @override
-  int consoles = 0;
-
-  @override
-  int? get consolePort => null;
-
-  @override
-  String get consoleToken => '';
-
-  @override
-  String? consoleUrl(String host) => null;
-
-  @override
-  Stream<Action> get consoleActions => const Stream<Action>.empty();
-
-  @override
-  Future<void> start() async {
-    running = true;
-    listeningPort = port;
-    address = '192.168.1.24';
-    onChanged?.call();
-  }
-
-  @override
-  Future<void> stop() async {
-    running = false;
-    listeningPort = null;
-    onChanged?.call();
-  }
-
-  @override
-  Future<void> publish(Action action) async {}
-
-  @override
-  Future<void> publishConsoleState({
-    required String profileId,
-    required int gearIndex,
-    required int gearCount,
-    required String mode,
-    required String lastAction,
-  }) async {}
-
-  @override
-  Future<void> dispose() async {}
-}
+import 'fake_publisher.dart';
 
 Future<void> pumpGuide(WidgetTester tester, AppState state) async {
   await tester.pumpWidget(
@@ -189,6 +116,53 @@ void main() {
 
     expect(find.textContaining('not one on Ethernet'), findsOneWidget);
     expect(find.textContaining('Bonjour'), findsOneWidget);
+  });
+
+  testWidgets('the parked gear box answers without leaving the screen', (
+    WidgetTester tester,
+  ) async {
+    // The box used to name the Gears tab and stop there, which sends a novice
+    // hunting for a tab in the middle of a first-time setup.
+    final AppState state = AppState(publisher: FakePublisher());
+    addTearDown(state.dispose);
+
+    await pumpGuide(tester, state);
+    await tester.tap(find.text('Answer now'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DropdownButton<int>), findsNWidgets(2));
+
+    await tester.tap(find.byType(DropdownButton<int>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('34 T').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<int>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('19 T').last);
+    await tester.pumpAndSettle();
+
+    expect(state.physicalSetup.isComplete, isTrue);
+    expect(find.textContaining('scaled from where the chain'), findsNothing);
+  });
+
+  testWidgets('the dialog can be dismissed without answering', (
+    WidgetTester tester,
+  ) async {
+    // A rider who opened it by mistake, or who does not know their cog yet,
+    // must not be trapped: the question is asked again from the gear screen.
+    final AppState state = AppState(publisher: FakePublisher());
+    addTearDown(state.dispose);
+
+    await pumpGuide(tester, state);
+    await tester.tap(find.text('Answer now'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Later'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DropdownButton<int>), findsNothing);
+    expect(state.physicalSetup.isComplete, isFalse);
+    expect(find.text('Answer now'), findsOneWidget);
   });
 
   testWidgets('the guide is the first screen, so it is seen without looking', (

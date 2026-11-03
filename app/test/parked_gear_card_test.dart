@@ -21,7 +21,7 @@ void main() {
     expect(find.text('Cog'), findsOneWidget);
   });
 
-  testWidgets('records the chainring the rider picks', (
+  testWidgets('holds a half answer instead of dropping it', (
     WidgetTester tester,
   ) async {
     final AppState state = AppState();
@@ -33,10 +33,58 @@ void main() {
     await tester.tap(find.text('50 T').last);
     await tester.pumpAndSettle();
 
+    // Nothing is recorded yet, because the wheel size cannot be built from one
+    // tooth count; but the choice is kept on screen so the rider can finish.
+    expect(state.physicalSetup.parkedChainringTeeth, isNull);
+    expect(find.text('Where is your chain?'), findsOneWidget);
+    expect(find.text('50 T'), findsWidgets);
+
+    await tester.tap(find.byType(DropdownButton<int>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('17 T').last);
+    await tester.pumpAndSettle();
+
     expect(state.physicalSetup.parkedChainringTeeth, 50);
+    expect(state.physicalSetup.parkedCogTeeth, 17);
   });
 
-  testWidgets('shows the wheel size once the setup is complete', (
+  testWidgets('answers as soon as both halves are known', (
+    WidgetTester tester,
+  ) async {
+    final AppState state = AppState();
+    addTearDown(state.dispose);
+    await tester.pumpWidget(_wrap(state));
+
+    await tester.tap(find.byType(DropdownButton<int>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('34 T').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<int>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('19 T').last);
+    await tester.pumpAndSettle();
+
+    expect(state.physicalSetup.isComplete, isTrue);
+    expect(find.text('Chain on 34/19'), findsOneWidget);
+  });
+
+  testWidgets('collapses to one line once answered', (
+    WidgetTester tester,
+  ) async {
+    // Answered once per bike, never again: a card that keeps the same size
+    // forever pushes the shift buttons off a phone.
+    final AppState state = AppState();
+    addTearDown(state.dispose);
+    state.setParkedGear(chainring: 34, cog: 19);
+    await tester.pumpWidget(_wrap(state));
+
+    expect(find.text('Chain on 34/19'), findsOneWidget);
+    expect(find.textContaining('scaled from this'), findsOneWidget);
+    expect(find.text('Where is your chain?'), findsNothing);
+    expect(find.byType(DropdownButton<int>), findsNothing);
+  });
+
+  testWidgets('one tap reopens the question for a change of bike', (
     WidgetTester tester,
   ) async {
     final AppState state = AppState();
@@ -44,8 +92,10 @@ void main() {
     state.setParkedGear(chainring: 34, cog: 19);
     await tester.pumpWidget(_wrap(state));
 
-    expect(find.text('Chain on 34/19'), findsOneWidget);
-    expect(find.textContaining('Trainer wheel size right now'), findsOneWidget);
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DropdownButton<int>), findsNWidgets(2));
   });
 
   testWidgets('offers the quietest gear that still reaches every gear', (
@@ -55,6 +105,8 @@ void main() {
     addTearDown(state.dispose);
     state.setParkedGear(chainring: 50, cog: 11);
     await tester.pumpWidget(_wrap(state));
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
 
     final ParkedGear recommended = state.recommendedParkedGear!;
     expect(find.text('Quietest: ${recommended.name}'), findsOneWidget);
@@ -79,5 +131,17 @@ void main() {
     await tester.pumpWidget(_wrap(state));
 
     expect(find.textContaining('cannot be built from 50/11'), findsOneWidget);
+  });
+
+  testWidgets('says the wheel size in the collapsed line too', (
+    WidgetTester tester,
+  ) async {
+    final AppState state = AppState();
+    addTearDown(state.dispose);
+    state.setParkedGear(chainring: 34, cog: 19);
+    await tester.pumpWidget(_wrap(state));
+
+    expect(find.textContaining('wheel'), findsOneWidget);
+    expect(find.textContaining('mm'), findsOneWidget);
   });
 }
