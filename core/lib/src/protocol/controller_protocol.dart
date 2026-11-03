@@ -42,11 +42,31 @@ abstract final class ControllerMessageType {
   /// Battery report.
   static const int battery = 25;
 
-  /// Two-button notification (protobuf body).
+  /// Button mask, one bit per button, as a Click v2 sends it.
+  ///
+  /// Measured on hardware (firmware 1.1.0): the frame is `23 08 <varint>`,
+  /// field 1 holding a 32-bit mask where every bit is set at rest and the bit
+  /// of a pressed button is cleared.
+  static const int buttons = 0x23;
+
+  /// Older two-field button notification (protobuf body).
   static const int click = 55;
 
   /// The controller is about to disconnect.
   static const int disconnect = 0xFE;
+}
+
+/// Bit positions of the button mask, measured on a Click v2.
+///
+/// Only the two that shift gears are named: they are the ones the bridge maps,
+/// and inventing names for the other eight would be a guess. A press clears the
+/// bit, so the tests assert on the frames the controller actually sent.
+abstract final class ControllerButtonBits {
+  /// Up (towards the small cog).
+  static const int up = 12;
+
+  /// Down (towards the big cog).
+  static const int down = 5;
 }
 
 /// Handshake bytes.
@@ -157,6 +177,9 @@ abstract final class ControllerCodec {
     final int type = frame[0];
     final List<int> body = frame.sublist(1);
     switch (type) {
+      case ControllerMessageType.buttons:
+        final ClickButtons? buttons = parseButtonMask(body);
+        return buttons == null ? null : ClickMessage(buttons);
       case ControllerMessageType.click:
         final ClickButtons? buttons = parseClickNotification(body);
         return buttons == null ? null : ClickMessage(buttons);
@@ -168,6 +191,37 @@ abstract final class ControllerCodec {
       default:
         return null;
     }
+  }
+
+  /// Parses the button mask of a `0x23` frame.
+  ///
+  /// Field 1 carries one varint: a 32-bit mask, all ones at rest, with the bit
+  /// of a pressed button cleared. Returns null when the frame carries no such
+  /// field, so a future firmware cannot be mistaken for a press.
+  static ClickButtons? parseButtonMask(List<int> body) {
+    int index = 0;
+    while (index < body.length) {
+      final int tag = body[index++];
+      final int field = tag >> 3;
+      final int wireType = tag & 0x07;
+      if (wireType != 0) {
+        if (wireType == 2 && index < body.length) {
+          final int length = body[index++];
+          index += length;
+          continue;
+        }
+        return null;
+      }
+      final _VarintResult varint = _readVarint(body, index);
+      index = varint.nextIndex;
+      if (field != 1) continue;
+      final int mask = varint.value;
+      return ClickButtons(
+        up: (mask >> ControllerButtonBits.up) & 1 == 0,
+        down: (mask >> ControllerButtonBits.down) & 1 == 0,
+      );
+    }
+    return null;
   }
 
   /// Parses the protobuf body of a button notification.

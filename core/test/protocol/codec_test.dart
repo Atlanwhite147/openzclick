@@ -250,4 +250,46 @@ void main() {
       ]);
     });
   });
+
+  group('button mask frames measured on a Click v2', () {
+    // Frames captured from the controller over WinRT, firmware 1.1.0: the
+    // notification is `23 08 <varint>`, every mask bit set at rest and the bit
+    // of the pressed button cleared. The old decoder expected type 55 and threw
+    // all of these away, which is why presses reached the application as
+    // nothing at all.
+    ControllerMessage? decodeFrame(List<int> frame) =>
+        ControllerCodec.decode(frame);
+
+    test('the up button clears bit 12', () {
+      final ControllerMessage? message = decodeFrame(
+        <int>[0x23, 0x08, 0xff, 0xdf, 0xff, 0xff, 0x0f],
+      );
+      expect(message, isA<ClickMessage>());
+      expect((message! as ClickMessage).buttons, const ClickButtons(
+        up: true,
+        down: false,
+      ));
+    });
+
+    test('the down button clears bit 5', () {
+      final ControllerMessage? message = decodeFrame(
+        <int>[0x23, 0x08, 0xdf, 0xff, 0xff, 0xff, 0x0f],
+      );
+      expect((message! as ClickMessage).buttons, const ClickButtons(
+        up: false,
+        down: true,
+      ));
+    });
+
+    test('an all-ones mask is a released controller', () {
+      final ControllerMessage? message = decodeFrame(
+        <int>[0x23, 0x08, 0xff, 0xff, 0xff, 0xff, 0x0f],
+      );
+      expect((message! as ClickMessage).buttons, ClickButtons.released);
+    });
+
+    test('a mask without field 1 is not read as a press', () {
+      expect(decodeFrame(<int>[0x23, 0x10, 0x00]), isNull);
+    });
+  });
 }
