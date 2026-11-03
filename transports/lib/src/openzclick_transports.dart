@@ -18,3 +18,4 @@ export 'trainer_proxy.dart';
 export 'trainer/ftms.dart';
 export 'trainer/virtual_trainer.dart';
 export 'transport.dart';
+export 'ws_relay_transport.dart';

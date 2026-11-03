@@ -6,10 +6,10 @@
 /// and device status (`0x02`); the application sends back haptic commands
 /// (`0x03`) and its information (`0x04`).
 ///
-/// Everything is functional except the native mDNS announcement, which depends
-/// on a platform API and remains to be wired (see `mdns_advertiser.dart`).
-/// Without a platform advertiser, the TCP server still accepts incoming
-/// connections by address and port.
+/// Everything works with the pure Dart announcement ([DartMdnsAdvertiser]); a
+/// platform advertiser would only be needed for hosts whose multicast the
+/// runtime cannot reach, and [PlatformMdnsAdvertiser] still throws until such
+/// a host is wired.
 library;
 
 import 'dart:async';
