@@ -6,6 +6,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 
 import '../platform/capabilities.dart';
 
+import 'bluetooth_uuid.dart';
 import 'controller_error.dart';
 
 /// State of the connection to a physical controller.
@@ -171,9 +172,7 @@ class ControllerConnection {
   /// case, and a wrong candidate costs one failed connection, not a session.
   static bool _looksLikeController(ScanResult result) {
     for (final Guid service in result.advertisementData.serviceUuids) {
-      if (service.toString().toLowerCase() == ControllerUuids.service) {
-        return true;
-      }
+      if (sameUuid(service.toString(), ControllerUuids.service)) return true;
     }
     final String name = result.advertisementData.advName.isNotEmpty
         ? result.advertisementData.advName
@@ -196,7 +195,7 @@ class ControllerConnection {
       services = await target.discoverServices();
       final bool found = services.any(
         (BluetoothService service) =>
-            service.uuid.toString().toLowerCase() == ControllerUuids.service,
+            sameUuid(service.uuid.toString(), ControllerUuids.service),
       );
       if (found) return services;
       if (attempt < 3) {
@@ -230,24 +229,27 @@ class ControllerConnection {
       BluetoothCharacteristic? writeTarget;
       BluetoothCharacteristic? syncReply;
       for (final BluetoothService service in services) {
-        final String serviceUuid = service.uuid.toString().toLowerCase();
-        if (serviceUuid != ControllerUuids.service) {
+        if (!sameUuid(service.uuid.toString(), ControllerUuids.service)) {
           continue;
         }
         for (final BluetoothCharacteristic characteristic
             in service.characteristics) {
-          final String uuid = characteristic.uuid.toString().toLowerCase();
-          if (uuid == ControllerUuids.asyncChannel) {
+          final String uuid = characteristic.uuid.toString();
+          if (sameUuid(uuid, ControllerUuids.asyncChannel)) {
             asyncChannel = characteristic;
           }
-          if (uuid == ControllerUuids.syncRx) writeTarget = characteristic;
-          if (uuid == ControllerUuids.syncTx) syncReply = characteristic;
+          if (sameUuid(uuid, ControllerUuids.syncRx)) {
+            writeTarget = characteristic;
+          }
+          if (sameUuid(uuid, ControllerUuids.syncTx)) {
+            syncReply = characteristic;
+          }
         }
       }
 
       if (asyncChannel == null || writeTarget == null) {
         final String seen = services
-            .map((BluetoothService s) => s.uuid.toString().toLowerCase())
+            .map((BluetoothService s) => canonicalUuid(s.uuid.toString()))
             .join(', ');
         throw StateError(
           'controller channels are missing (services seen: '
