@@ -12,6 +12,7 @@ import 'net/publisher.dart';
 import 'platform/capabilities.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
+import 'ui/mywhoosh_guide.dart';
 
 void main() => runApp(const OpenZclickApp());
 
@@ -85,9 +86,10 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   static const List<String> _titles = <String>[
-    'Trainer',
+    'MyWhoosh',
+    'Gears',
     'Controllers',
-    'Target',
+    'Network',
     'Diagnostics',
   ];
 
@@ -95,6 +97,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final AppState state = widget.state;
     final List<Widget> pages = <Widget>[
+      MyWhooshGuideScreen(state: state),
       TrainerScreen(state: state),
       ControllersScreen(state: state),
       TargetScreen(state: state),
@@ -108,21 +111,64 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (int value) => setState(() => _index = value),
         destinations: const <NavigationDestination>[
+          NavigationDestination(icon: Icon(Icons.play_circle), label: 'Start'),
           NavigationDestination(
             icon: Icon(Icons.fitness_center),
-            label: 'Trainer',
+            label: 'Gears',
           ),
           NavigationDestination(
             icon: Icon(Icons.sports_esports),
             label: 'Controllers',
           ),
-          NavigationDestination(icon: Icon(Icons.lan), label: 'Target'),
+          NavigationDestination(icon: Icon(Icons.lan), label: 'Network'),
           NavigationDestination(
             icon: Icon(Icons.terminal),
             label: 'Diagnostics',
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Landing screen: the four steps of a first ride, in order.
+class MyWhooshGuideScreen extends StatelessWidget {
+  /// Creates the screen for [state].
+  const MyWhooshGuideScreen({required this.state, super.key});
+
+  /// Shared application state.
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: <Widget>[
+        MyWhooshGuideCard(state: state),
+        const SizedBox(height: 8),
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Not using MyWhoosh?',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Every training application that implements OpenBikeControl '
+                  'works the same way: TrainingPeaks Virtual, Strappo, '
+                  'icTrainer, Velotoss, Biketerra and Ride Cave. The other tabs '
+                  'drive any application that only accepts taps or keys.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -309,7 +355,7 @@ class ControllersScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(
               'Declarative definitions shipped with the core are listed in the '
-              'Target tab. The controller link above is the live input path.',
+              'Network tab. The controller link above is the live input path.',
             ),
           ],
         );

@@ -12,7 +12,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-372%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-378%20passing-brightgreen)](#status)
 
 </div>
 
@@ -49,14 +49,42 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 
 | Platform | File | Notes |
 |---|---|---|
-| Web | [atlanwhite147.github.io/openzclick](https://atlanwhite147.github.io/openzclick/) | nothing to install: Chrome or Edge, the controller pairs over Web Bluetooth |
-| Android | [`app-release.apk`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/app-release.apk) | sideload directly, updates install over the previous version |
-| iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | sign with Sideloadly or AltStore, 7 days with a free Apple ID |
-| Windows | [`openzclick-windows-x64.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-windows-x64.zip) | unzip and run `openzclick.exe` |
+| Web | [atlanwhite147.github.io/openzclick](https://atlanwhite147.github.io/openzclick/) | nothing to install: Chrome or Edge, the controller pairs over Web Bluetooth. MyWhoosh cannot find a plain page, see below |
+| Windows | [`openzclick-windows-x64.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-windows-x64.zip) | unzip anywhere, double click `openzclick.exe`. Windows may warn once about an unknown publisher: *More info*, then *Run anyway* |
+| Android | [`app-release.apk`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/app-release.apk) | open the file on the phone and accept *install from this source*; updates install over the previous version |
+| iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | needs a computer: sign with Sideloadly or AltStore, 7 days with a free Apple ID |
 
 Every file is rebuilt on every push to `main`. The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
 
-## Getting started
+## Ride with MyWhoosh in four steps
+
+You need no account, no cable and no driver. Install nothing if you use the web page.
+
+1. **Start the application.** On Windows, unzip and double click `openzclick.exe`; on Android, install the APK. In a browser, open the page — nothing to install, but read the note under the steps.
+2. **Tap *Start* on the first screen.** It now listens for MyWhoosh. The screen says *listening* or *announced on your network*.
+3. **In MyWhoosh, open the device connection screen and tap the OpenBikeControl icon, top right.** MyWhoosh asks for confirmation: answer **Yes**. The icon turns blue.
+4. **Ride.** Your two buttons shift. The application shows the client count going to 1, so you know MyWhoosh really attached.
+
+Where to tap a button before you clip in: the **Gears** tab has *Shift up* and *Shift down* buttons that send exactly what the controller sends. If those change the gear in MyWhoosh, the link works and only the controller pairing is left.
+
+### If MyWhoosh does not find it
+
+| Symptom | Cause and fix |
+|---|---|
+| Nothing appears in MyWhoosh | the two are not on the same Wi-Fi network, or MyWhoosh runs on Android. MyWhoosh does not accept this connection over Wi-Fi on Android |
+| Windows finds nothing | MyWhoosh needs Bonjour on Windows (installed with iTunes, or *Bonjour Print Services*). Without it, discovery returns nothing and says nothing |
+| A firewall popup appeared | allow the application on private networks; without it the port stays closed |
+| MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; or the controller needs unlocking once in its own application |
+| The gear changes here but not in MyWhoosh | MyWhoosh has paired the trainer itself. Let MyWhoosh own the trainer rather than the bridge |
+
+### In a browser, with no installation at all
+
+The page does everything except be found by MyWhoosh, because a normal web page may not open a server. Two ways around it, both on the page:
+
+- **Drive a bridge from a phone.** Run the application on a computer (step 1), start it, then scan the QR code it displays in the **Network** tab. The phone becomes the console: you press in the browser, MyWhoosh receives.
+- **Run the page as an installed application.** Chrome alone can install the page as a signed bundle (*Isolated Web App*), which is allowed a server; the page then announces itself and MyWhoosh finds it directly. `docs/browser-bridge.md` has the exact commands.
+
+## For developers
 
 ```bash
 git clone https://github.com/Atlanwhite147/openzclick.git
@@ -186,9 +214,9 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 
 | Module | State | Tests |
 |---|---|---|
-| `core/` | protocol, session, link supervision, gear engine, mapping, gestures | 225 |
+| `core/` | protocol, session, link supervision, gear engine, mapping, gestures | 232 |
 | `transports/` | mDNS responder, TCP server, console relay, FTMS trainer proxy; Bluetooth stays an interface | 94 |
-| `app/` | pairing, gears, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 42 |
+| `app/` | pairing, gears, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 52 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 

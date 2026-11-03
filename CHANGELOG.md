@@ -14,6 +14,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- **A first screen a novice can follow.** The application used to open on the gear display, with publication on a tab called *Target* and no word about what to do inside MyWhoosh. It now opens on a guide whose four steps match MyWhoosh's own documented gesture — start the bridge here, open MyWhoosh, tap the OpenBikeControl icon in the top right, answer *Yes* — with the two steps the application can observe ticked as they complete, and the client count confirming that MyWhoosh really attached.
+- A troubleshooting section in the application, listing the obstacles riders actually meet: networks that differ, Bonjour missing on Windows, Wi-Fi control refused on MyWhoosh for Android, a firewall, a controller still locked, and a trainer that MyWhoosh has paired itself.
+- The README opens on the ride rather than on the architecture: four steps, a table of symptoms, and a paragraph on installing nothing.
+
+### Changed
+- The bottom navigation reads *Start*, *Gears*, *Controllers*, *Network*, *Diagnostics* instead of *Trainer*, *Controllers*, *Target*, *Diagnostics*: *Target* meant nothing to anyone who had not read the specification, and the network step is what a rider looks for, not the application's target.
+
 ### Fixed
 - A press sent before the training application connected no longer leaves a permanent error on screen: the transport still reports it, the publisher treats it as a hint, and an arriving client clears whatever fault came before it.
 - The Bluetooth link used the wrong channels: it subscribed to the write-only characteristic, which never notifies, and wrote the handshake to the reply channel. Buttons arrive on the asynchronous channel and the handshake answer on the synchronous one, as `docs/controllers.md` now states.

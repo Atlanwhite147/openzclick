@@ -10,6 +10,8 @@ void main() {
   ) async {
     await tester.pumpWidget(const OpenZclickApp());
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Gears'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Gear'), findsOneWidget);
     expect(find.textContaining('/ 12'), findsWidgets);
@@ -19,6 +21,8 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const OpenZclickApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gears'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Shift up'));
