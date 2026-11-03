@@ -8,9 +8,11 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![CI](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml)
 [![Android build](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml)
 [![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
+[![Windows build](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml)
+[![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-334%20passing-brightgreen)](#status)
+[![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
+[![Tests](https://img.shields.io/badge/tests-357%20passing-brightgreen)](#status)
 
 </div>
 
@@ -47,10 +49,12 @@ No account, no subscription, no telemetry. One Dart codebase for Android, iOS, W
 
 | Platform | File | Notes |
 |---|---|---|
+| Web | [atlanwhite147.github.io/openzclick](https://atlanwhite147.github.io/openzclick/) | nothing to install: Chrome or Edge, the controller pairs over Web Bluetooth |
 | Android | [`app-release.apk`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/app-release.apk) | sideload directly, updates install over the previous version |
 | iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | sign with Sideloadly or AltStore, 7 days with a free Apple ID |
+| Windows | [`openzclick-windows-x64.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-windows-x64.zip) | unzip and run `openzclick.exe` |
 
-Both files are rebuilt on every push to `main`. The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
+Every file is rebuilt on every push to `main`. The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
 
 ## Getting started
 
@@ -64,7 +68,7 @@ cd ../transports && dart pub get && dart test
 
 # application
 cd ../app && flutter pub get
-flutter run -d linux      # or windows, macos, android, ios
+flutter run -d linux      # or windows, macos, android, ios, chrome
 ```
 
 Requirements: Flutter stable (Dart 3.13 or newer). No Android SDK or Xcode needed for the protocol work.
@@ -81,7 +85,7 @@ Requirements: Flutter stable (Dart 3.13 or newer). No Android SDK or Xcode neede
 openzclick/
 ├─ core/          # pure Dart, no I/O: codec, session, gear engine, mapping, gestures
 ├─ transports/    # dart:io: mDNS responder, TCP server, Bluetooth/injection/proxy interfaces
-├─ app/           # Flutter shell: pairing, gears, publishing, diagnostics
+├─ app/           # Flutter shell: pairing, gears, publishing, diagnostics; android, ios, windows, macos, web
 ├─ docs/          # specification, architecture notes, screenshots
 └─ CONTRACTS.md   # interface signatures between the modules
 ```
@@ -104,6 +108,20 @@ iOS differs from the other platforms in two ways, and only one is a matter of co
 | TCP server on the local network | works, after the local network permission prompt |
 
 So the bridge follows the two rules without pretending: it always listens, and when it cannot announce itself it displays the address to type into the application (`192.168.1.24:47123`). Applications that only discover services need the entitlement, or a bridge running on the machine where they run.
+
+## In a browser
+
+The same code runs in a tab, with nothing to install: the published page, or `flutter run -d chrome` from a checkout. It is honest about what a page is allowed to do.
+
+| Capability | In a browser |
+|---|---|
+| Pairing the controller, gears, gestures, diagnostics | works, through Web Bluetooth (Chrome, Edge, Chrome for Android; Safari and Firefox expose no Web Bluetooth) |
+| Driving a bridge running on the local network | works: the page is the console of the bridge, over a WebSocket (`docs/console.md`) |
+| mDNS announcement, TCP server | impossible: a page cannot open a listening socket or announce a service, so a training application cannot discover it |
+| Tap or keyboard injection | impossible: a page cannot synthesise input for another application |
+| Becoming the trainer | impossible: browsers only offer the central role of Bluetooth, never the peripheral one |
+
+Web Bluetooth is only exposed to a secure context, so the page must be served over HTTPS or from `localhost`. The publication card states this instead of pretending: for a training application to see the buttons, the bridge runs on a machine of the local network, and the page enters the address and the four letter code it displays.
 
 ## When the application only accepts taps
 
@@ -163,10 +181,10 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 | Module | State | Tests |
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, mapping, gestures | 225 |
-| `transports/` | mDNS responder, TCP server, FTMS trainer proxy; Bluetooth stays an interface | 87 |
-| `app/` | pairing, gears, publishing, injection, diagnostics on the four platforms | 22 |
+| `transports/` | mDNS responder, TCP server, console relay, FTMS trainer proxy; Bluetooth stays an interface | 94 |
+| `app/` | pairing, gears, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 38 |
 
-Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
+Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
 ## Roadmap
 
@@ -178,6 +196,8 @@ Verified on Android 13: installation, first frame, gear changes, direction choic
 - [x] local injection transport, with an Android accessibility service driver
 - [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
 - [ ] iPhone multicast entitlement
+- [x] browser build: the same interface in a tab, the controller over Web Bluetooth, and the page as the console of a bridge on the local network
+- [ ] browser, next: drive the trainer directly over FTMS, for the applications that do not handle shifting
 
 ![Injection](docs/screenshots/injection.png)
 

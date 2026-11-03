@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Fixed
+- A press sent before the training application connected no longer leaves a permanent error on screen: the transport still reports it, the publisher treats it as a hint, and an arriving client clears whatever fault came before it.
 - The Bluetooth link used the wrong channels: it subscribed to the write-only characteristic, which never notifies, and wrote the handshake to the reply channel. Buttons arrive on the asynchronous channel and the handshake answer on the synchronous one, as `docs/controllers.md` now states.
 - A controller that stays silent is reported as needing one pairing in the official application instead of leaving a connection that looks alive and does nothing.
 - Frames now match the OpenBikeControl specification byte for byte: the length byte this project added after the type byte is gone, so an application that implements the specification reads our messages instead of a body length mistaken for a button identifier.
@@ -23,6 +24,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - The stream decoder works without a length field: a buffer that decodes whole is one message, two messages coalesced in one read stay apart, and an undecodable write no longer accumulates in the buffer of a peer.
 
 ### Added
+- **Console relay**: the bridge opens a WebSocket next to the TCP server, so a page can drive it. The address and a four letter code are shown on the Target screen; a console that presents a wrong code is refused before the upgrade. Actions typed on the page take the same path as a controller press, and the bridge pushes its gear state back so no console drifts from the real gear. This is the route that also works on an iPhone, where no browser exposes Web Bluetooth. Details: `docs/console.md`, and `transports/tool/console_bridge.dart` to check it without a controller.
+- Browser build: the application compiles and runs in Chrome and Edge, pairs the controller over Web Bluetooth (through the browser's device chooser, with the service granted as an optional one), keeps the gear engine, gestures and diagnostics, and connects to a bridge as its console from the Target screen.
+- `WebPublisher` and `InjectionBackend`: the publisher and the injector are now ports, so the same widgets run on a host with `dart:io` and on a host without it, without a platform conditional inside the interface.
+- Web and Windows builds in CI: the page is published to GitHub Pages (HTTPS is required for Web Bluetooth), the Windows archive joins the `latest` release.
+- The "needs unlock" hint: a controller that stays silent after the handshake tells the rider to pair it once in its official application.
 - `ControllerLinkWatchdog`: plain-handshake fallback after three seconds, "needs unlock" after ten seconds of silence, reconnection after forty-five seconds without a frame. Pure logic in the core, tested without a radio.
 - `docs/controllers.md`: the three channels, the three behaviours a controller can have, and the documented workaround for a Click v2 that drops after a minute.
 - FTMS trainer proxy: control point codec, simulation parameters, target power and resistance, Indoor Bike Data.
