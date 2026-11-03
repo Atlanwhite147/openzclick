@@ -83,6 +83,17 @@ class ControllerConnection {
       <StreamSubscription<List<int>>>[];
   Timer? _supervision;
   final ControllerLinkWatchdog _watchdog = ControllerLinkWatchdog();
+
+  /// True once the plain handshake was written on this link.
+  ///
+  /// The encrypted request and the plain one are not the same question: a
+  /// Click v2 answers the encrypted one with a bare `RideOn` echo and then
+  /// stays silent, while the plain handshake is what makes it stream its
+  /// buttons. A single echo therefore says nothing about the session.
+  bool _plainHandshakeSent = false;
+
+  /// Whole seconds elapsed since the link came up.
+  int _secondsSinceConnect = 0;
   bool _reconnecting = false;
 
   StreamSubscription<List<ScanResult>>? _scanSubscription;
@@ -283,6 +294,8 @@ class ControllerConnection {
       _keyPair = ControllerCrypto.generateKeyPair();
       _crypto = null;
       encrypted = false;
+      _plainHandshakeSent = false;
+      _secondsSinceConnect = 0;
       _watchdog.onConnected();
       await writeTarget.write(
         ControllerHandshake.encryptedRequest(_keyPair!.publicKeyBytes),
@@ -309,19 +322,31 @@ class ControllerConnection {
 
   /// Feeds the watchdog and carries out what it asks for.
   void _supervise() {
+    _secondsSinceConnect++;
     final ControllerLinkAction? action = _watchdog.onElapsed(
       const Duration(seconds: 1),
     );
     switch (action) {
       case null:
-        return;
+        break;
       case ControllerLinkAction.sendPlainHandshake:
+        _plainHandshakeSent = true;
         unawaited(_write(ControllerHandshake.plainRequest()));
       case ControllerLinkAction.needsUnlock:
         needsUnlock = true;
         _notify();
       case ControllerLinkAction.reconnect:
         unawaited(_reconnect());
+    }
+
+    // A Click v2 answers the encrypted request with a bare `RideOn` echo and
+    // then waits for the rest of an exchange that will never come: it streams
+    // its buttons only after the plain handshake. The watchdog cannot ask for
+    // that fallback, because a frame did arrive and it reads a frame as an
+    // answer; the criterion is the derived session, not the bytes.
+    if (_crypto == null && !_plainHandshakeSent && _secondsSinceConnect >= 3) {
+      _plainHandshakeSent = true;
+      unawaited(_write(ControllerHandshake.plainRequest()));
     }
   }
 
