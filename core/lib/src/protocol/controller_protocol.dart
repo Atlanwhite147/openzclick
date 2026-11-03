@@ -56,17 +56,28 @@ abstract final class ControllerMessageType {
   static const int disconnect = 0xFE;
 }
 
-/// Bit positions of the button mask, measured on a Click v2.
+/// Bit positions of the button mask, measured one button at a time on a
+/// Click v2 (firmware 1.1.0), each press isolated and read back from the
+/// frame the controller sent.
 ///
-/// Only the two that shift gears are named: they are the ones the bridge maps,
-/// and inventing names for the other eight would be a guess. A press clears the
-/// bit, so the tests assert on the frames the controller actually sent.
+/// A press clears the bit; every other bit stays set. Only [plus] and [b] reach
+/// the gear engine: they are the two the rider uses to shift, so mapping the
+/// other three would move a gear on a button pressed for another reason.
 abstract final class ControllerButtonBits {
-  /// Up (towards the small cog).
-  static const int up = 12;
+  /// Y, the blue button at the top of the pod.
+  static const int y = 6;
 
-  /// Down (towards the big cog).
-  static const int down = 5;
+  /// Z, the orange button on the left.
+  static const int z = 7;
+
+  /// A, the green button on the right.
+  static const int a = 4;
+
+  /// B, the pink button at the bottom: shift down.
+  static const int b = 5;
+
+  /// The large `+` under the cluster: shift up.
+  static const int plus = 12;
 }
 
 /// Handshake bytes.
@@ -217,8 +228,8 @@ abstract final class ControllerCodec {
       if (field != 1) continue;
       final int mask = varint.value;
       return ClickButtons(
-        up: (mask >> ControllerButtonBits.up) & 1 == 0,
-        down: (mask >> ControllerButtonBits.down) & 1 == 0,
+        up: (mask >> ControllerButtonBits.plus) & 1 == 0,
+        down: (mask >> ControllerButtonBits.b) & 1 == 0,
       );
     }
     return null;

@@ -415,6 +415,13 @@ class ControllersScreen extends StatelessWidget {
               ),
             const Divider(height: 32),
             Text('Last buttons: ${state.lastButtons ?? 'none'}'),
+            const SizedBox(height: 4),
+            Text(
+              // Measured on the hardware, one button at a time: these two are
+              // wired to the gears, the other three of the pod are not.
+              'On a Click v2, the + button shifts up and B shifts down.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (!ready) ...<Widget>[
               const SizedBox(height: 12),
               Text(

@@ -35,6 +35,24 @@ view:
 The buttons arrive on `0002` and the handshake acknowledgement on `0004`.
 Subscribe to both, write to `0003`.
 
+## Which button is which
+
+Measured on a Click v2 (firmware 1.1.0), one button at a time, by reading the
+mask out of the `23 08 <varint>` notification. A press clears its bit; every
+other bit stays set, so the resting frame is `23 08 ff ff ff ff 0f`.
+
+| Button | Bit | Frame while held |
+|---|---|---|
+| `+` (under the cluster) | 12 | `23 08 ff df ff ff 0f` |
+| `B` (bottom, pink) | 5 | `23 08 df ff ff ff 0f` |
+| `Y` (top, blue) | 6 | `23 08 bf ff ff ff 0f` |
+| `Z` (left, orange) | 7 | `23 08 7f ff ff ff 0f` |
+| `A` (right, green) | 4 | `23 08 ef ff ff ff 0f` |
+
+Only `+` and `B` reach the gear engine: they are the two a rider shifts with,
+and mapping the other three would change gear on a button pressed for another
+reason. Naming the rest is a one-line change once a use for them exists.
+
 ## The three behaviours a controller can have
 
 A controller answers the host in one of three ways, and only the first two can be

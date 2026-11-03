@@ -295,5 +295,50 @@ void main() {
     test('a mask without field 1 is not read as a press', () {
       expect(decodeFrame(<int>[0x23, 0x10, 0x00]), isNull);
     });
+
+    test('Y, Z and A do not move a gear', () {
+      // Each bit was measured alone: Y clears 6, Z clears 7, A clears 4. They
+      // are not the buttons the rider shifts with, so a press must reach the
+      // application as "nothing pressed" rather than as a gear change.
+      for (final int bit in <int>[
+        ControllerButtonBits.y,
+        ControllerButtonBits.z,
+        ControllerButtonBits.a,
+      ]) {
+        final int mask = 0xFFFFFFFF & ~(1 << bit);
+        final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+          <int>[0x08, ..._varint(mask)],
+        );
+        expect(buttons, ClickButtons.released, reason: 'bit $bit');
+      }
+    });
+
+    test('the plus button is the one that shifts up', () {
+      final int mask = 0xFFFFFFFF & ~(1 << ControllerButtonBits.plus);
+      final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+        <int>[0x08, ..._varint(mask)],
+      );
+      expect(buttons, const ClickButtons(up: true, down: false));
+    });
+
+    test('the B button is the one that shifts down', () {
+      final int mask = 0xFFFFFFFF & ~(1 << ControllerButtonBits.b);
+      final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+        <int>[0x08, ..._varint(mask)],
+      );
+      expect(buttons, const ClickButtons(up: false, down: true));
+    });
   });
+}
+
+/// Protobuf varint encoding, used to rebuild the masks the controller sent.
+List<int> _varint(int value) {
+  final List<int> out = <int>[];
+  int v = value;
+  while (v > 0x7F) {
+    out.add((v & 0x7F) | 0x80);
+    v >>= 7;
+  }
+  out.add(v);
+  return out;
 }
