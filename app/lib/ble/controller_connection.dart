@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
+import '../platform/capabilities.dart';
+
+import 'controller_error.dart';
+
 /// State of the connection to a physical controller.
 enum ControllerStatus {
   /// Not connected.
@@ -112,7 +116,11 @@ class ControllerConnection {
       },
       onError: (Object e) {
         status = ControllerStatus.failed;
-        error = e.toString();
+        error = explainControllerError(
+          e,
+          isWeb: kIsWeb,
+          secureContext: Capabilities.webBluetoothPossible,
+        );
         _notify();
       },
     );
@@ -133,7 +141,11 @@ class ControllerConnection {
       );
     } catch (e) {
       status = ControllerStatus.failed;
-      error = e.toString();
+      error = explainControllerError(
+        e,
+        isWeb: kIsWeb,
+        secureContext: Capabilities.webBluetoothPossible,
+      );
       _notify();
       return;
     }
@@ -222,7 +234,11 @@ class ControllerConnection {
       _notify();
     } catch (e) {
       status = ControllerStatus.failed;
-      error = e.toString();
+      error = explainControllerError(
+        e,
+        isWeb: kIsWeb,
+        secureContext: Capabilities.webBluetoothPossible,
+      );
       _notify();
     }
   }
@@ -249,7 +265,11 @@ class ControllerConnection {
     try {
       await _writeTarget?.write(frame);
     } catch (e) {
-      error = e.toString();
+      error = explainControllerError(
+        e,
+        isWeb: kIsWeb,
+        secureContext: Capabilities.webBluetoothPossible,
+      );
       _notify();
     }
   }

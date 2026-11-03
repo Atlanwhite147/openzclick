@@ -229,7 +229,14 @@ class _ParkedGearPickersState extends State<ParkedGearPickers> {
                 ),
               ],
             ),
-            if (recommended != null && recommended != parked) ...<Widget>[
+            // Only once the rider has described their bike: before that, a
+            // suggestion names a ratio that may not exist on it at all. A
+            // single-cog setup (a Zwift Cog has one) cannot answer it, and
+            // offering 34/30 to someone who owns one cog reads as the
+            // application not knowing what a Cog is.
+            if (recommended != null &&
+                parked != null &&
+                recommended != parked) ...<Widget>[
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,

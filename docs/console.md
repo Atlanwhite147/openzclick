@@ -22,10 +22,20 @@ phone or laptop browser          bridge (Windows, macOS, Linux, Android)
 Start the publication on the Target screen. The card **Browser console** then shows a QR code, the address to open and the four letter code:
 
 ```
-ws://192.168.1.24:47124/console?token=abcd
+http://192.168.1.24:47124/?token=abcd
 ```
 
-Scanning the QR with a phone opens the published page with the bridge and the code in the URL (`?bridge=192.168.1.24:47124&code=abcd`), and the page connects on its own: nothing is typed. Typing the address and the code by hand still works, for a desktop browser or a phone without a camera.
+Scanning the QR with a phone opens that address, and the page connects on its own: nothing is typed. Typing `192.168.1.24:47124` in any browser also works, and the page then asks for the code.
+
+### Why the bridge serves the page itself
+
+The bridge answers `GET /` on its relay port with the console document. It was not the first design: the QR code used to point at the hosted page with the bridge address in a query parameter (`?bridge=...&code=...`). That could never work from a phone, and the failure said nothing useful.
+
+A published page is served over `https://`. A browser refuses to open a `ws://` socket from an `https://` document: that is the mixed content rule, and it fires before the bridge sees a single byte. The code was correct, the bridge was running, and the only feedback was *"the bridge refused the connection: check the address and the code"* — which sent the rider to check a code that was right.
+
+Serving the document from the bridge removes the rule at its root: the page and the socket share an origin, a host and a port, so nothing is mixed. It also means the address a phone opens is the one the bridge already knows.
+
+The cost is that Web Bluetooth needs a secure context, so the page served by the bridge has no controller scanning. That is not a regression on a phone (iOS exposes no Web Bluetooth at all) and the bridge has its own Bluetooth, which is what pairs the controller. The hosted page keeps the full interface for a laptop, where it is served over `https://` and can scan.
 
 Three rules make that code the only thing to protect:
 
@@ -37,7 +47,9 @@ The relay listens on `47124`, next to the TCP port `47123` the application uses.
 
 ## On the page
 
-Open the published page, go to **Target**, enter the address and the code (or scan the QR code of the bridge). The address may be a bare IP (`192.168.1.24`), an IP with a port (`192.168.1.24:47124`) or a full `ws://` URL, because a rider copies whatever the bridge shows.
+Open the address the bridge shows, or scan its QR code. The console it serves carries the gear, two shift buttons and the link state, and nothing else: it is deliberately one file with no dependency and no build step, because a phone on a home network may have no internet at all and a page that needs the network to draw two buttons fails exactly when it is needed.
+
+The hosted page is the other door, for a laptop: **Target**, then the address and the code. The address may be a bare IP (`192.168.1.24`), an IP with a port (`192.168.1.24:47124`) or a full `ws://` URL, because a rider copies whatever the bridge shows.
 
 Once connected:
 

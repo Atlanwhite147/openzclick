@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../net/publisher_port.dart';
 import '../platform/capabilities.dart';
+import '../platform/links.dart';
 import '../state/app_state.dart';
 import 'parked_gear_card.dart';
 
@@ -32,7 +34,7 @@ class MyWhooshGuideCard extends StatelessWidget {
       builder: (BuildContext context, _) {
         final PublisherPort publisher = state.publisher;
         if (!Capabilities.canPublish) {
-          return _GuideElsewhere(state: state, onOpenNetwork: onOpenNetwork);
+          return GuideElsewhere(state: state, onOpenNetwork: onOpenNetwork);
         }
         final bool running = publisher.running;
         final bool connected = publisher.peers > 0;
@@ -300,10 +302,18 @@ class _Troubleshooting extends StatelessWidget {
 }
 
 /// A plain page is not the bridge: say where the bridge has to run.
-class _GuideElsewhere extends StatelessWidget {
-  const _GuideElsewhere({required this.state, this.onOpenNetwork});
+///
+/// Public so the browser-only branch can be rendered on its own in a test: on a
+/// native host this card is never built, and the download link it carries exists
+/// precisely for the rider who has no application yet.
+class GuideElsewhere extends StatelessWidget {
+  /// Creates the card for [state].
+  const GuideElsewhere({required this.state, this.onOpenNetwork, super.key});
 
+  /// Shared application state.
   final AppState state;
+
+  /// Jumps to the Network tab, where a code is typed by hand.
   final VoidCallback? onOpenNetwork;
 
   @override
@@ -339,6 +349,31 @@ class _GuideElsewhere extends StatelessWidget {
               '1. Install openzclick where MyWhoosh runs, and press Start there.'
               '\n2. It shows a code. Scan it, or type the address it displays.',
               style: TextStyle(fontSize: 13),
+            ),
+            // The step above used to name a file nobody could find: a rider
+            // reading this page has no way to guess that "install" means a
+            // download page. Opening a link would need a launcher plugin for
+            // every platform, so the address is shown and can be copied.
+            const SizedBox(height: 8),
+            const SelectableText(
+              downloadsUrl,
+              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(
+                    const ClipboardData(text: downloadsUrl),
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Download link copied')),
+                  );
+                },
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copy the download link'),
+              ),
             ),
             if (onOpenNetwork != null)
               Padding(

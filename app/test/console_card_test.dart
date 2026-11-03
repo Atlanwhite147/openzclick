@@ -87,12 +87,15 @@ void main() {
     );
 
     expect(find.text('Browser console'), findsOneWidget);
-    // Scanning this link must land on the page already connected: the bridge
-    // address and the code travel in the URL.
+    // The QR code must land on the page the bridge serves itself, in http on
+    // the bridge's own port. A hosted page is https://, and a browser refuses
+    // to open the console socket (ws://) from one: the scan used to produce a
+    // page that could never reach the bridge, with no way to tell why.
     expect(
-      find.textContaining('?bridge=192.168.1.24%3A47124&code=abcd'),
+      find.textContaining('http://192.168.1.24:47124/?token=abcd'),
       findsOneWidget,
     );
+    expect(find.textContaining('?bridge='), findsNothing);
     expect(find.byType(QrImageView), findsOneWidget);
   });
 

@@ -32,11 +32,30 @@ abstract final class ConsoleEndpoint {
     return 'ws://$authority$path?token=$cleanCode';
   }
 
+  /// Address a QR code carries, so a phone opens the console the bridge serves.
+  ///
+  /// The bridge serves the console itself, on the port it already listens on,
+  /// over `http`. That is not a detail: a hosted page is `https://`, and a
+  /// browser refuses to open a `ws://` socket from one, so a QR pointing at the
+  /// hosted page produced a page that could never reach the bridge. Same origin,
+  /// same port, nothing mixed.
+  static String bridgePage({
+    required String host,
+    required int port,
+    required String code,
+  }) {
+    final String cleanCode = code.trim();
+    return 'http://$host:$port/?token=${Uri.encodeQueryComponent(cleanCode)}';
+  }
+
   /// Address a QR code carries, so a phone opens the page already connected.
   ///
   /// [page] is the published page; [host] and [port] the console of the bridge.
   /// The rider scans, the page reads these two parameters and dials: nothing is
   /// typed, which is the whole point of the code.
+  ///
+  /// Kept for a bridge that has no page of its own to serve, which is the case
+  /// of a build without the relay: prefer [bridgePage].
   static String pageLink({
     required String page,
     required String host,

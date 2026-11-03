@@ -76,7 +76,7 @@ Future<WebSocket> connectConsole(
 }) async {
   final String code = token ?? relay.token;
   return WebSocket.connect(
-    'ws://127.0.0.1:${relay.listeningPort}${WebSocketRelayTransport.path}'
+    'ws://127.0.0.1:${relay.listeningPort}${WebSocketRelayTransport.consolePath}'
     '?token=$code',
   );
 }

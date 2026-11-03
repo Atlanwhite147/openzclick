@@ -21,4 +21,5 @@ export 'trainer/gear_circumference_driver.dart';
 export 'trainer/wahoo_wheel_circumference.dart';
 export 'trainer/virtual_trainer.dart';
 export 'transport.dart';
+export 'console_page.dart';
 export 'ws_relay_transport.dart';

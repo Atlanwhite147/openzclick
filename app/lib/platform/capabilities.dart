@@ -64,6 +64,21 @@ abstract final class Capabilities {
   /// rather than a list the application scans and filters itself.
   static bool get usesBluetoothChooser => isWeb;
 
+  /// True when this page could use Web Bluetooth at all.
+  ///
+  /// The API only exists in a secure context: `https`, or `localhost`. A page
+  /// served over plain `http` on a LAN address — which is exactly what a bridge
+  /// serves so its console can reach it without mixed content — has no
+  /// `navigator.bluetooth` at all. Saying so before the rider taps the button
+  /// costs nothing and prevents the one reading nobody wants, "the application
+  /// is broken".
+  static bool get webBluetoothPossible {
+    if (!isWeb) return true;
+    final Uri base = Uri.base;
+    if (base.scheme == 'https') return true;
+    return base.host == 'localhost' || base.host == '127.0.0.1';
+  }
+
   /// Short name of the host, for diagnostics.
   static String get hostName => isWeb
       ? 'web'

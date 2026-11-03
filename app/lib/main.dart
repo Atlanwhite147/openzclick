@@ -312,8 +312,10 @@ class ControllersScreen extends StatelessWidget {
                   // reconnection fixes: say what the rider must do instead of
                   // showing a connection that looks alive.
                   link.needsUnlock
-                      ? 'No answer after the handshake: pair the controller '
-                            'once in its official application, then reconnect'
+                      ? 'The controller connected but answers nothing. This is '
+                            'the known Click v2 behaviour: pair it once in the '
+                            'Zwift application, keep that application open '
+                            'about three minutes, then come back here.'
                       : link.error ??
                             (ready
                                 ? '${link.encrypted ? 'encrypted' : 'plain'} session'
@@ -330,7 +332,34 @@ class ControllersScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            if (Capabilities.usesBluetoothChooser)
+            if (!Capabilities.webBluetoothPossible)
+              // The API does not exist on a plain http page, so the press would
+              // fail with a plugin stack trace. Saying why is cheaper than
+              // letting the rider conclude the application is broken.
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'This page cannot use Bluetooth: browsers only allow '
+                        'it on https or on localhost. The bridge still works — '
+                        'pair the controller in the openzclick application on a '
+                        'computer, or on the bridge itself.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (Capabilities.usesBluetoothChooser)
               // Web Bluetooth opens the browser's own device picker: there is
               // no list to scan, and a "Scan" button that opens a chooser is
               // named for what the rider will see.
@@ -374,11 +403,21 @@ class ControllersScreen extends StatelessWidget {
               ),
             const Divider(height: 32),
             Text('Last buttons: ${state.lastButtons ?? 'none'}'),
-            const SizedBox(height: 8),
-            const Text(
-              'Declarative definitions shipped with the core are listed in the '
-              'Network tab. The controller link above is the live input path.',
-            ),
+            if (!ready) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(
+                'First time with a Zwift Click?',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'A Click v2 stays silent until it has been paired once in the '
+                'Zwift application, and it drops again if that pairing is cut '
+                'short. Pair it there, leave it open about three minutes, then '
+                'come back. The v1 has no such step.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ],
         );
       },
@@ -612,8 +651,7 @@ class _BridgeConsoleCard extends StatelessWidget {
         final String code = publisher.consoleToken;
         final bool ready = consolePort != null && code.isNotEmpty;
         final String? link = ready
-            ? ConsoleEndpoint.pageLink(
-                page: webAppUrl,
+            ? ConsoleEndpoint.bridgePage(
                 host: host,
                 port: consolePort,
                 code: code,
@@ -647,9 +685,10 @@ class _BridgeConsoleCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   ready
-                      ? 'Scan this code with a phone: the page opens and drives '
-                            'this bridge. Or enter $host:$consolePort and '
-                            'the code by hand.'
+                      ? 'Scan this with a phone: the page opens here and drives '
+                            'this bridge, no application to install. Or type '
+                            '$host:$consolePort in any browser and enter the '
+                            'code.'
                       : 'Start the publication to let a browser drive this bridge',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),

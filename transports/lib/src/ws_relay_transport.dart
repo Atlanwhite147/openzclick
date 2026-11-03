@@ -23,6 +23,7 @@ import 'dart:math';
 
 import 'package:openzclick_core/openzclick_core.dart';
 
+import 'console_page.dart';
 import 'events.dart';
 import 'transport.dart';
 
@@ -45,8 +46,8 @@ class WebSocketRelayTransport extends ManagedTransport {
   /// Preferred port, next to the TCP one so a rider types two close numbers.
   static const int defaultPort = 47124;
 
-  /// Path the console connects to.
-  static const String path = '/console';
+  /// Path the console socket connects to.
+  static const String consolePath = '/console';
 
   /// Code a console must present.
   final String token;
@@ -92,7 +93,31 @@ class WebSocketRelayTransport extends ManagedTransport {
   /// interfaces the phone can reach.
   String? urlFor(String host) {
     if (!isRunning) return null;
-    return 'ws://$host:$listeningPort$path?token=$token';
+    return 'ws://$host:$listeningPort$consolePath?token=$token';
+  }
+
+  /// Address a phone opens to get the console, on the same origin as the
+  /// socket.
+  ///
+  /// This is what the QR code points at. It has to be `http://` on this
+  /// machine: a hosted page is `https://` and browsers refuse to open a
+  /// `ws://` socket from one, which is why the hosted page could never drive a
+  /// bridge on a home network.
+  String? pageUrlFor(String host) {
+    if (!isRunning) return null;
+    return 'http://$host:$listeningPort/?token=$token';
+  }
+
+  /// Serves the console document, on the same origin and port as the socket.
+  Future<void> _servePage(HttpRequest request) async {
+    final HttpResponse response = request.response;
+    response.headers.contentType = ContentType.html;
+    response.headers.set('cache-control', 'no-store');
+    // The page and the socket share an origin, so the document has to be
+    // reachable by the socket's own callers and by nothing else.
+    response
+        .write(consolePageHtml(token: request.uri.queryParameters['token']));
+    await response.close();
   }
 
   @override
@@ -147,7 +172,12 @@ class WebSocketRelayTransport extends ManagedTransport {
   }
 
   Future<void> _onRequest(HttpRequest request) async {
-    if (request.uri.path != path) {
+    final String path = request.uri.path;
+    if (path == '/' || path == '/index.html') {
+      await _servePage(request);
+      return;
+    }
+    if (path != consolePath) {
       request.response.statusCode = HttpStatus.notFound;
       await request.response.close();
       return;

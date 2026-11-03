@@ -12,7 +12,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-455%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-474%20passing-brightgreen)](#status)
 
 </div>
 
@@ -58,9 +58,9 @@ Every file is rebuilt on every push to `main`. The Android package is signed wit
 
 ## Ride with MyWhoosh in four steps
 
-You need no account, no cable and no driver. Install nothing if you use the web page.
+You need no account, no cable and no driver. Everything is on the [releases page](https://github.com/Atlanwhite147/openzclick/releases/latest).
 
-1. **Start the application.** On Windows, unzip and double click `openzclick.exe`; on Android, install the APK. In a browser, open the page — nothing to install, but read the note under the steps.
+1. **Start the application.** On Windows, unzip and double click `openzclick.exe`; on Android, install the APK. On a phone with neither, keep reading: the application runs on the machine with MyWhoosh and the phone only drives it.
 2. **Tap *Start* on the first screen.** It now listens for MyWhoosh. The screen says *listening* or *announced on your network*.
 3. **In MyWhoosh, open the device connection screen and tap the OpenBikeControl icon, top right.** MyWhoosh asks for confirmation: answer **Yes**. The icon turns blue.
 4. **Ride.** Your two buttons shift. The application shows the client count going to 1, so you know MyWhoosh really attached.
@@ -77,11 +77,13 @@ Where to tap a button before you clip in: the **Gears** tab has *Shift up* and *
 | MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; or the controller needs unlocking once in its own application |
 | The gear changes here but not in MyWhoosh | MyWhoosh has paired the trainer itself. Let MyWhoosh own the trainer rather than the bridge |
 
-### In a browser, with no installation at all
+### From a phone, with nothing installed on the phone
 
-The page does everything except be found by MyWhoosh, because a normal web page may not open a server. Two ways around it, both on the page:
+A phone cannot be the bridge MyWhoosh discovers, because a normal web page may not open a server. It can drive one:
 
-- **Drive a bridge from a phone.** Run the application on a computer (step 1), start it, then scan the QR code it displays in the **Network** tab. The phone becomes the console: you press in the browser, MyWhoosh receives.
+- **Run the application on the computer where MyWhoosh runs**, tap *Start*, and scan the QR code in the **Network** tab. The phone opens the console the bridge serves itself, at `http://<computer-ip>:47124`, and its buttons arrive in MyWhoosh exactly like a controller press.
+
+That address matters: the bridge serves the page over plain `http` on purpose. A hosted page is `https://`, and browsers refuse to open a `ws://` socket from one, so the phone could never have reached the bridge from the published page. `docs/console.md` explains it.
 - **Run the page as an installed application.** Chrome alone can install the page as a signed bundle (*Isolated Web App*), which is allowed a server; the page then announces itself and MyWhoosh finds it directly. `docs/browser-bridge.md` has the exact commands.
 
 ## For developers
@@ -215,8 +217,8 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 | Module | State | Tests |
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 248 |
-| `transports/` | mDNS responder, TCP server, console relay, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 129 |
-| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 78 |
+| `transports/` | mDNS responder, TCP server, console relay and the page it serves, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 137 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 89 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 
