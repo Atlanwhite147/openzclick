@@ -807,7 +807,34 @@ class _ConsoleClientCardState extends State<_ConsoleClientCard> {
                                 'enter the address it displays.'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                if (!connected) ...<Widget>[
+                if (!connected && !Capabilities.canDialBridge) ...<Widget>[
+                  // This page is served over https, and a browser refuses to
+                  // open a ws:// socket from one. Nothing typed here can work,
+                  // and the refusal used to be reported as a wrong code.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This page is served over https, and a browser will '
+                            'not let it reach a bridge on your network. Open the '
+                            'address the bridge shows instead, which starts '
+                            'with http://.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (!connected) ...<Widget>[
                   const SizedBox(height: 12),
                   TextField(
                     controller: _host,

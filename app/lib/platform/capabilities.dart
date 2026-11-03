@@ -79,6 +79,22 @@ abstract final class Capabilities {
     return base.host == 'localhost' || base.host == '127.0.0.1';
   }
 
+  /// True when a page may open a socket to a bridge on the network.
+  ///
+  /// A browser refuses a `ws://` socket from an `https://` document: the mixed
+  /// content rule fires before the bridge sees a byte. So the hosted page can
+  /// never dial, and pretending otherwise sends a rider to check a code that is
+  /// correct. The bridge serves its own page over `http` for exactly this
+  /// reason; a native host dials without asking anyone.
+  static bool get canDialBridge => canDialFrom(Uri.base);
+
+  /// Same rule as [canDialBridge], for a page address given explicitly.
+  ///
+  /// Pure, so the rule is tested on the host: a test cannot make the page it
+  /// runs in switch to https.
+  static bool canDialFrom(Uri page, {bool? web}) =>
+      !(web ?? isWeb) || page.scheme != 'https';
+
   /// Short name of the host, for diagnostics.
   static String get hostName => isWeb
       ? 'web'
