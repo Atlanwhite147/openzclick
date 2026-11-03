@@ -73,6 +73,13 @@ class AppState extends ChangeNotifier {
   /// Persistence port, null until [restore] is called.
   SettingsStore? store;
 
+  /// What is physically bolted to the bike, and where the chain sits on it.
+  ///
+  /// Kept here rather than in a screen because every gear the bridge applies
+  /// depends on it: a bridge that forgets the parked gear moves the whole ladder
+  /// by a factor the rider cannot see.
+  PhysicalSetup physicalSetup = PhysicalSetup.defaultSetup;
+
   Timer? _persistTimer;
 
   StreamSubscription<ClickButtons>? _buttonSubscription;
@@ -275,6 +282,12 @@ class AppState extends ChangeNotifier {
     final GearProfile profile =
         GearProfile.byId(snapshot.profileId) ?? GearProfile.road12;
     engine = GearEngine(profile: profile, initialGear: snapshot.gearIndex);
+    physicalSetup = PhysicalSetup(
+      chainringTeeth: physicalSetup.chainringTeeth,
+      cogTeeth: physicalSetup.cogTeeth,
+      parkedChainringTeeth: snapshot.parkedChainringTeeth,
+      parkedCogTeeth: snapshot.parkedCogTeeth,
+    );
     for (final MapEntry<Action, List<double>> entry
         in snapshot.positions.entries) {
       injection.setPosition(entry.key, entry.value[0], entry.value[1]);
@@ -305,6 +318,43 @@ class AppState extends ChangeNotifier {
     _ => null,
   };
 
+  /// Records where the chain sits on the bike.
+  ///
+  /// The single most consequential setting in the application: it moves every
+  /// gear at once, by a factor of up to two, with no symptom other than the
+  /// rider finding the ride harder or easier than the number on screen says.
+  void setParkedGear({required int chainring, required int cog}) {
+    final PhysicalSetup updated = physicalSetup.parkedOn(
+      chainring: chainring,
+      cog: cog,
+    );
+    if (!updated.isComplete) return;
+    physicalSetup = updated;
+    _persist();
+    _syncConsole(Action.none);
+    notifyListeners();
+  }
+
+  /// Wheel size the current gear asks the trainer for, in millimetres.
+  ///
+  /// `null` when setup is unfinished or the gear cannot be expressed, which the
+  /// Network screen reports instead of showing a number nobody can use.
+  double? get currentWheelCircumference {
+    final ParkedGear? parked = physicalSetup.parkedGear;
+    if (parked == null) return null;
+    final List<GearRatio> gears = engine.profile.gears;
+    if (engine.gearIndex < 0 || engine.gearIndex >= gears.length) return null;
+    return WheelCircumferenceScaler.effectiveCircumference(
+      neutralCircumference: referenceCircumferenceMillimeters,
+      parked: parked,
+      selectedRatio: gears[engine.gearIndex].ratio,
+    );
+  }
+
+  /// The gear the setup recommends, given the profile in use.
+  ParkedGear? get recommendedParkedGear =>
+      physicalSetup.recommendParkedGear(engine.profile);
+
   /// Writes the current settings, coalescing bursts of changes.
   void _persist() {
     final SettingsStore? settings = store;
@@ -318,6 +368,8 @@ class AppState extends ChangeNotifier {
           positions: injection.positions,
           publishOnStart: publisher.running,
           injectOnStart: injection.running,
+          parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
+          parkedCogTeeth: physicalSetup.parkedCogTeeth,
         ),
       );
     });

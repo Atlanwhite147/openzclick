@@ -17,6 +17,8 @@ class SettingsSnapshot {
     required this.positions,
     required this.publishOnStart,
     required this.injectOnStart,
+    this.parkedChainringTeeth,
+    this.parkedCogTeeth,
   });
 
   /// Identifier of the gear profile.
@@ -33,6 +35,16 @@ class SettingsSnapshot {
 
   /// Whether the tap injection should resume on the next start.
   final bool injectOnStart;
+
+  /// Chainring the chain sits on, `null` until the rider confirms it.
+  ///
+  /// Stored because setup is completed once: asking again every launch would
+  /// be the same question with the same answer, and skipping it corrupts every
+  /// gear by a factor nothing on screen reveals.
+  final int? parkedChainringTeeth;
+
+  /// Cog the chain sits on, `null` until the rider confirms it.
+  final int? parkedCogTeeth;
 }
 
 /// Persistence port: the application depends on this, never on a plugin.
@@ -51,6 +63,8 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _publishKey = 'openzclick.publish';
   static const String _injectKey = 'openzclick.inject';
   static const String _positionPrefix = 'openzclick.position.';
+  static const String _parkedChainringKey = 'openzclick.parked.chainring';
+  static const String _parkedCogKey = 'openzclick.parked.cog';
 
   @override
   Future<SettingsSnapshot?> load() async {
@@ -76,6 +90,8 @@ class PrefsSettingsStore implements SettingsStore {
       positions: positions,
       publishOnStart: prefs.getBool(_publishKey) ?? false,
       injectOnStart: prefs.getBool(_injectKey) ?? false,
+      parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
+      parkedCogTeeth: prefs.getInt(_parkedCogKey),
     );
   }
 
@@ -86,6 +102,18 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
+    final int? chainring = snapshot.parkedChainringTeeth;
+    if (chainring == null) {
+      await prefs.remove(_parkedChainringKey);
+    } else {
+      await prefs.setInt(_parkedChainringKey, chainring);
+    }
+    final int? cog = snapshot.parkedCogTeeth;
+    if (cog == null) {
+      await prefs.remove(_parkedCogKey);
+    } else {
+      await prefs.setInt(_parkedCogKey, cog);
+    }
     for (final MapEntry<Action, List<double>> entry
         in snapshot.positions.entries) {
       await prefs.setString(

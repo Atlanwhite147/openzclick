@@ -51,6 +51,63 @@ void main() {
     state.dispose();
   });
 
+  test('restores where the chain was left on the bike', () async {
+    // Setup is answered once. Asking again every launch is the same question
+    // with the same answer; forgetting it moves every gear silently.
+    final MemorySettingsStore store = MemorySettingsStore();
+    await store.save(
+      const SettingsSnapshot(
+        profileId: 'road-12',
+        gearIndex: 3,
+        positions: <Action, List<double>>{},
+        publishOnStart: false,
+        injectOnStart: false,
+        parkedChainringTeeth: 50,
+        parkedCogTeeth: 17,
+      ),
+    );
+    final AppState state = AppState();
+    await state.restore(store);
+    expect(state.physicalSetup.parkedGear, isNotNull);
+    expect(state.physicalSetup.parkedGear!.name, '50/17');
+    expect(state.currentWheelCircumference, isNotNull);
+    state.dispose();
+  });
+
+  test('persists the parked gear once the rider chooses it', () async {
+    final MemorySettingsStore store = MemorySettingsStore();
+    final AppState state = AppState();
+    await state.restore(store);
+    expect(state.physicalSetup.isComplete, isFalse);
+
+    state.setParkedGear(chainring: 34, cog: 21);
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+
+    final SettingsSnapshot? saved = await store.load();
+    expect(saved!.parkedChainringTeeth, 34);
+    expect(saved.parkedCogTeeth, 21);
+    expect(state.physicalSetup.isComplete, isTrue);
+    state.dispose();
+  });
+
+  test('refuses a parked gear the bike does not have', () async {
+    final AppState state = AppState();
+    state.setParkedGear(chainring: 34, cog: 19);
+    state.setParkedGear(chainring: 39, cog: 19);
+    expect(state.physicalSetup.parkedChainringTeeth, 34);
+    state.dispose();
+  });
+
+  test('a gear the setup cannot build has no wheel size to show', () async {
+    // Parked in the big ring on the smallest cog, the easiest gear needs a
+    // wheel so small that a training application would draw a stopped rider.
+    final AppState state = AppState();
+    state.setParkedGear(chainring: 50, cog: 11);
+    state.engine = GearEngine(profile: GearProfile.road12, initialGear: 0);
+    expect(state.currentWheelCircumference, isNull);
+    state.dispose();
+  });
+
   test('changing profile keeps the relative position', () async {
     final AppState state = AppState();
     state.engine = GearEngine(profile: GearProfile.road12, initialGear: 11);

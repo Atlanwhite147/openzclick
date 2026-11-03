@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openzclick/main.dart';
@@ -25,6 +26,14 @@ void main() {
     await tester.tap(find.text('Gears'));
     await tester.pumpAndSettle();
 
+    // The parked-gear card sits above the buttons, so the buttons have to be
+    // scrolled into view before they exist.
+    await tester.dragUntilVisible(
+      find.text('Shift up'),
+      find.byType(ListView).first,
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Shift up'));
     await tester.pumpAndSettle();
 

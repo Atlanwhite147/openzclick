@@ -21,6 +21,12 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Console relay: a page drives a bridge over a WebSocket, from the Target screen,
   with a code the bridge displays. Verified in Chrome: a button of the page
   reaches the bridge, and a gear changed on the bridge moves the page.
+- The bridge can be the page itself: Direct Sockets in an installed web app give
+  a real mDNS announcement (341 bytes) and a real TCP server on port 47123,
+  verified end to end in Chrome 145.
+- Trainer gearing by wheel size: one command per gear, the parked gear of the
+  bike asked once and stored, the wheel window a riding application may impose
+  honoured, and Cycling Power published next to FTMS (`docs/trainer-proxy.md`).
 
 ## Next, in order
 
@@ -33,8 +39,9 @@ itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
 (`docs/browser-bridge.md`, verified end to end on Chrome 145). What remains:
 
 - drive the smart trainer directly over FTMS with Web Bluetooth: the gears become
-  resistance setpoints, no bridge at all, which covers applications that do not
-  handle shifting.
+  wheel sizes, no bridge at all, which covers applications that do not handle
+  shifting. The arithmetic and the frames are already written
+  (`docs/trainer-proxy.md`); what remains is a Web Bluetooth link to the machine.
 
 ### 2. Windows keyboard injection
 `SendInput`, or the scan code path for applications that ignore synthetic keys. One file, one test, no new dependency. This is the platform where most riders are.
@@ -45,7 +52,7 @@ itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
 ### 4. Trainer proxy
 The bridge connects to the smart trainer, applies the resistance of the selected gear, and presents itself to the training application as an ordinary trainer. This is the only path that works on iPhone, because iOS allows a Bluetooth peripheral without any Apple entitlement.
 
-State: the FTMS codec and the virtual trainer logic are implemented and tested (`docs/trainer-proxy.md`), with a scripted ride that runs without hardware. What remains is the Bluetooth part: an FTMS client towards the real trainer, a GATT server that exposes the service to the application, and the control loop between them.
+State: the FTMS codec, the virtual trainer logic, the wheel-size command and the Cycling Power service are implemented and tested (`docs/trainer-proxy.md`), with a scripted ride that runs without hardware. What remains is the Bluetooth part: an FTMS client towards the real trainer, a GATT server that exposes the services to the application, and the control loop between them.
 
 ### 5. iPhone multicast entitlement
 Not code: a request to Apple, with the paperwork written in `docs/ios-multicast.md`. Until it is granted, iOS listens but cannot announce.

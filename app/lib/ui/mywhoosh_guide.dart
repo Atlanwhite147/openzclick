@@ -56,6 +56,37 @@ class MyWhooshGuideCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (!state.physicalSetup.isComplete) ...<Widget>[
+                  // Said before the four steps, because it anchors every gear
+                  // the bridge will send: a rider who starts riding with this
+                  // unanswered finds the ride harder and concludes the gears
+                  // are broken.
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Icon(Icons.pedal_bike_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Before you start: leave the chain on a middle cog '
+                            'and set it in the Gears tab. The gears here are '
+                            'scaled from where the chain really is.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 _Step(
                   number: 1,
                   done: running,

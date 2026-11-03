@@ -13,6 +13,7 @@ import 'platform/capabilities.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
 import 'ui/mywhoosh_guide.dart';
+import 'ui/parked_gear_card.dart';
 
 void main() => runApp(const OpenZclickApp());
 
@@ -197,6 +198,7 @@ class TrainerScreen extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: <Widget>[
+            ParkedGearCard(state: state),
             _MetricCard(
               label: 'Gear',
               value: '${engine.gearNumber} / ${engine.gearCount}',

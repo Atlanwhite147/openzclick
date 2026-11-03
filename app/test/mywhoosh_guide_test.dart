@@ -105,6 +105,29 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Start'), findsOneWidget);
   });
 
+  testWidgets('warns about the parked gear while it is unanswered', (
+    WidgetTester tester,
+  ) async {
+    // A rider who starts riding with this unanswered finds the ride much
+    // harder than the gear number says, and concludes the gears are broken.
+    final FakePublisher publisher = FakePublisher();
+    final AppState state = AppState(publisher: publisher);
+    addTearDown(state.dispose);
+
+    await pumpGuide(tester, state);
+    expect(
+      find.textContaining('scaled from where the chain really is'),
+      findsOneWidget,
+    );
+
+    state.setParkedGear(chainring: 34, cog: 19);
+    await tester.pump();
+    expect(
+      find.textContaining('scaled from where the chain really is'),
+      findsNothing,
+    );
+  });
+
   testWidgets('the start button starts the publication', (
     WidgetTester tester,
   ) async {

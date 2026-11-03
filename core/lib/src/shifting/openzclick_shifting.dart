@@ -4,3 +4,4 @@ library;
 export 'gear_engine.dart';
 export 'gear_profile.dart';
 export 'gear_ratio.dart';
+export 'parked_gear.dart';
