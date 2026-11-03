@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 430" width="860" height="430" role="img" aria-label="The five buttons of a Click v2 pod with the bit each one clears in the button mask, and the frame it produces">
+  <style>
+    .bg { fill: #ffffff; }
+    .pod { fill: #1f2328; }
+    .btn { stroke: #ffffff; stroke-width: 2; }
+    .bl { font: 700 18px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #ffffff; }
+    .cap { font: 600 13px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #1f2328; }
+    .mut { font: 400 12px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #57606a; }
+    .mono { font: 500 12px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #1f2328; }
+    .shift { font: 700 11px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #1a7f37; }
+    .free { font: 500 11px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #8c959f; }
+    .rule { stroke: #d0d7de; stroke-width: 1; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="860" height="430"/>
+
+  <!-- pod -->
+  <g transform="translate(150,215)">
+    <path class="pod" d="M0,-120 L104,-60 L104,60 L0,120 L-104,60 L-104,-60 Z"/>
+    <!-- Y top -->
+    <circle class="btn" cx="0" cy="-58" r="30" fill="#2f6fed"/>
+    <text class="bl" x="0" y="-51" text-anchor="middle">Y</text>
+    <!-- Z left -->
+    <circle class="btn" cx="-58" cy="0" r="30" fill="#f0883e"/>
+    <text class="bl" x="-58" y="7" text-anchor="middle">Z</text>
+    <!-- A right -->
+    <circle class="btn" cx="58" cy="0" r="30" fill="#3fb950"/>
+    <text class="bl" x="58" y="7" text-anchor="middle">A</text>
+    <!-- B bottom -->
+    <circle class="btn" cx="0" cy="58" r="30" fill="#db61a2"/>
+    <text class="bl" x="0" y="65" text-anchor="middle">B</text>
+    <!-- plus -->
+    <circle class="btn" cx="0" cy="140" r="22" fill="#57606a"/>
+    <text class="bl" x="0" y="147" text-anchor="middle">+</text>
+    <text class="mut" x="0" y="196" text-anchor="middle">right pod, as photographed</text>
+  </g>
+
+  <!-- table -->
+  <g transform="translate(330,60)">
+    <text class="cap" x="0" y="0">Button</text>
+    <text class="cap" x="90" y="0">Bit cleared</text>
+    <text class="cap" x="200" y="0">Frame while held</text>
+    <text class="cap" x="430" y="0">Wired to</text>
+    <line class="rule" x1="0" y1="10" x2="500" y2="10"/>
+
+    <g class="mono">
+      <text x="0" y="40">+</text>
+      <text x="90" y="40">12</text>
+      <text x="200" y="40">23 08 ff df ff ff 0f</text>
+      <text class="shift" x="430" y="40">shift up</text>
+
+      <text x="0" y="76">B</text>
+      <text x="90" y="76">5</text>
+      <text x="200" y="76">23 08 df ff ff ff 0f</text>
+      <text class="shift" x="430" y="76">shift down</text>
+
+      <text x="0" y="112">Y</text>
+      <text x="90" y="112">6</text>
+      <text x="200" y="112">23 08 bf ff ff ff 0f</text>
+      <text class="free" x="430" y="112">free</text>
+
+      <text x="0" y="148">Z</text>
+      <text x="90" y="148">7</text>
+      <text x="200" y="148">23 08 7f ff ff ff 0f</text>
+      <text class="free" x="430" y="148">free</text>
+
+      <text x="0" y="184">A</text>
+      <text x="90" y="184">4</text>
+      <text x="200" y="184">23 08 ef ff ff ff 0f</text>
+      <text class="free" x="430" y="184">free</text>
+
+      <text x="0" y="220">released</text>
+      <text x="90" y="220">-</text>
+      <text x="200" y="220">23 08 ff ff ff ff 0f</text>
+      <text class="free" x="430" y="220">nothing</text>
+    </g>
+
+    <text class="mut" x="0" y="272">Measured one button at a time on a Click v2, firmware 1.1.0.</text>
+    <text class="mut" x="0" y="292">Every bit is set at rest; a press clears its own bit and nothing else.</text>
+    <text class="mut" x="0" y="312">Type 23, field 1, protobuf varint.</text>
+  </g>
+</svg>

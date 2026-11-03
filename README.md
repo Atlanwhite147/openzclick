@@ -11,39 +11,66 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Windows build](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml)
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-477%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-488%20passing-brightgreen)](#status)
 
 </div>
 
----
+![Zwift Click to the bridge over Bluetooth, the bridge to the training application over the local network](docs/readme-flow.svg)
 
-A two-button controller bought for one application usually stops working as soon as you change application. openzclick reads the controller over Bluetooth, turns its button presses into gear changes, and publishes them on the local network with an open protocol, so the same buttons drive every training application that speaks it.
+A controller bought for one application usually stops working as soon as you change application. openzclick reads it over Bluetooth, turns button presses into gear changes, and publishes them on the local network with an open protocol, so the same buttons drive every application that speaks it.
 
-No account, no subscription, no telemetry. One Dart codebase for Android, iOS, Windows and macOS.
+**No account, no subscription, no cable, no driver, no telemetry.** One Dart codebase for Android, iOS, Windows, macOS and the browser.
 
-<div align="center">
+## Measured on real hardware
 
-| Start | Gears | Controllers | Network |
-|---|---|---|---|
-| ![Start](docs/screenshots/trainer.png) | ![Gears](docs/screenshots/controllers.png) | ![Controllers](docs/screenshots/diagnostics.png) | ![Network](docs/screenshots/publish.png) |
+Everything below was captured from a Click v2 (firmware `1.1.0`) over WinRT and is asserted by a test:
 
-</div>
+![The five buttons of a Click v2 pod and the bit each one clears](docs/buttons.svg)
+
+<details>
+<summary><b>The three things that cost an evening each</b></summary>
+
+<br>
+
+1. **A UUID is one identifier written three ways.** Windows reports Bluetooth SIG services short: the vendor service comes back as `fc82` where the specification says `0000fc82-0000-1000-8000-00805f9b34fb`. Compare the canonical form, never the raw strings, or the service is present and never found.
+2. **A connection is not a service table.** The first discovery right after a connection can return without the vendor service. Retry it before concluding that a channel is missing.
+3. **An echo is not an answer.** The encrypted handshake is answered either with the device public key or with a bare `RideOn` echo and then silence. A Click v2 does the second, and the plain handshake has to go out anyway, because that is what makes it stream its buttons. The decision rests on the derived session, not on having received bytes.
+
+The controller report lives in [#3](https://github.com/Atlanwhite147/openzclick/issues/3), with the address, the GATT tree and the raw frames.
+
+</details>
+
+## What works, where
+
+| Capability | Windows | Linux | macOS | Android | iOS | Browser |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Pair the controller, gears, gestures | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Chrome, Edge |
+| Belongs to you, no account | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| mDNS announcement + TCP server | ✅ | ✅ | ✅ | ✅ | ⚠️ needs Apple's entitlement | ⚠️ Isolated Web App only |
+| Drive the bridge from a phone | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ console over WebSocket |
+| Keyboard injection (no protocol support) | ❌ | ✅ X11 | ❌ | — | — | ❌ |
+| Tap injection (on-screen controls) | ❌ | ❌ | ❌ | ✅ accessibility service | ❌ | ❌ |
+| Become the trainer (FTMS peripheral) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+✅ verified · ⚠️ works with a platform constraint · ❌ not implemented, open to a contributor
+
+The two ❌ on desktop are the shortest path to a first accepted pull request: [Windows `SendInput`](https://github.com/Atlanwhite147/openzclick/issues/1) and [macOS `CGEventPost`](https://github.com/Atlanwhite147/openzclick/issues/2) are one file each, next to the Linux one that already works.
 
 ## Features
 
 | | |
 |---|---|
-| **Gears from two buttons** | single tap shifts up or down, from a gear profile (12-speed road, 8-speed flat, 24-speed hill) |
+| **Gears from a controller** | single tap shifts up or down, from a gear profile (12-speed road, 8-speed flat, 24-speed hill) |
+| **Five buttons decoded** | `+` and `B` shift, `Y`, `Z` and `A` are measured, named and asserted inert |
 | **Intersection choices** | double tap sends a left or right direction without leaving the hoods |
-| **Encrypted controller sessions** | ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, with a plain fallback for older firmware |
+| **Sessions, encrypted when offered** | ECDH P-256 handshake, HKDF-SHA256 derivation, AES-CCM frames, with a plain fallback the hardware actually needs |
 | **Open publication** | mDNS/DNS-SD announcement plus a TCP server, both in pure Dart, identical on every platform |
-| **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls if needed |
+| **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls |
 | **Keyboard fallback** | on a Linux desktop, X11 and XTest turn button presses into real key presses, verified against a live X server |
 | **Becomes the trainer** | FTMS decoded and encoded in pure Dart: the bridge can drive the real machine and impersonate a trainer, which is the only route that works on iPhone |
-| **Works without hardware** | the whole protocol is unit tested; a command line probe checks the network link |
+| **Works without hardware** | 488 tests without a radio; a command line probe checks the network link |
 | **Settings that survive a restart** | gear profile, current gear, tap positions and publishers resume where you left them |
-| **Honest diagnostics** | live controller state, battery level, codec test bench inside the application |
+| **Honest diagnostics** | live controller state, battery level, the raw frames, inside the application |
 
 ## Download
 
@@ -63,9 +90,9 @@ You need no account, no cable and no driver. Everything is on the [releases page
 1. **Start the application.** On Windows, unzip and double click `openzclick.exe`; on Android, install the APK. On a phone with neither, keep reading: the application runs on the machine with MyWhoosh and the phone only drives it.
 2. **Tap *Start* on the first screen.** It now listens for MyWhoosh. The screen says *listening* or *announced on your network*.
 3. **In MyWhoosh, open the device connection screen and tap the OpenBikeControl icon, top right.** MyWhoosh asks for confirmation: answer **Yes**. The icon turns blue.
-4. **Ride.** Your two buttons shift. The application shows the client count going to 1, so you know MyWhoosh really attached.
+4. **Ride.** Your buttons shift. The application shows the client count going to 1, so you know MyWhoosh really attached.
 
-Where to tap a button before you clip in: the **Gears** tab has *Shift up* and *Shift down* buttons that send exactly what the controller sends. If those change the gear in MyWhoosh, the link works and only the controller pairing is left.
+Where to press a button before you clip in: the **Gears** tab has *Shift up* and *Shift down* buttons that send exactly what the controller sends. If those change the gear in MyWhoosh, the link works and only the controller pairing is left.
 
 ### If MyWhoosh does not find it
 
@@ -74,7 +101,7 @@ Where to tap a button before you clip in: the **Gears** tab has *Shift up* and *
 | Nothing appears in MyWhoosh | the two are not on the same Wi-Fi network, or MyWhoosh runs on Android. MyWhoosh does not accept this connection over Wi-Fi on Android |
 | Windows finds nothing | MyWhoosh needs Bonjour on Windows (installed with iTunes, or *Bonjour Print Services*). Without it, discovery returns nothing and says nothing |
 | A firewall popup appeared | allow the application on private networks; without it the port stays closed |
-| MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; or the controller needs unlocking once in its own application |
+| MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; the page says *Nothing answered* when the controller was asleep |
 | The gear changes here but not in MyWhoosh | MyWhoosh has paired the trainer itself. Let MyWhoosh own the trainer rather than the bridge |
 
 ### From a phone, with nothing installed on the phone
@@ -84,6 +111,7 @@ A phone cannot be the bridge MyWhoosh discovers, because a normal web page may n
 - **Run the application on the computer where MyWhoosh runs**, tap *Start*, and scan the QR code in the **Network** tab. The phone opens the console the bridge serves itself, at `http://<computer-ip>:47124`, and its buttons arrive in MyWhoosh exactly like a controller press.
 
 That address matters: the bridge serves the page over plain `http` on purpose. A hosted page is `https://`, and browsers refuse to open a `ws://` socket from one, so the phone could never have reached the bridge from the published page. `docs/console.md` explains it.
+
 - **Run the page as an installed application.** Chrome alone can install the page as a signed bundle (*Isolated Web App*), which is allowed a server; the page then announces itself and MyWhoosh finds it directly. `docs/browser-bridge.md` has the exact commands.
 
 ## For developers
@@ -116,7 +144,7 @@ openzclick/
 ├─ core/          # pure Dart, no I/O: codec, session, gear engine, mapping, gestures
 ├─ transports/    # dart:io: mDNS responder, TCP server, Bluetooth/injection/proxy interfaces
 ├─ app/           # Flutter shell: pairing, gears, publishing, diagnostics; android, ios, windows, macos, web
-├─ docs/          # specification, architecture notes, screenshots
+├─ docs/          # specification, architecture notes, diagrams
 └─ CONTRACTS.md   # interface signatures between the modules
 ```
 
@@ -198,13 +226,9 @@ Details and calibration caveats: [docs/trainer-proxy.md](docs/trainer-proxy.md).
 
 ## How the link works
 
-**Controller side.** Scan for the vendor service (`0000fc82-0000-1000-8000-00805f9b34fb`), subscribe to the asynchronous channel for buttons and to the synchronous reply channel, write the handshake to the write-only one (`docs/controllers.md` explains why swapping them gives a link that connects and stays silent). Three details each cost an evening and are now handled where they belong:
+**Controller side.** Scan for the vendor service, subscribe to the asynchronous channel for buttons and to the synchronous reply channel, write the handshake to the write-only one, where the three traps above are handled (`docs/controllers.md`).
 
-- **A UUID is one identifier written three ways.** Windows reports Bluetooth SIG services short, so the vendor service comes back as `fc82` where the specification says `0000fc82-0000-1000-8000-00805f9b34fb`. Compare the canonical form, never the raw strings, or the service is present and never found.
-- **A connection is not a service table.** The first discovery right after a connection can return without the vendor service; retry it before concluding that a channel is missing.
-- **An echo is not an answer.** The encrypted request carrying an ephemeral P-256 key is answered either with the device public key, derived through ECDH then HKDF-SHA256 and decrypted with AES-CCM, or with a bare `RideOn` echo and then nothing. A Click v2 does the second: the plain six-byte handshake has to go out anyway, because that is what makes it stream its buttons. The decision rests on the derived session, not on having received bytes.
-
-Button notifications are protobuf varints: type `23`, field 1 holding the mask described below.
+Button notifications are protobuf: type `23`, field 1 holding a 32-bit mask where a press clears its own bit.
 
 **Training application side.** The bridge announces `openzclick._openbikecontrol._tcp.local` with the TXT record of the specification (`version`, `id`, `name`, `service-uuids`, `manufacturer`, `model`). A client connects over TCP, sends an application info frame, and receives one frame per action, with no length field on the wire: `01 01 01` for shift up pressed, `01 18 01` for a steer left. One write carries one message, which is what delimits frames in a protocol that has no length byte.
 
@@ -216,48 +240,52 @@ cd transports && dart run tool/net_probe.dart 47123
 
 Then browse `_openbikecontrol._tcp` with any mDNS browser and connect a client to the printed port.
 
-### Which button is which
-
-Measured on a Click v2 (firmware 1.1.0), one button at a time, by reading the mask out of the `23 08 <varint>` notification the controller sends: a press clears its bit, every other bit stays set, so the resting frame is `23 08 ff ff ff ff 0f`.
-
-| Button | Bit | Frame while held | Used for |
-|---|---|---|---|
-| `+` (under the cluster) | 12 | `23 08 ff df ff ff 0f` | shift up |
-| `B` (bottom, pink) | 5 | `23 08 df ff ff ff 0f` | shift down |
-| `Y` (top, blue) | 6 | `23 08 bf ff ff ff 0f` | free |
-| `Z` (left, orange) | 7 | `23 08 7f ff ff ff 0f` | free |
-| `A` (right, green) | 4 | `23 08 ef ff ff ff 0f` | free |
-
-Only `+` and `B` reach the gear engine. The other three are named and covered by a test that asserts they change nothing, so a later mapping cannot happen by accident.
-
 Protocol facts are implemented in Dart from public interoperability notes; no third-party code is copied. Cryptographic primitives come from `pointycastle`.
 
 ## Status
 
 | Module | State | Tests |
 |---|---|---|
-| `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 248 |
+| `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 255 |
 | `transports/` | mDNS responder, TCP server, console relay and the page it serves, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 137 |
-| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 92 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 96 |
 
-Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
+**Verified on Windows 11 with a Click v2:** scan, connect, plain session, five buttons identified one at a time, `+` and `B` shifting the gear end to end, and a training client on another machine reading the frames over the tailnet.
+
+**Verified on Android 13:** installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client.
+
+**Verified in Chrome:** the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click.
+
+What is not verified is the Bluetooth radio on macOS and on iOS against real hardware: [CONTRIBUTING.md](CONTRIBUTING.md) explains how to report a controller that does not pair.
 
 ## Roadmap
 
 - [x] binary protocol, encrypted sessions, gear engine
-- [x] two-button gestures, direction choices
+- [x] controller gestures and direction choices
 - [x] network publication in the shared core
 - [x] persisted settings and gear profile selection
 - [x] continuous Android and iOS builds
+- [x] a Click v2 scanned, connected and shifting on Windows, measured frame by frame
 - [x] local injection transport, with an Android accessibility service driver
+- [ ] Windows and macOS keyboard injection
+- [ ] the left pod of the pair, button by button
 - [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
 - [ ] iPhone multicast entitlement
-- [x] browser build: the same interface in a tab, the controller over Web Bluetooth, and the page as the console of a bridge on the local network
 - [ ] browser, next: drive the trainer directly over FTMS, for the applications that do not handle shifting
 
-![Injection](docs/screenshots/injection.png)
-
 The detailed roadmap, including what is open to a first contribution, lives in [docs/ROADMAP.md](docs/ROADMAP.md). The specification is in [docs/spec.md](docs/spec.md).
+
+## Screens
+
+<div align="center">
+
+| Start | Gears | Network | Injection |
+|---|---|---|---|
+| ![Start](docs/screenshots/trainer.png) | ![Gears](docs/screenshots/controllers.png) | ![Network](docs/screenshots/publish.png) | ![Injection](docs/screenshots/injection.png) |
+
+</div>
+
+These four were captured on Android from an earlier build, before the navigation became *Start · Gears · Controllers · Network*; the screens themselves are the same. They are the next thing to refresh, along with a Windows capture of a Click v2 connected.
 
 ## Contributing
 

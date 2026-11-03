@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 210" width="900" height="210" role="img" aria-label="The controller talks to the bridge over Bluetooth, the bridge publishes on the local network, the training application reads it">
+  <style>
+    .box { fill: #ffffff; stroke: #2f6fed; stroke-width: 2; }
+    .label { font: 600 15px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #1f2328; }
+    .sub { font: 400 12px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #57606a; }
+    .wire { stroke: #57606a; stroke-width: 2; fill: none; }
+    .wlabel { font: 500 11px -apple-system, "Segoe UI", Roboto, sans-serif; fill: #57606a; }
+    .dot { fill: #2f6fed; }
+  </style>
+
+  <rect x="0" y="0" width="900" height="210" fill="#ffffff"/>
+
+  <!-- controller -->
+  <rect class="box" x="20" y="60" width="200" height="90" rx="12"/>
+  <text class="label" x="120" y="92" text-anchor="middle">Zwift Click v2</text>
+  <text class="sub" x="120" y="112" text-anchor="middle">5 buttons per pod</text>
+  <text class="sub" x="120" y="130" text-anchor="middle">one BLE link for the pair</text>
+
+  <!-- arrow 1 -->
+  <line class="wire" x1="226" y1="105" x2="352" y2="105"/>
+  <polygon class="dot" points="352,105 342,100 342,110"/>
+  <text class="wlabel" x="289" y="96" text-anchor="middle">Bluetooth LE</text>
+  <text class="wlabel" x="289" y="126" text-anchor="middle">GATT notify</text>
+
+  <!-- bridge -->
+  <rect class="box" x="358" y="46" width="200" height="118" rx="12" fill="#f5f8ff"/>
+  <text class="label" x="458" y="76" text-anchor="middle">openzclick</text>
+  <text class="sub" x="458" y="96" text-anchor="middle">decodes the mask</text>
+  <text class="sub" x="458" y="113" text-anchor="middle">runs the gear engine</text>
+  <text class="sub" x="458" y="130" text-anchor="middle">announces and serves</text>
+  <text class="sub" x="458" y="150" text-anchor="middle">Windows · macOS · Linux · Android · iOS</text>
+
+  <!-- arrow 2 -->
+  <line class="wire" x1="564" y1="105" x2="690" y2="105"/>
+  <polygon class="dot" points="690,105 680,100 680,110"/>
+  <text class="wlabel" x="627" y="96" text-anchor="middle">mDNS + TCP 47123</text>
+  <text class="wlabel" x="627" y="126" text-anchor="middle">01 01 01 / 01 01 00</text>
+
+  <!-- app -->
+  <rect class="box" x="696" y="60" width="184" height="90" rx="12"/>
+  <text class="label" x="788" y="92" text-anchor="middle">MyWhoosh</text>
+  <text class="sub" x="788" y="112" text-anchor="middle">any application that</text>
+  <text class="sub" x="788" y="130" text-anchor="middle">speaks OpenBikeControl</text>
+
+  <text class="sub" x="450" y="196" text-anchor="middle">no account, no cable, no driver: the buttons travel over the local network</text>
+</svg>
