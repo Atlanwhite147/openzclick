@@ -12,7 +12,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-439%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-455%20passing-brightgreen)](#status)
 
 </div>
 
@@ -216,7 +216,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 248 |
 | `transports/` | mDNS responder, TCP server, console relay, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 129 |
-| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 62 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 78 |
 
 Verified on Android 13: installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client. The browser build was checked in Chrome against its own build output: the four sections render, the gear engine runs, a click on **Shift up** reaches a headless bridge (`action shiftUp from console-1` in its log), and a gear changed on the bridge side moves the page without any click. The Bluetooth link cannot be exercised in the test container, which has no radio; see [CONTRIBUTING.md](CONTRIBUTING.md) if you own a controller and want to help close that gap.
 

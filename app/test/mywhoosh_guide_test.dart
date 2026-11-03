@@ -32,25 +32,26 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Start'), findsOneWidget);
   });
 
-  testWidgets('warns about the parked gear while it is unanswered', (
+  testWidgets('offers the parked gear without making it look required', (
     WidgetTester tester,
   ) async {
-    // A rider who starts riding with this unanswered finds the ride much
-    // harder than the gear number says, and concludes the gears are broken.
+    // MyWhoosh does its own virtual shifting, so an unanswered chain does not
+    // stop anyone riding. Presenting it as a pre-condition sends riders to fix
+    // a setup that already works.
     final FakePublisher publisher = FakePublisher();
     final AppState state = AppState(publisher: publisher);
     addTearDown(state.dispose);
 
     await pumpGuide(tester, state);
     expect(
-      find.textContaining('scaled from where the chain really is'),
+      find.textContaining('Optional: tell the app where your chain sits'),
       findsOneWidget,
     );
 
     state.setParkedGear(chainring: 34, cog: 19);
     await tester.pump();
     expect(
-      find.textContaining('scaled from where the chain really is'),
+      find.textContaining('Optional: tell the app where your chain sits'),
       findsNothing,
     );
   });

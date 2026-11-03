@@ -9,14 +9,14 @@ Widget _wrap(AppState state) => MaterialApp(
 );
 
 void main() {
-  testWidgets('asks where the chain is before anything else', (
+  testWidgets('asks where the chain is without blocking', (
     WidgetTester tester,
   ) async {
     final AppState state = AppState();
     addTearDown(state.dispose);
     await tester.pumpWidget(_wrap(state));
 
-    expect(find.text('Where is your chain?'), findsOneWidget);
+    expect(find.text('Where is your chain? (optional)'), findsOneWidget);
     expect(find.text('Chainring'), findsOneWidget);
     expect(find.text('Cog'), findsOneWidget);
   });
@@ -36,7 +36,7 @@ void main() {
     // Nothing is recorded yet, because the wheel size cannot be built from one
     // tooth count; but the choice is kept on screen so the rider can finish.
     expect(state.physicalSetup.parkedChainringTeeth, isNull);
-    expect(find.text('Where is your chain?'), findsOneWidget);
+    expect(find.text('Where is your chain? (optional)'), findsOneWidget);
     expect(find.text('50 T'), findsWidgets);
 
     await tester.tap(find.byType(DropdownButton<int>).last);
@@ -80,7 +80,7 @@ void main() {
 
     expect(find.text('Chain on 34/19'), findsOneWidget);
     expect(find.textContaining('scaled from this'), findsOneWidget);
-    expect(find.text('Where is your chain?'), findsNothing);
+    expect(find.text('Where is your chain? (optional)'), findsNothing);
     expect(find.byType(DropdownButton<int>), findsNothing);
   });
 

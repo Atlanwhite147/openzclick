@@ -140,9 +140,14 @@ class _HomeShellState extends State<HomeShell> {
 
 /// One word telling the rider whether the ride will work, on every screen.
 ///
-/// Tapping it goes to the start screen, which is the only place that says what
-/// to do next. Without this the answer to "why is nothing happening" lives on a
-/// tab the rider has to guess.
+/// Without this the answer to "why is nothing happening" lives on a tab the
+/// rider has to guess.
+///
+/// The parked gear is deliberately not part of the verdict. On the route a
+/// rider actually rides today, MyWhoosh does its own virtual shifting and the
+/// bridge only forwards buttons, so a rider who has never seen the chain
+/// question still shifts perfectly. Counting it here would leave them on "Not
+/// ready" while everything worked, which is worse than saying nothing.
 class _ReadinessChip extends StatelessWidget {
   const _ReadinessChip({required this.state});
 
@@ -153,16 +158,28 @@ class _ReadinessChip extends StatelessWidget {
     return ListenableBuilder(
       listenable: state,
       builder: (BuildContext context, _) {
-        final bool ready =
-            state.publisher.running && state.physicalSetup.isComplete;
+        final bool bridge = state.publisher.running;
+        // Only load-bearing where the bridge drives the trainer itself; see
+        // [Capabilities.drivesTrainerItself].
+        final bool chain =
+            !Capabilities.drivesTrainerItself || state.physicalSetup.isComplete;
+        final bool ready = bridge && chain;
         final ColorScheme colors = Theme.of(context).colorScheme;
         return Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Chip(
             avatar: Icon(
-              ready ? Icons.check_circle : Icons.error_outline,
+              ready
+                  ? Icons.check_circle
+                  : bridge
+                  ? Icons.pedal_bike_outlined
+                  : Icons.error_outline,
               size: 18,
-              color: ready ? Colors.green : colors.error,
+              color: ready
+                  ? Colors.green
+                  : bridge
+                  ? colors.tertiary
+                  : colors.error,
             ),
             label: Text(ready ? 'Ready' : 'Not ready'),
             labelStyle: Theme.of(context).textTheme.labelMedium,

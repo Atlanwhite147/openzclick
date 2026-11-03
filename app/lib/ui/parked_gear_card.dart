@@ -183,14 +183,14 @@ class _ParkedGearPickersState extends State<ParkedGearPickers> {
                       ? Icons.pedal_bike_outlined
                       : Icons.check_circle,
                   color: parked == null
-                      ? theme.colorScheme.error
+                      ? theme.colorScheme.onSurfaceVariant
                       : theme.colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     parked == null
-                        ? 'Where is your chain?'
+                        ? 'Where is your chain? (optional)'
                         : 'Chain on ${parked.name}',
                     style: theme.textTheme.titleMedium,
                   ),
@@ -201,8 +201,9 @@ class _ParkedGearPickersState extends State<ParkedGearPickers> {
             Text(
               parked == null
                   ? 'Look down at your bike: which chainring and which cog is '
-                        'the chain on? Leave it there for the whole ride and '
-                        'shift with the controller instead.'
+                        'the chain on? Answering is only useful if the ride feels '
+                        'too hard or too easy for the gear shown; MyWhoosh does '
+                        'the shifting itself.'
                   : 'The gears on screen are scaled from this. If the ride feels '
                         'much harder or easier than the gear number suggests, '
                         'this is the setting to change.',

@@ -170,8 +170,9 @@ class _ParkedGearNotice extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Before you start: leave the chain on a middle cog and set it '
-                  'here. The gears are scaled from where the chain really is.',
+                  'Optional: tell the app where your chain sits. MyWhoosh does '
+                  'the shifting itself, so leave this blank unless the gears '
+                  'feel wrong once you ride. It takes ten seconds.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
