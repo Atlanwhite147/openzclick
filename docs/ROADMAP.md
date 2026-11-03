@@ -24,11 +24,13 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 
 ## Next, in order
 
-### 1. What the browser cannot do, and the two ways around it
-A page cannot open a listening socket, announce a service or act as a Bluetooth
-peripheral, so a browser can never be the bridge a training application
-discovers. One route is done: the page is the console of a bridge on the local
-network, over a WebSocket (`docs/console.md`). What remains:
+### 1. What the browser cannot do, and the three ways around it
+A page in a tab cannot open a listening socket, announce a service or act as a
+Bluetooth peripheral, so a plain page can never be the bridge a training
+application discovers. Two routes are done: the page is the console of a bridge on
+the local network, over a WebSocket (`docs/console.md`), and the page is the bridge
+itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
+(`docs/browser-bridge.md`, verified end to end on Chrome 145). What remains:
 
 - drive the smart trainer directly over FTMS with Web Bluetooth: the gears become
   resistance setpoints, no bridge at all, which covers applications that do not

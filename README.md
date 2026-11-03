@@ -12,7 +12,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20web-2f6fed)](#download)
-[![Tests](https://img.shields.io/badge/tests-361%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-372%20passing-brightgreen)](#status)
 
 </div>
 
@@ -117,11 +117,17 @@ The same code runs in a tab, with nothing to install: the published page, or `fl
 |---|---|
 | Pairing the controller, gears, gestures, diagnostics | works, through Web Bluetooth (Chrome, Edge, Chrome for Android; Safari and Firefox expose no Web Bluetooth) |
 | Driving a bridge running on the local network | works: the page is the console of the bridge, over a WebSocket, and a QR code on the bridge opens it already connected (`docs/console.md`) |
-| mDNS announcement, TCP server | impossible: a page cannot open a listening socket or announce a service, so a training application cannot discover it |
+| mDNS announcement, TCP server | works when the page is an **Isolated Web App**: Chrome then grants Direct Sockets, and the page becomes the bridge itself (`docs/browser-bridge.md`) |
 | Tap or keyboard injection | impossible: a page cannot synthesise input for another application |
 | Becoming the trainer | impossible: browsers only offer the central role of Bluetooth, never the peripheral one |
 
-Web Bluetooth is only exposed to a secure context, so the page must be served over HTTPS or from `localhost`. The publication card states this instead of pretending: for a training application to see the buttons, the bridge runs on a machine of the local network, and the page enters the address and the four letter code it displays.
+Web Bluetooth is only exposed to a secure context, so the page must be served over HTTPS or from `localhost`. The publication card states this instead of pretending: for a training application to see the buttons, either the page runs as an Isolated Web App on that machine, or the bridge runs elsewhere on the local network and the page enters the address and the four letter code it displays.
+
+### The page as the bridge
+
+An Isolated Web App is a signed bundle Chrome installs; it is the only context where a page is allowed a TCP server. There the page announces `_openbikecontrol._tcp` over mDNS and serves the protocol on 47123, so a training application discovers it as it discovers the desktop build. Verified on Chrome 145: an announcement left the page, a client connected, and a shift arrived as button `0x01` pressed then released.
+
+The two limits are the platform's, not the code's: a page may send to a multicast group but not bind to it, so queries are never answered and the announcement is repeated every two seconds; and nothing on iOS or Android grants Direct Sockets, so on a phone the page stays a console. `docs/browser-bridge.md` has the build, signing and install steps.
 
 ## When the application only accepts taps
 

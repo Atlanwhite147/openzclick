@@ -18,6 +18,8 @@ import 'package:web/web.dart' as web;
 
 import 'console_endpoint.dart';
 import 'publisher_port.dart';
+import 'sockets/sockets.dart';
+import 'web_bridge_publisher.dart';
 
 /// Publication state of the browser build: a client of the bridge.
 class WebPublisher implements PublisherPort, ConsoleClient {
@@ -235,8 +237,16 @@ class WebPublisher implements PublisherPort, ConsoleClient {
   }
 }
 
-/// Builds the publication of the current host.
+/// Builds the publication of this page.
+///
+/// An Isolated Web App owns sockets: it publishes like the native bridge and a
+/// training application discovers it. Any other page can only be the console of a
+/// bridge running elsewhere.
 PublisherPort createPublisher({
   bool advertise = true,
   int port = WebPublisher.defaultPort,
-}) => WebPublisher(advertise: advertise, port: port);
+}) {
+  final DirectSocketsHost? host = createDirectSocketsHost();
+  if (host != null) return WebBridgePublisher(host: host);
+  return WebPublisher(advertise: advertise, port: port);
+}

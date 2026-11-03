@@ -9,6 +9,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../net/sockets/sockets.dart';
+
 /// Capabilities of the current host.
 abstract final class Capabilities {
   /// True in a browser, where only Web Bluetooth and local storage exist.
@@ -33,8 +35,12 @@ abstract final class Capabilities {
   static bool get canAnnounce => !isWeb && !isIOS;
 
   /// True when the host can listen on a TCP port and be reached by a training
-  /// application. A browser can only open outgoing connections.
-  static bool get canPublish => !isWeb;
+  /// application.
+  ///
+  /// Every native host can. A browser can only when the page is an Isolated Web
+  /// App, because that is the one context where Chrome grants a TCP server; any
+  /// other page is limited to dialling a bridge.
+  static bool get canPublish => !isWeb || directSocketsAvailable;
 
   /// True when the host can synthesise input for another application.
   static bool get canInject => isAndroid || isLinux;

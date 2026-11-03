@@ -373,7 +373,11 @@ class TargetScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            if (Capabilities.canPublish)
+            // A page that owns sockets *is* the bridge: it has no relay to show.
+            // A native host serves one, and a plain page dials one.
+            if (Capabilities.isWeb && Capabilities.canPublish)
+              const SizedBox.shrink()
+            else if (Capabilities.canPublish)
               _BridgeConsoleCard(state: state)
             else
               _ConsoleClientCard(state: state),

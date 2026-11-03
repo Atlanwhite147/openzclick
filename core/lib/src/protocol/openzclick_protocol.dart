@@ -9,4 +9,5 @@ export 'controller_crypto.dart';
 export 'controller_protocol.dart';
 export 'controller_watchdog.dart';
 export 'codec.dart';
+export 'dns_sd.dart';
 export 'messages.dart';
