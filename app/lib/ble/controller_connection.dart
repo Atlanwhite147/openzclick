@@ -222,8 +222,9 @@ class ControllerConnection {
       // Windows answers the first discovery after a connection with a partial
       // table: the vendor service arrives on the second or third call. Asking
       // once reported "channels are missing" on a controller that had them.
-      final List<BluetoothService> services =
-          await _discoverControllerServices(target);
+      final List<BluetoothService> services = await _discoverControllerServices(
+        target,
+      );
 
       BluetoothCharacteristic? asyncChannel;
       BluetoothCharacteristic? writeTarget;

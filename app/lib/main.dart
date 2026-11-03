@@ -395,9 +395,8 @@ class ControllersScreen extends StatelessWidget {
                   'Nothing answered. The controller sleeps after a few seconds: '
                   'press a button again and scan once more. A Click v2 that was '
                   'never paired in Zwift stays silent until it has been.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: Theme.of(context).colorScheme.error),
                 ),
               ),
             for (final ScanResult result in link.found)

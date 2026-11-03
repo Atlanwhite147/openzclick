@@ -265,20 +265,24 @@ void main() {
         <int>[0x23, 0x08, 0xff, 0xdf, 0xff, 0xff, 0x0f],
       );
       expect(message, isA<ClickMessage>());
-      expect((message! as ClickMessage).buttons, const ClickButtons(
-        up: true,
-        down: false,
-      ));
+      expect(
+          (message! as ClickMessage).buttons,
+          const ClickButtons(
+            up: true,
+            down: false,
+          ));
     });
 
     test('the down button clears bit 5', () {
       final ControllerMessage? message = decodeFrame(
         <int>[0x23, 0x08, 0xdf, 0xff, 0xff, 0xff, 0x0f],
       );
-      expect((message! as ClickMessage).buttons, const ClickButtons(
-        up: false,
-        down: true,
-      ));
+      expect(
+          (message! as ClickMessage).buttons,
+          const ClickButtons(
+            up: false,
+            down: true,
+          ));
     });
 
     test('an all-ones mask is a released controller', () {
