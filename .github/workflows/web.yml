@@ -3,6 +3,12 @@ name: Web build
 # The browser build pairs the controller over Web Bluetooth, which every
 # browser only exposes to a secure context: GitHub Pages serves it over HTTPS,
 # which is also why the build is deployed instead of only archived.
+#
+# The repository's Pages source must stay "GitHub Actions". Left on "Deploy from
+# a branch", GitHub builds the README with Jekyll on every push to main and
+# publishes it over this artifact: the site then serves the README as plain text
+# while both deployments report success, which is exactly how it stayed broken
+# without anyone noticing.
 
 on:
   push:
