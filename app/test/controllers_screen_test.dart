@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart' hide Action;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openzclick/main.dart';
 import 'package:openzclick/platform/capabilities.dart';
+import 'package:openzclick/platform/version.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick/ui/mywhoosh_guide.dart';
 
@@ -100,5 +102,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Nothing answered'), findsOneWidget);
+  });
+
+  testWidgets('the pairing screen hands over the material for an issue', (
+    WidgetTester tester,
+  ) async {
+    // The bridge is written on a machine with no Bluetooth radio, so a dropout
+    // can only be understood from what the rider's device actually exposes.
+    // Asking for a description gets skimmed; asking for a pasted blob works.
+    final List<String> copied = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (MethodCall call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add(
+            (call.arguments as Map<Object?, Object?>)['text']! as String,
+          );
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    final AppState state = AppState(publisher: FakePublisher());
+    addTearDown(state.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ControllersScreen(state: state)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Copy device report'), 200);
+    await tester.tap(find.text('Copy device report'));
+    await tester.pumpAndSettle();
+
+    expect(copied, hasLength(1));
+    expect(copied.single, contains('openzclick device report'));
+    // The version travels with it: without one, a maintainer is reading an
+    // unknown build.
+    expect(copied.single, contains(appVersion));
+    expect(find.textContaining('Device report copied'), findsOneWidget);
   });
 }

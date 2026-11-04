@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart' hide Action;
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -10,6 +11,7 @@ import 'net/android_injection.dart';
 import 'net/console_endpoint.dart';
 import 'net/publisher.dart';
 import 'platform/capabilities.dart';
+import 'platform/version.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
 import 'ui/gear_panel.dart';
@@ -415,6 +417,31 @@ class ControllersScreen extends StatelessWidget {
               ),
             const Divider(height: 32),
             Text('Last buttons: ${state.lastButtons ?? 'none'}'),
+            // Asked for by the one person who could close the loop: the bridge
+            // is written on a machine with no radio, so a dropout can only be
+            // diagnosed from what a rider's device actually exposes. A
+            // description of a dropout gets skimmed; a pasted blob gets read.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final String report = state.controller
+                      .buildReport(appVersion)
+                      .render();
+                  await Clipboard.setData(ClipboardData(text: report));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Device report copied: paste it into a GitHub issue',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.description_outlined, size: 18),
+                label: const Text('Copy device report'),
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               // Measured on the hardware, one button at a time: these two are

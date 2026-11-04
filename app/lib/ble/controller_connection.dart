@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -8,6 +9,7 @@ import '../platform/capabilities.dart';
 
 import 'bluetooth_uuid.dart';
 import 'controller_error.dart';
+import 'device_report.dart';
 
 /// State of the connection to a physical controller.
 enum ControllerStatus {
@@ -69,6 +71,22 @@ class ControllerConnection {
   /// A scan that finds nothing used to go back to the initial screen without
   /// a word, which reads as "the button did nothing": say it instead.
   bool scanFoundNothing = false;
+
+  /// Strings the controller gave about itself, read at connect.
+  ///
+  /// Firmware is the one field a bug report cannot do without: the same model
+  /// behaves differently across revisions, and riders rarely know which they
+  /// have.
+  DeviceInformation information = const DeviceInformation();
+
+  /// GATT tree as the platform reported it, for [buildReport].
+  ///
+  /// Distinct from the local `services` of a connection attempt: the tree
+  /// outlives the attempt, because a link that fails is the one worth reporting.
+  List<GattServiceInfo> gattTree = const <GattServiceInfo>[];
+
+  final FrameRing _frames = FrameRing();
+  DateTime? _connectedAt;
 
   final StreamController<ClickButtons> _buttons =
       StreamController<ClickButtons>.broadcast();
@@ -270,14 +288,32 @@ class ControllerConnection {
       }
       _writeTarget = writeTarget;
 
+      // Kept before the handshake: a link that fails the handshake is exactly
+      // the one whose report is worth reading, so the tree cannot depend on the
+      // link succeeding.
+      gattTree = _describe(services);
+      information = await _readDeviceInformation(services);
+
+      _connectedAt = DateTime.now();
+      _frames.clear();
+
       // Buttons arrive on the asynchronous channel, the handshake reply on the
       // synchronous one: listening to both is the difference between a link
       // that works and a link that connects and says nothing.
       await asyncChannel.setNotifyValue(true);
-      _frameSubscriptions.add(asyncChannel.onValueReceived.listen(_onFrame));
+      _frameSubscriptions.add(
+        asyncChannel.onValueReceived.listen(
+          (List<int> frame) => _onFrame(frame, asyncChannel!),
+        ),
+      );
       if (syncReply != null) {
-        await syncReply.setNotifyValue(true);
-        _frameSubscriptions.add(syncReply.onValueReceived.listen(_onFrame));
+        final BluetoothCharacteristic reply = syncReply;
+        await reply.setNotifyValue(true);
+        _frameSubscriptions.add(
+          reply.onValueReceived.listen(
+            (List<int> frame) => _onFrame(frame, reply),
+          ),
+        );
       }
       _connectionSubscription = target.connectionState.listen((
         BluetoothConnectionState state,
@@ -297,7 +333,9 @@ class ControllerConnection {
       _plainHandshakeSent = false;
       _secondsSinceConnect = 0;
       _watchdog.onConnected();
-      await writeTarget.write(
+      // Through [_write], so the handshake request lands in the report: a link
+      // that never answers is diagnosed from exactly these bytes.
+      await _write(
         ControllerHandshake.encryptedRequest(_keyPair!.publicKeyBytes),
       );
 
@@ -351,6 +389,7 @@ class ControllerConnection {
   }
 
   Future<void> _write(List<int> frame) async {
+    _record(frame, FrameDirection.outbound, _writeTarget?.uuid.toString());
     try {
       await _writeTarget?.write(frame);
     } catch (e) {
@@ -379,7 +418,116 @@ class ControllerConnection {
     }
   }
 
-  void _onFrame(List<int> frame) {
+  /// Appends [bytes] to the ring, timed from the moment the link was made.
+  void _record(
+    List<int> bytes,
+    FrameDirection direction,
+    String? characteristic,
+  ) {
+    final DateTime? start = _connectedAt;
+    if (start == null) return;
+    _frames.add(
+      FrameRecord(
+        elapsed: DateTime.now().difference(start),
+        characteristic: characteristic ?? 'unknown',
+        direction: direction,
+        bytes: List<int>.unmodifiable(bytes),
+      ),
+    );
+  }
+
+  /// Turns what the platform returned into a comparable description.
+  static List<GattServiceInfo> _describe(List<BluetoothService> services) {
+    final List<GattServiceInfo> described = <GattServiceInfo>[];
+    for (final BluetoothService service in services) {
+      described.add(
+        GattServiceInfo(
+          uuid: service.uuid.toString(),
+          characteristics: <GattCharacteristicInfo>[
+            for (final BluetoothCharacteristic c in service.characteristics)
+              GattCharacteristicInfo(
+                uuid: c.uuid.toString(),
+                properties: <String>[
+                  if (c.properties.read) 'read',
+                  if (c.properties.write) 'write',
+                  if (c.properties.writeWithoutResponse) 'writeWithoutResponse',
+                  if (c.properties.notify) 'notify',
+                  if (c.properties.indicate) 'indicate',
+                ],
+                notifying: c.isNotifying,
+              ),
+          ],
+        ),
+      );
+    }
+    return List<GattServiceInfo>.unmodifiable(described);
+  }
+
+  /// Reads the Device Information service, field by field.
+  ///
+  /// Every read is guarded on its own: a device that exposes `0x180a` but
+  /// refuses one characteristic must still give the other four. A missing
+  /// firmware string is a gap in a report; an exception here would cost the
+  /// whole report.
+  static Future<DeviceInformation> _readDeviceInformation(
+    List<BluetoothService> services,
+  ) async {
+    BluetoothService? info;
+    for (final BluetoothService service in services) {
+      if (sameUuid(service.uuid.toString(), '180a')) info = service;
+    }
+    if (info == null) return const DeviceInformation();
+
+    Future<String?> read(String uuid) async {
+      for (final BluetoothCharacteristic c in info!.characteristics) {
+        if (!sameUuid(c.uuid.toString(), uuid)) continue;
+        try {
+          final List<int> value = await c.read();
+          final String text = utf8.decode(value, allowMalformed: true);
+          final String trimmed = text.replaceAll('\u0000', '').trim();
+          return trimmed.isEmpty ? null : trimmed;
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
+    }
+
+    return DeviceInformation(
+      manufacturer: await read('2a29'),
+      model: await read('2a24'),
+      serial: await read('2a25'),
+      firmware: await read('2a26'),
+      hardware: await read('2a27'),
+    );
+  }
+
+  /// Builds the report a rider pastes into an issue.
+  ///
+  /// [appVersion] is passed in rather than read here: this class has no idea
+  /// which build it runs in, and a version guessed wrong is worse than none.
+  DeviceReport buildReport(String appVersion) {
+    return DeviceReport(
+      generatedAt: DateTime.now(),
+      appVersion: appVersion,
+      host: Capabilities.hostName,
+      deviceName: device?.platformName,
+      deviceId: device?.remoteId.toString(),
+      status: status.name,
+      encrypted: encrypted,
+      needsUnlock: needsUnlock,
+      batteryPercent: batteryPercent,
+      error: error,
+      information: information,
+      services: gattTree,
+      frames: _frames.frames,
+    );
+  }
+
+  void _onFrame(List<int> frame, BluetoothCharacteristic source) {
+    // Recorded before any interpretation: a frame the parser does not recognise
+    // is precisely what a maintainer needs to see.
+    _record(frame, FrameDirection.inbound, source.uuid.toString());
     if (frame.isEmpty) return;
 
     // Handshake acknowledgement: RideOn, optionally followed by a public key.

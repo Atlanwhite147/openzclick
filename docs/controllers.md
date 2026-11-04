@@ -97,7 +97,19 @@ exchange that requires that application's own identity.
 
 ## Reporting a controller that does not pair
 
-Open an issue with the model, the firmware version, the phone or desktop model,
-and the last twenty lines of the diagnostic log. A pairing that works is as
-useful as one that fails: the table of working firmware versions is what tells a
-rider whether upgrading will break their setup.
+Open an issue and paste the device report: **Controllers**, then *Copy device
+report*. One tap, and everything a maintainer cannot guess travels with it —
+application version, host, device name and identifier, the strings of the Device
+Information service (manufacturer, model, serial, firmware, hardware), the whole
+GATT tree with its properties, and the last 40 frames with their direction and
+timing relative to the moment the link was made.
+
+The report exists because of the shape of this project: most of it is written on
+a machine with no Bluetooth radio, so most rules run against a fake controller. Asking a
+rider to describe a dropout returns something incomplete and unreproducible;
+asking for one pasted blob returns something that can be replayed. The frames are
+recorded before they are parsed, so a frame the decoder does not recognise is
+still in the report — that is usually the finding.
+
+A pairing that works is as useful as one that fails: the table of working
+firmware versions is what tells a rider whether upgrading will break their setup.

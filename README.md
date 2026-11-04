@@ -11,7 +11,7 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 [![Windows build](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml)
 [![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-488%20passing-brightgreen)](#status)
+[![Tests](https://img.shields.io/badge/tests-514%20passing-brightgreen)](#status)
 
 </div>
 
@@ -68,7 +68,7 @@ The two ❌ on desktop are the shortest path to a first accepted pull request: [
 | **Tap fallback** | for applications that never speak the protocol, an Android accessibility service taps their own on-screen controls |
 | **Keyboard fallback** | on a Linux desktop, X11 and XTest turn button presses into real key presses, verified against a live X server |
 | **Becomes the trainer** | FTMS decoded and encoded in pure Dart: the bridge can drive the real machine and impersonate a trainer, which is the only route that works on iPhone |
-| **Works without hardware** | 488 tests without a radio; a command line probe checks the network link |
+| **Works without hardware** | 514 tests without a radio; a command line probe checks the network link |
 | **Settings that survive a restart** | gear profile, current gear, tap positions and publishers resume where you left them |
 | **Honest diagnostics** | live controller state, battery level, the raw frames, inside the application |
 
@@ -102,6 +102,8 @@ Where to press a button before you clip in: the **Gears** tab has *Shift up* and
 | Windows finds nothing | MyWhoosh needs Bonjour on Windows (installed with iTunes, or *Bonjour Print Services*). Without it, discovery returns nothing and says nothing |
 | A firewall popup appeared | allow the application on private networks; without it the port stays closed |
 | MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; the page says *Nothing answered* when the controller was asleep |
+| The controller connects then drops after a minute | the Click v2 unlock: pair it once in the Zwift application, leave it open about three minutes, then come back |
+| Something is wrong but you cannot say what | **Controllers**, then *Copy device report*: firmware, GATT tree and the last frames travel with it, which is what makes a bug reproducible |
 | The gear changes here but not in MyWhoosh | MyWhoosh has paired the trainer itself. Let MyWhoosh own the trainer rather than the bridge |
 
 ### From a phone, with nothing installed on the phone
@@ -248,7 +250,7 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 255 |
 | `transports/` | mDNS responder, TCP server, console relay and the page it serves, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 137 |
-| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, diagnostics on Android, iOS, Windows, macOS and the browser | 96 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, device report, diagnostics on Android, iOS, Windows, macOS and the browser | 122 |
 
 **Verified on Windows 11 with a Click v2:** scan, connect, plain session, five buttons identified one at a time, `+` and `B` shifting the gear end to end, and a training client on another machine reading the frames over the tailnet.
 

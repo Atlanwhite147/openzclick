@@ -21,6 +21,15 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Console relay: a page drives a bridge over a WebSocket, from the Target screen,
   with a code the bridge displays. Verified in Chrome: a button of the page
   reaches the bridge, and a gear changed on the bridge moves the page.
+- Windows keyboard and pointer injection through `SendInput`, with the buffer
+  layout tested in plain Dart and a zero return from the call raised as a
+  failure instead of counted as a gear change (`docs/injection.md`).
+- A device report a rider copies in one tap — version, host, device identity,
+  Device Information strings, GATT tree and the last 40 frames with direction
+  and timing — because no development machine here has a Bluetooth radio.
+- The bridge serves its own console over `http` on its relay port, so a phone can
+  reach it: a hosted page is `https://` and a browser will not open a `ws://`
+  socket from one.
 - The bridge can be the page itself: Direct Sockets in an installed web app give
   a real mDNS announcement (341 bytes) and a real TCP server on port 47123,
   verified end to end in Chrome 145.
@@ -43,8 +52,12 @@ itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
   shifting. The arithmetic and the frames are already written
   (`docs/trainer-proxy.md`); what remains is a Web Bluetooth link to the machine.
 
-### 2. Windows keyboard injection
-`SendInput`, or the scan code path for applications that ignore synthetic keys. One file, one test, no new dependency. This is the platform where most riders are.
+### 2. Verifying the Windows injector on hardware
+The code is written and its buffer layout is tested, but nothing here can run it
+against a real application. What is needed is a report: does a shift reach
+MyWhoosh, Zwift and Rouvy on Windows? If one of them ignores injected events
+(Raw Input, DirectInput, exclusive fullscreen), `docs/injection.md` records the
+alternative — a virtual gamepad through ViGEm — and the trade it costs.
 
 ### 3. macOS keyboard injection
 `CGEventPost`, with the accessibility permission requested from the user.

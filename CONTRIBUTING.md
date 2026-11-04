@@ -49,7 +49,13 @@ If the probe is discovered and answers, the bridge is fine and the receiving sid
 
 ## Looking for a first task
 
-`docs/ROADMAP.md` lists the work that is well bounded and useful. The Windows and macOS injectors are the two that block the most riders: each is one file implementing `KeyInjector`, with a test.
+`docs/ROADMAP.md` lists the work that is well bounded and useful. The macOS injector is the one that blocks the most riders now that Windows is done: it is one file implementing `KeyInjector`, with a test, and `docs/injection.md` says what the port has to respect.
+
+## The most useful thing you can send: a device report
+
+The machine this project is mostly developed on has no Bluetooth radio, so most rules are tested against a fake controller. Real hardware reports are what balance that. What closes that gap is not a description of a dropout — descriptions arrive incomplete — but the raw material: which services the device exposes, what its firmware calls itself, and the last frames it sent before going quiet.
+
+In the application, open **Controllers** and tap **Copy device report**, then paste it into an issue. It carries the version, the host, the device name and identifier, the Device Information strings, the GATT tree with its properties, and the last 40 frames with their direction and timing. It contains no personal data: the timings are relative to the moment the link was made, not to a clock.
 
 ## Code style
 
