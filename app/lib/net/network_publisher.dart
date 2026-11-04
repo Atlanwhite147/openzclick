@@ -5,6 +5,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 import 'package:openzclick_transports/openzclick_transports.dart';
 
 import 'android_multicast.dart';
+import 'local_address.dart';
 import 'publisher_port.dart';
 
 /// Publishes the bridge on the local network with the OpenBikeControl protocol.
@@ -190,29 +191,25 @@ class NetworkPublisher implements PublisherPort {
     });
   }
 
-  /// First non-loopback IPv4 address, preferred over container bridges.
+  /// Address a phone on the same network should type.
+  ///
+  /// `null` when nothing usable exists, which the screen shows as "this
+  /// device" rather than as a plausible address that reaches nothing.
   static Future<String?> _localAddress() async {
     try {
       final List<NetworkInterface> interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
       );
-      const List<String> excluded = <String>[
-        'docker',
-        'br-',
-        'veth',
-        'virbr',
-        'lxc',
-        'waydroid',
-        'tun',
-        'tap',
-        'tailscale',
-      ];
-      for (final NetworkInterface interface in interfaces) {
-        if (excluded.any(interface.name.startsWith)) continue;
-        for (final InternetAddress candidate in interface.addresses) {
-          if (!candidate.isLoopback) return candidate.address;
-        }
-      }
+      return chooseLocalAddress(<LocalInterface>[
+        for (final NetworkInterface interface in interfaces)
+          LocalInterface(
+            name: interface.name,
+            addresses: <String>[
+              for (final InternetAddress address in interface.addresses)
+                if (!address.isLoopback) address.address,
+            ],
+          ),
+      ]);
     } catch (_) {
       // A host without interfaces still gets a listening socket.
     }
@@ -228,6 +225,13 @@ class NetworkPublisher implements PublisherPort {
       error = null;
     } else if (event is TransportDisconnected) {
       peers = peers > 0 ? peers - 1 : 0;
+    } else if (event is TransportActionReceived) {
+      // A button pressed by a connected application is an input like any other:
+      // it takes the same path as a message typed in a console, so the gear
+      // engine and the local injection both see it. Dropping it here is the
+      // worst kind of failure — the peer is counted, the frame is decoded, the
+      // screen says a client is connected, and nothing moves.
+      _consoleActions.add(event.action);
     } else if (event is TransportError) {
       // A fault attributed to no peer while nobody is connected is a transient
       // hint, not a state: storing "no client connected" would leave a
