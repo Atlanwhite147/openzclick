@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -77,5 +78,46 @@ void main() {
     await publisher.publish(Action.shiftUp);
     expect(publisher.error, isNull);
     await publisher.stop();
+  });
+
+  test('a button pressed by a connected application is an input, not a '
+      'decoration', () async {
+    final NetworkPublisher publisher = NetworkPublisher(
+      advertise: false,
+      port: 0,
+      requestedConsolePort: -1,
+    );
+    await publisher.start();
+    addTearDown(publisher.dispose);
+
+    final List<Action> received = <Action>[];
+    final StreamSubscription<Action> subscription = publisher.consoleActions
+        .listen(received.add);
+    addTearDown(subscription.cancel);
+
+    final Socket client = await Socket.connect(
+      InternetAddress.loopbackIPv4,
+      publisher.listeningPort!,
+    );
+    addTearDown(client.destroy);
+    for (int attempt = 0; attempt < 100 && publisher.peers == 0; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    expect(publisher.peers, 1);
+
+    // Measured on Windows: the peer was counted, the frame was decoded, and the
+    // gear did not move, because this event was dropped on the floor.
+    client.add(ButtonStateMessage(<int, int>{ButtonIds.shiftUp: 1}).encode());
+    await client.flush();
+    for (int attempt = 0; attempt < 100 && received.isEmpty; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    expect(received, <Action>[Action.shiftUp]);
+
+    // A release triggers nothing: only a press is an action.
+    client.add(ButtonStateMessage(<int, int>{ButtonIds.shiftUp: 0}).encode());
+    await client.flush();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(received, <Action>[Action.shiftUp]);
   });
 }
