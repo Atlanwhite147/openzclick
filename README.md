@@ -279,13 +279,13 @@ The detailed roadmap, including what is open to a first contribution, lives in [
 
 <div align="center">
 
-| Start | Gears | Network | Injection |
+| Start | Gears | Controllers | Network |
 |---|---|---|---|
-| ![Start](docs/screenshots/trainer.png) | ![Gears](docs/screenshots/controllers.png) | ![Network](docs/screenshots/publish.png) | ![Injection](docs/screenshots/injection.png) |
+| ![Start](docs/screenshots/start.png) | ![Gears](docs/screenshots/gears.png) | ![Controllers](docs/screenshots/controllers.png) | ![Network](docs/screenshots/network.png) |
 
 </div>
 
-These four were captured on Android from an earlier build, before the navigation became *Start · Gears · Controllers · Network*; the screens themselves are the same. They are the next thing to refresh, along with a Windows capture of a Click v2 connected.
+Captured on Windows 11 from the current build: the four steps, the gear with its chain-setup card, the controller screen, and the publication with the QR code a phone scans to become the console. The **Controllers** shot shows the state before pairing, which is the honest one to publish: a connected Click v2 is the same screen with a green icon, the session type and the battery percentage.
 
 ## Contributing
 
