@@ -334,6 +334,22 @@ class ControllersScreen extends StatelessWidget {
                     : null,
               ),
             ),
+            if (state.batteryWarning != null)
+              Card(
+                color: Theme.of(context).colorScheme.errorContainer,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.battery_alert,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                  title: Text(
+                    state.batteryWarning!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
             if (!Capabilities.webBluetoothPossible)
               // The API does not exist on a plain http page, so the press would
