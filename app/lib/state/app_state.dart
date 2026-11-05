@@ -65,12 +65,46 @@ class AppState extends ChangeNotifier {
   /// Profile in use.
   KeyProfile get keyProfile => keyProfileById(_keyProfileId);
 
+  /// Keys the rider changed, for the current application only.
+  final Map<String, String> _overrides = <String, String>{};
+
+  /// Keys really sent: the profile's table with the rider's changes on top.
+  Map<Action, String> get effectiveKeys {
+    final Map<Action, String> keys = Map<Action, String>.of(keyProfile.keys);
+    for (final MapEntry<String, String> entry in _overrides.entries) {
+      for (final Action action in Action.values) {
+        if (action.name == entry.key) keys[action] = entry.value;
+      }
+    }
+    return keys;
+  }
+
+  /// True when the rider changed at least one key of the current application.
+  bool get hasKeyOverrides => _overrides.isNotEmpty;
+
+  /// Replaces the key sent for [action], and rebuilds the injection.
+  ///
+  /// A single character, or a name the platform knows (`Left`, `space`). An empty
+  /// value restores the shipped binding.
+  void setKey(Action action, String key) {
+    final String trimmed = key.trim();
+    if (trimmed.isEmpty) {
+      _overrides.remove(action.name);
+    } else {
+      _overrides[action.name] = trimmed;
+    }
+    injection.keys = effectiveKeys;
+    _persist();
+    notifyListeners();
+  }
+
   /// Switches the application the keys are taken from.
   void setKeyProfile(String id) {
     final KeyProfile profile = keyProfileById(id);
     if (profile.id == _keyProfileId) return;
     _keyProfileId = profile.id;
-    injection.keys = profile.keys;
+    _overrides.clear();
+    injection.keys = effectiveKeys;
     injection.shiftsPerPress = profile.shiftsPerPress;
     if (profile.windowHint.isNotEmpty && injection.focusWindow.isEmpty) {
       injection.focusWindow = profile.windowHint;
@@ -335,7 +369,10 @@ class AppState extends ChangeNotifier {
     }
     injection.focusWindow = snapshot.focusWindow;
     _keyProfileId = snapshot.keyProfileId;
-    injection.keys = keyProfileById(_keyProfileId).keys;
+    _overrides
+      ..clear()
+      ..addAll(snapshot.keyOverrides);
+    injection.keys = effectiveKeys;
     injection.shiftsPerPress = snapshot.shiftsPerPress;
     if (snapshot.publishOnStart) await publisher.start();
     if (snapshot.injectOnStart) await injection.start();
@@ -416,6 +453,7 @@ class AppState extends ChangeNotifier {
           focusWindow: injection.focusWindow,
           keyProfileId: _keyProfileId,
           shiftsPerPress: injection.shiftsPerPress,
+          keyOverrides: Map<String, String>.of(_overrides),
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
         ),
