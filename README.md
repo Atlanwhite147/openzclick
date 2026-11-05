@@ -33,6 +33,11 @@ OpenBikeControl protocol on the network rather than only synthesising keystrokes
 Where those differences do not matter, use QZ. It is older, it is more complete, and
 it knows hardware this project has never seen.
 
+Fifteen other projects solve neighbouring problems — keyboard mappers for Linux and
+macOS, OpenBikeControl bridges, ESP32 peripherals that reach an iPad — and each one
+answers a question this project had to answer alone. [docs/prior-art.md](docs/prior-art.md)
+lists them with their licence and what each teaches.
+
 ## Measured on real hardware
 
 Everything below was captured from a Click v2 (firmware `1.1.0`) over WinRT and is asserted by a test:
