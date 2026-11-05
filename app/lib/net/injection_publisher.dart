@@ -43,13 +43,19 @@ class InjectionPublisher {
   /// Default desktop bindings, matching the shortcuts of common training
   /// applications.
   static const Map<Action, String> defaultKeys = <Action, String>{
-    Action.shiftUp: 'i',
-    Action.shiftDown: 'k',
+    Action.shiftUp: 'k',
+    Action.shiftDown: 'i',
     Action.steerLeft: 'Left',
     Action.steerRight: 'Right',
   };
 
   /// Key bound to each action, null when the publisher injects taps.
+  ///
+  /// The direction is not obvious and the public sources contradict each
+  /// other: in MyWhoosh, `k` shifts to a harder gear and `i` to an easier one.
+  /// The mapping above follows the profile shipped by `zwiftboard` (MIT), which
+  /// was written against a Click v2 and MyWhoosh, rather than the keyboard
+  /// shortcut tables that disagree on which way `i` and `k` go.
   final Map<Action, String>? keys;
 
   /// Optional check performed before the first injection.

@@ -114,7 +114,7 @@ Where to press a button before you clip in: the **Gears** tab has *Shift up* and
 | Windows finds nothing | MyWhoosh needs Bonjour on Windows (installed with iTunes, or *Bonjour Print Services*). Without it, discovery returns nothing and says nothing |
 | A firewall popup appeared | allow the application on private networks; without it the port stays closed |
 | MyWhoosh attached but buttons do nothing | the controller is not paired yet: open the **Controllers** tab and scan; the page says *Nothing answered* when the controller was asleep |
-| The controller connects then drops after a minute | the Click v2 unlock: pair it once in the Zwift application, leave it open about three minutes, then come back |
+| The controller connects then drops after a minute | two candidates: a Click v2 that wants one pairing in the Zwift application (leave it open about three minutes), or simply a pod that heard no write for a minute — the bridge now writes a keepalive every three seconds, so if the drop is still there, it is the first |
 | Something is wrong but you cannot say what | **Controllers**, then *Copy device report*: firmware, GATT tree and the last frames travel with it, which is what makes a bug reproducible |
 | The gear changes here but not in MyWhoosh | MyWhoosh has paired the trainer itself. Let MyWhoosh own the trainer rather than the bridge |
 

@@ -368,13 +368,14 @@ class ControllerConnection {
       case null:
         break;
       case ControllerLinkAction.sendPlainHandshake:
-        _plainHandshakeSent = true;
-        unawaited(_write(ControllerHandshake.plainRequest()));
+        unawaited(_startPlainSession());
       case ControllerLinkAction.needsUnlock:
         needsUnlock = true;
         _notify();
-      case ControllerLinkAction.reconnect:
-        unawaited(_reconnect());
+      case ControllerLinkAction.sendKeepalive:
+        // Only in a plain session: an encrypted one answers frames by itself,
+        // and a stray `RideOn` in the middle of it would be noise.
+        if (_crypto == null) unawaited(_keepalive());
     }
 
     // A Click v2 answers the encrypted request with a bare `RideOn` echo and
@@ -383,15 +384,54 @@ class ControllerConnection {
     // that fallback, because a frame did arrive and it reads a frame as an
     // answer; the criterion is the derived session, not the bytes.
     if (_crypto == null && !_plainHandshakeSent && _secondsSinceConnect >= 3) {
-      _plainHandshakeSent = true;
-      unawaited(_write(ControllerHandshake.plainRequest()));
+      unawaited(_startPlainSession());
     }
   }
 
+  /// Opens a plain session: the `RideOn` marker, then the two frames that
+  /// complete the activation.
+  ///
+  /// Measured on Windows by `zwiftboard` (MIT): a Click v2 streams its buttons
+  /// only after the full exchange, and the plain handshake alone leaves it in a
+  /// state where it answers for a while and then stops.
+  Future<void> _startPlainSession() async {
+    if (_plainHandshakeSent) return;
+    _plainHandshakeSent = true;
+    _watchdog.onPlainHandshakeSent();
+    for (final List<int> frame in ControllerHandshake.activationSequence()) {
+      final bool sent = await _tryWrite(frame);
+      if (!sent) {
+        // A failed write is the only observable sign that the session ended.
+        unawaited(_reconnect());
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+    }
+  }
+
+  /// Holds the plain session open.
+  ///
+  /// A pod drops roughly a minute after the last write it received; button
+  /// silence is normal riding and says nothing about the link.
+  Future<void> _keepalive() async {
+    final bool sent = await _tryWrite(ControllerHandshake.plainRequest());
+    if (!sent) unawaited(_reconnect());
+  }
+
   Future<void> _write(List<int> frame) async {
+    await _tryWrite(frame);
+  }
+
+  /// Writes [frame], and says whether the link accepted it.
+  ///
+  /// The boolean is what the supervision acts on: a write the controller does
+  /// not take is the only reliable sign that the session ended, since an idle
+  /// controller is silent by design.
+  Future<bool> _tryWrite(List<int> frame) async {
     _record(frame, FrameDirection.outbound, _writeTarget?.uuid.toString());
     try {
       await _writeTarget?.write(frame);
+      return true;
     } catch (e) {
       error = explainControllerError(
         e,
@@ -399,6 +439,7 @@ class ControllerConnection {
         secureContext: Capabilities.webBluetoothPossible,
       );
       _notify();
+      return false;
     }
   }
 
@@ -408,7 +449,7 @@ class ControllerConnection {
       return;
     }
     _reconnecting = true;
-    error = 'controller went silent, reconnecting';
+    error = 'the controller stopped acknowledging writes, reconnecting';
     _notify();
     try {
       await _clearLink();

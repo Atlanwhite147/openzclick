@@ -8,12 +8,24 @@
 /// 2. it ignores the encrypted handshake and only accepts the plain `RideOn`
 ///    marker, sending button frames in the clear;
 /// 3. it says nothing at all until it has been paired once in the official
-///    application, which is what makes a Click disappear after a minute.
+///    application.
 ///
 /// The last case cannot be distinguished from a dead radio by looking at the
 /// bytes: both are silence. This class turns that silence into an explicit
 /// action, so the interface can tell the rider what to do instead of showing a
 /// connection that is technically alive and functionally useless.
+///
+/// ## Silence is not a fault, a failed write is
+///
+/// An earlier version reconnected after 45 seconds without a button frame. That
+/// is wrong on both counts: coasting for a minute is normal riding, and a pod
+/// keeps its session alive from the host side, not from its buttons. The
+/// measurement behind this comes from `zwiftboard` (MIT), which found that a
+/// controller drops about 65 seconds after the last write, and that a `RideOn`
+/// written every three seconds is what holds it. So the watchdog now asks for a
+/// keepalive on a cadence, and never for a reconnection: the caller reconnects
+/// when a write actually fails, which is the only observable sign that the
+/// session ended.
 ///
 /// Pure logic, no timer and no I/O: the caller feeds it elapsed time, which
 /// keeps every rule testable without a radio.
@@ -29,8 +41,9 @@ enum ControllerLinkAction {
   /// pairing in the official application.
   needsUnlock,
 
-  /// The link was carrying frames and went silent: reconnect.
-  reconnect,
+  /// Write the plain `RideOn` again to hold the session open. A failure of that
+  /// write, and not a silence, is the signal to reconnect.
+  sendKeepalive,
 }
 
 /// Supervises one link from the handshake to the next reconnection.
@@ -41,16 +54,24 @@ class ControllerLinkWatchdog {
   /// encrypted handshake before falling back to the plain one.
   /// [unlockHintAfter] is how long a completely silent link is tolerated before
   /// blaming the controller lock.
-  /// [silenceBeforeReconnect] is how long an established link may stay silent
-  /// before it is considered broken.
+  /// [keepaliveInterval] is the cadence of the plain `RideOn` that holds the
+  /// session open. Three seconds is what `zwiftboard` measured on a Click v2;
+  /// the pod drops roughly a minute after the last write it received.
   ControllerLinkWatchdog({
     this.plainFallbackAfter = const Duration(seconds: 3),
     this.unlockHintAfter = const Duration(seconds: 10),
-    this.silenceBeforeReconnect = const Duration(seconds: 45),
+    this.keepaliveInterval = const Duration(seconds: 3),
   }) {
     if (plainFallbackAfter >= unlockHintAfter) {
       throw ArgumentError(
         'the plain fallback must come before the unlock hint',
+      );
+    }
+    if (keepaliveInterval <= Duration.zero) {
+      throw ArgumentError.value(
+        keepaliveInterval,
+        'keepaliveInterval',
+        'must be positive',
       );
     }
   }
@@ -61,15 +82,14 @@ class ControllerLinkWatchdog {
   /// Delay before concluding that nothing will ever arrive.
   final Duration unlockHintAfter;
 
-  /// Silence tolerated on an established link.
-  final Duration silenceBeforeReconnect;
+  /// Cadence of the keepalive once a plain session is open.
+  final Duration keepaliveInterval;
 
   Duration _sinceConnect = Duration.zero;
-  Duration _sinceFrame = Duration.zero;
+  Duration _sinceKeepalive = Duration.zero;
   bool _frameSeen = false;
   bool _plainSent = false;
   bool _unlockHinted = false;
-  bool _reconnectAsked = false;
 
   /// True once any frame arrived since [onConnected].
   bool get frameSeen => _frameSeen;
@@ -83,47 +103,53 @@ class ControllerLinkWatchdog {
   /// Resets the supervision for a new connection.
   void onConnected() {
     _sinceConnect = Duration.zero;
-    _sinceFrame = Duration.zero;
+    _sinceKeepalive = Duration.zero;
     _frameSeen = false;
     _plainSent = false;
     _unlockHinted = false;
-    _reconnectAsked = false;
   }
 
   /// Records traffic from the controller.
   ///
   /// Any frame counts, handshake acknowledgement included: it proves the
-  /// controller is listening.
+  /// controller is listening, and a link that just spoke needs no keepalive.
   void onFrame() {
     _frameSeen = true;
-    _sinceFrame = Duration.zero;
-    _reconnectAsked = false;
+    _sinceKeepalive = Duration.zero;
+  }
+
+  /// Records that the caller wrote the plain handshake, so that the keepalive
+  /// cadence starts even when nothing ever answers.
+  void onPlainHandshakeSent() {
+    _plainSent = true;
+    _sinceKeepalive = Duration.zero;
   }
 
   /// Advances the clocks by [elapsed] and returns what to do, if anything.
   ///
-  /// Each action is returned once: asking for the plain handshake twice, or
-  /// for the same reconnection in a loop, is the caller's bug to avoid.
+  /// Each action is returned once per cadence: asking for the plain handshake
+  /// twice is the caller's bug to avoid, while the keepalive is meant to repeat.
   ControllerLinkAction? onElapsed(Duration elapsed) {
     if (elapsed.isNegative) {
       throw ArgumentError.value(elapsed, 'elapsed', 'must not be negative');
     }
     _sinceConnect += elapsed;
-    _sinceFrame += elapsed;
+    _sinceKeepalive += elapsed;
 
     if (!_plainSent && !_frameSeen && _sinceConnect >= plainFallbackAfter) {
       _plainSent = true;
+      _sinceKeepalive = Duration.zero;
       return ControllerLinkAction.sendPlainHandshake;
     }
     if (!_frameSeen && !_unlockHinted && _sinceConnect >= unlockHintAfter) {
       _unlockHinted = true;
       return ControllerLinkAction.needsUnlock;
     }
-    if (_frameSeen &&
-        !_reconnectAsked &&
-        _sinceFrame >= silenceBeforeReconnect) {
-      _reconnectAsked = true;
-      return ControllerLinkAction.reconnect;
+    // Only once a plain session has been opened: before that, the encrypted
+    // handshake owns the link and a stray `RideOn` would be noise.
+    if (_plainSent && _sinceKeepalive >= keepaliveInterval) {
+      _sinceKeepalive = Duration.zero;
+      return ControllerLinkAction.sendKeepalive;
     }
     return null;
   }

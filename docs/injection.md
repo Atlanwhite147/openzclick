@@ -31,12 +31,14 @@ cd app && DISPLAY=:99 dart run tool/x11_probe.dart i Left k
 
 | Action | Key |
 |---|---|
-| shift up | `i` |
-| shift down | `k` |
+| shift up (harder) | `k` |
+| shift down (easier) | `i` |
 | steer left | `Left` |
 | steer right | `Right` |
 
 These match the shortcuts of common training applications. They live in `InjectionPublisher.defaultKeys` and are easy to make configurable.
+
+The direction is the one trap in the table. Public shortcut listings disagree on whether `i` or `k` shifts up, and the MyWhoosh page names the two keys without saying which way they go. The mapping above follows the profile shipped by [`zwiftboard`](https://github.com/thomaschampagne/zwiftboard) (MIT), written against a Click v2 and MyWhoosh: there, `k` is a harder gear and `i` an easier one. If a rider reports an inverted ladder, this table is the line to change — not the gear engine.
 
 ## The Windows implementation
 
