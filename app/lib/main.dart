@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'ble/controller_connection.dart';
 import 'net/android_injection.dart';
 import 'net/console_endpoint.dart';
+import 'net/key_profiles.dart';
 import 'net/publisher.dart';
 import 'platform/capabilities.dart';
 import 'platform/version.dart';
@@ -590,6 +591,62 @@ class TargetScreen extends StatelessWidget {
                             ? null
                             : () => _editPosition(context, state, action),
                       ),
+                  if (state.injection.usesKeys)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                      child: Row(
+                        children: <Widget>[
+                          const Text('Application'),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: state.keyProfile.id,
+                              items: <DropdownMenuItem<String>>[
+                                for (final KeyProfile profile
+                                    in builtInKeyProfiles)
+                                  DropdownMenuItem<String>(
+                                    value: profile.id,
+                                    child: Text(profile.label),
+                                  ),
+                              ],
+                              onChanged: (String? id) {
+                                if (id != null) state.setKeyProfile(id);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Text('x'),
+                          const SizedBox(width: 8),
+                          DropdownButton<int>(
+                            value: state.injection.shiftsPerPress,
+                            items: <DropdownMenuItem<int>>[
+                              for (final int n in <int>[1, 2, 3])
+                                DropdownMenuItem<int>(
+                                  value: n,
+                                  child: Text('$n'),
+                                ),
+                            ],
+                            onChanged: (int? n) {
+                              if (n != null) state.setShiftsPerPress(n);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (state.injection.usesKeys)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          state.keyProfile.source.isEmpty
+                              ? 'Gears on k and i, steering on the arrows.'
+                              : 'From ${state.keyProfile.source}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
                   if (state.injection.usesKeys)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
