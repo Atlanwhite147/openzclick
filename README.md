@@ -48,13 +48,13 @@ The controller report lives in [#3](https://github.com/Atlanwhite147/openzclick/
 | Belongs to you, no account | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | mDNS announcement + TCP server | ✅ | ✅ | ✅ | ✅ | ⚠️ needs Apple's entitlement | ⚠️ Isolated Web App only |
 | Drive the bridge from a phone | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ console over WebSocket |
-| Keyboard injection (no protocol support) | ❌ | ✅ X11 | ❌ | — | — | ❌ |
+| Keyboard injection (no protocol support) | ✅ `SendInput` | ✅ X11 | ❌ | — | — | ❌ |
 | Tap injection (on-screen controls) | ❌ | ❌ | ❌ | ✅ accessibility service | ❌ | ❌ |
 | Become the trainer (FTMS peripheral) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ✅ verified · ⚠️ works with a platform constraint · ❌ not implemented, open to a contributor
 
-The two ❌ on desktop are the shortest path to a first accepted pull request: [Windows `SendInput`](https://github.com/Atlanwhite147/openzclick/issues/1) and [macOS `CGEventPost`](https://github.com/Atlanwhite147/openzclick/issues/2) are one file each, next to the Linux one that already works.
+The remaining ❌ on desktop is the shortest path to a first accepted pull request: [macOS `CGEventPost`](https://github.com/Atlanwhite147/openzclick/issues/2) is one file, next to the Linux and Windows ones that already work.
 
 ## Features
 
@@ -250,9 +250,13 @@ Protocol facts are implemented in Dart from public interoperability notes; no th
 |---|---|---|
 | `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 255 |
 | `transports/` | mDNS responder, TCP server, console relay and the page it serves, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 137 |
-| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, device report, diagnostics on Android, iOS, Windows, macOS and the browser | 122 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, device report, diagnostics on Android, iOS, Windows, macOS and the browser | 129 |
 
 **Verified on Windows 11 with a Click v2:** scan, connect, plain session, five buttons identified one at a time, `+` and `B` shifting the gear end to end, and a training client on another machine reading the frames over the tailnet.
+
+**Verified on Windows 11, the injection route:** the bridge started its own publication and injection, a console on another machine typed `shiftUp` then `shiftDown`, the gear went 10 → 11 → 10, and a window that did not own the application received `i` then `k`. What that does not cover — whether MyWhoosh, Zwift or Rouvy accept the events — is the open item in [docs/ROADMAP.md](docs/ROADMAP.md), and [docs/injection.md](docs/injection.md) records the protocol and the caveats.
+
+**Verified on Windows 11, the console route:** the address shown for a phone, and encoded in the QR code, is now the Wi-Fi adapter (`192.168.1.18`) rather than the Tailscale one (`100.76.28.61`) — the bug and its fix were measured on the machine that produced it — and that console page drove the bridge end to end from another computer.
 
 **Verified on Android 13:** installation, first frame, gear changes, direction choices, tap injection through the accessibility service, announcement visible from the local network and TCP handshake with a client.
 
@@ -269,7 +273,8 @@ What is not verified is the Bluetooth radio on macOS and on iOS against real har
 - [x] continuous Android and iOS builds
 - [x] a Click v2 scanned, connected and shifting on Windows, measured frame by frame
 - [x] local injection transport, with an Android accessibility service driver
-- [ ] Windows and macOS keyboard injection
+- [x] Windows keyboard injection through `SendInput`, measured against a window that did not own the application
+- [ ] macOS keyboard injection
 - [ ] the left pod of the pair, button by button
 - [ ] Bluetooth peripheral backend (advertise the bridge as a trainer)
 - [ ] iPhone multicast entitlement
