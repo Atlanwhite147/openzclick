@@ -17,6 +17,7 @@ class SettingsSnapshot {
     required this.positions,
     required this.publishOnStart,
     required this.injectOnStart,
+    this.focusWindow = '',
     this.parkedChainringTeeth,
     this.parkedCogTeeth,
   });
@@ -35,6 +36,10 @@ class SettingsSnapshot {
 
   /// Whether the tap injection should resume on the next start.
   final bool injectOnStart;
+
+  /// Title fragment of the window that must own the focus when a key is
+  /// injected. Empty means "whatever window has the focus".
+  final String focusWindow;
 
   /// Chainring the chain sits on, `null` until the rider confirms it.
   ///
@@ -63,6 +68,7 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _publishKey = 'openzclick.publish';
   static const String _injectKey = 'openzclick.inject';
   static const String _positionPrefix = 'openzclick.position.';
+  static const String _focusWindowKey = 'openzclick.focusWindow';
   static const String _parkedChainringKey = 'openzclick.parked.chainring';
   static const String _parkedCogKey = 'openzclick.parked.cog';
 
@@ -90,6 +96,7 @@ class PrefsSettingsStore implements SettingsStore {
       positions: positions,
       publishOnStart: prefs.getBool(_publishKey) ?? false,
       injectOnStart: prefs.getBool(_injectKey) ?? false,
+      focusWindow: prefs.getString(_focusWindowKey) ?? '',
       parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
       parkedCogTeeth: prefs.getInt(_parkedCogKey),
     );
@@ -102,6 +109,11 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
+    if (snapshot.focusWindow.isEmpty) {
+      await prefs.remove(_focusWindowKey);
+    } else {
+      await prefs.setString(_focusWindowKey, snapshot.focusWindow);
+    }
     final int? chainring = snapshot.parkedChainringTeeth;
     if (chainring == null) {
       await prefs.remove(_parkedChainringKey);

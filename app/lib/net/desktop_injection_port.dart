@@ -7,10 +7,12 @@ library;
 
 import 'package:openzclick_core/openzclick_core.dart';
 
+import 'window_focus.dart';
+
 /// A working injector plus what the interface needs to drive it.
 class DesktopInjection {
   /// Builds the description.
-  DesktopInjection({required this.injector, this.availability});
+  DesktopInjection({required this.injector, this.availability, this.focuser});
 
   /// The injector itself.
   final KeyInjector injector;
@@ -18,4 +20,8 @@ class DesktopInjection {
   /// Synchronous test of the platform capability, asked before the switch is
   /// enabled. `null` when the backend is always ready.
   final bool Function()? availability;
+
+  /// Backend that can bring the training application to the front before a key
+  /// is injected, `null` where the platform cannot do it.
+  final WindowFocuser? focuser;
 }

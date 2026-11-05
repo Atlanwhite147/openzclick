@@ -53,6 +53,7 @@ class AppState extends ChangeNotifier {
     availability: _desktop?.availability,
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
     keys: _desktop == null ? null : InjectionPublisher.defaultKeys,
+    focuser: _desktop?.focuser,
   );
 
   /// Turns button states into gear changes and direction choices.
@@ -187,6 +188,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Records which window must own the focus when a key is injected.
+  ///
+  /// Empty keeps the plain keyboard behaviour: the key goes to whatever window
+  /// has the focus, which is right when the rider is looking at the game.
+  void setFocusWindow(String name) {
+    injection.focusWindow = name.trim();
+    _persist();
+    notifyListeners();
+  }
+
   /// Starts or stops the local tap injection.
   Future<void> toggleInjection() async {
     if (injection.running) {
@@ -292,6 +303,7 @@ class AppState extends ChangeNotifier {
         in snapshot.positions.entries) {
       injection.setPosition(entry.key, entry.value[0], entry.value[1]);
     }
+    injection.focusWindow = snapshot.focusWindow;
     if (snapshot.publishOnStart) await publisher.start();
     if (snapshot.injectOnStart) await injection.start();
     _syncConsole(Action.none);
@@ -368,6 +380,7 @@ class AppState extends ChangeNotifier {
           positions: injection.positions,
           publishOnStart: publisher.running,
           injectOnStart: injection.running,
+          focusWindow: injection.focusWindow,
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
         ),
