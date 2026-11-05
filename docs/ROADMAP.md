@@ -79,6 +79,13 @@ State: the FTMS codec, the virtual trainer logic, the wheel-size command and the
 ### 5. iPhone multicast entitlement
 Not code: a request to Apple, with the paperwork written in `docs/ios-multicast.md`. Until it is granted, iOS listens but cannot announce.
 
+## Planned from the survey of neighbouring projects
+
+The six phases, with what each one takes from which project and how it is verified,
+live in [`INTEGRATION-PLAN.md`](INTEGRATION-PLAN.md): per-application key profiles,
+both pods and the arrows they own, gestures, battery and sleep, macOS injection,
+then the spare buttons.
+
 ## Small, well bounded, ideal for a first contribution
 
 - Battery level and firmware shown on the controller screen.
