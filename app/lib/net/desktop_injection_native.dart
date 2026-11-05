@@ -13,6 +13,7 @@ library;
 import 'dart:io' show Platform;
 
 import 'desktop_injection_port.dart';
+import 'windows_focus.dart';
 import 'windows_injection.dart';
 import 'x11_injection.dart';
 
@@ -33,6 +34,9 @@ DesktopInjection? createDesktopInjection() {
     return DesktopInjection(
       injector: injector,
       availability: () => injector.available,
+      // A keystroke goes to the window that owns the focus, and that is rarely
+      // the training application: see docs/injection.md.
+      focuser: WindowsWindowFocuser(),
     );
   }
   return null;

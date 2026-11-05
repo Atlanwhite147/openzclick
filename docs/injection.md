@@ -51,6 +51,28 @@ The direction is the one trap in the table. Public shortcut listings disagree on
 
 `tapAt` uses `SetCursorPos` followed by `mouse_event`, which is enough for a click on a control. Coordinates are fractions of the screen, as on Linux.
 
+### Typing into the right window
+
+A keystroke goes to the window that owns the focus, and that window is rarely the
+training application: the rider had to look at this one to press a button, or
+something else stole the focus mid-ride. The key is then inserted, reported as
+sent, and received by a chat window.
+
+The *Type into this window only* field on the Network tab takes a fragment of the
+window title — `MyWhoosh` matches `MyWhooshHD` and `MyWhoosh - Free ride`. When it
+is set, every keypress first restores and raises that window, then types. When
+nothing matches, the key is **not** sent and the reason is shown under the switch:
+typing into an unrelated application is worse than a shift that does not happen.
+Empty, the field changes nothing and the key goes to whatever has the focus.
+
+Two limits, both honest: only the window **title** is matched (not the executable
+name), and Windows refuses `SetForegroundWindow` from a process that does not own
+the foreground, in which case the refusal is reported rather than hidden. The
+matching rule lives in `app/lib/net/window_focus.dart` and is tested without
+Windows; the enumeration is in `windows_focus.dart` and is not.
+
+The idea comes from `zwiftboard` (MIT), which offers it per profile.
+
 ### Measured on Windows
 
 The buffer layout was tested in plain Dart from the start; the call itself had never run, because no machine used to write the project had a Windows desktop to inject into. It has now been measured on a Windows 11 PC (build 26200), driven from another computer over the network:

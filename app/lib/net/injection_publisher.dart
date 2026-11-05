@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 import 'injection_backend.dart';
+import 'window_focus.dart';
 
 /// Injector used on platforms without a tap implementation.
 class UnsupportedInjector implements KeyInjector {
@@ -37,6 +38,7 @@ class InjectionPublisher {
     required this.injector,
     this.readiness,
     this.availability,
+    this.focuser,
     Map<Action, String>? keys,
   }) : keys = keys == null ? null : Map<Action, String>.unmodifiable(keys);
 
@@ -60,6 +62,17 @@ class InjectionPublisher {
 
   /// Optional check performed before the first injection.
   final Future<bool> Function()? readiness;
+
+  /// Optional backend that brings the training application to the front before
+  /// a key is injected, `null` where the platform cannot do it.
+  final WindowFocuser? focuser;
+
+  /// Title fragment of the window that must own the focus when a key goes out.
+  ///
+  /// Empty, the key goes to whatever window owns the focus, which is the plain
+  /// keyboard behaviour. Set, the publisher brings that window forward first and
+  /// refuses to type into anything else.
+  String focusWindow = '';
 
   /// Optional synchronous test of the platform capability, used by the user
   /// interface to disable the switch instead of failing later.
@@ -176,6 +189,12 @@ class InjectionPublisher {
     await _applyPositions();
     final InjectionBackend? backend = _backend;
     if (backend == null) return;
+    final String? refused = await _focusTarget();
+    if (refused != null) {
+      error = refused;
+      _notify();
+      return;
+    }
     try {
       await backend.emit(action);
       error = null;
@@ -184,6 +203,21 @@ class InjectionPublisher {
       debugPrint('openzclick: injection of ${action.name} failed: $e');
     }
     _notify();
+  }
+
+  /// Brings the configured window to the front, and says why it could not.
+  ///
+  /// A key inserted while another window owns the focus is a key nobody asked
+  /// for: it lands in a chat window and the rider sees a shift that did nothing.
+  /// So when a target is configured and the platform can act on it, the window
+  /// is raised first, and a refusal is reported instead of typing blind.
+  Future<String?> _focusTarget() async {
+    final WindowFocuser? target = focuser;
+    final String name = focusWindow.trim();
+    if (target == null || name.isEmpty) return null;
+    final bool focused = await target.focusWindow(name);
+    if (focused) return null;
+    return 'no window matching "$name": the key was not sent';
   }
 
   /// Sends a single tap at the position configured for [action].

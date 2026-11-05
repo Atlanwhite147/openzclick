@@ -590,7 +590,23 @@ class TargetScreen extends StatelessWidget {
                             ? null
                             : () => _editPosition(context, state, action),
                       ),
-                  if (state.injection.supported)
+                  if (state.injection.usesKeys)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                      child: TextFormField(
+                        initialValue: state.injection.focusWindow,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          labelText: 'Type into this window only',
+                          helperText:
+                              'A fragment of the window title, MyWhoosh for '
+                              'instance. Empty: the key goes to whichever '
+                              'window has the focus.',
+                        ),
+                        onChanged: state.setFocusWindow,
+                      ),
+                    ),
+                  if (state.injection.supported && !state.injection.usesKeys)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: TextButton.icon(
