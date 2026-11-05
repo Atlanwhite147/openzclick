@@ -5,14 +5,6 @@
 **Use your indoor cycling controller buttons with any training app.**<br>
 Gears go up and down, intersection directions get chosen, the smart trainer follows.
 
-[![CI](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ci.yml)
-[![Android build](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/android.yml)
-[![iOS build](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/ios.yml)
-[![Windows build](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/windows.yml)
-[![Web build](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml/badge.svg)](https://github.com/Atlanwhite147/openzclick/actions/workflows/web.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-514%20passing-brightgreen)](#status)
-
 </div>
 
 ![Zwift Click to the bridge over Bluetooth, the bridge to the training application over the local network](docs/readme-flow.svg)
@@ -20,6 +12,26 @@ Gears go up and down, intersection directions get chosen, the smart trainer foll
 A controller bought for one application usually stops working as soon as you change application. openzclick reads it over Bluetooth, turns button presses into gear changes, and publishes them on the local network with an open protocol, so the same buttons drive every application that speaks it.
 
 **No account, no subscription, no cable, no driver, no telemetry.** One Dart codebase for Android, iOS, Windows, macOS and the browser.
+
+## Prior art
+
+This is not the first bridge, and the ones that came before are worth your time:
+
+| Project | Licence | What it already covers |
+|---|---|---|
+| [QZ / qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) | GPL-3.0 | The most complete of the four: Click, Click v2, Play and Ride, a long list of trainers, on Android and iOS |
+| [BikeControl](https://github.com/OpenBikeControl/bikecontrol) | Non-Commercial after the `gpl3` tag, GPL-3.0 before it | The reference application for the OpenBikeControl protocol this project speaks |
+| [zwiftboard](https://github.com/thomaschampagne/zwiftboard) | MIT | Presents a Click v2 as a Bluetooth keyboard, in one small Go binary |
+| KSETT | closed, freemium | Gear shifting from a Click, with a second device in the middle |
+
+The difference claimed here is deliberately narrow: **MIT**, so a host application can
+embed it where the GPL would follow; no account; it runs on the machine that runs the
+training application (Windows and Linux today, macOS for the controller and the gears,
+not yet for the keystrokes) instead of requiring a phone; and it publishes the
+OpenBikeControl protocol on the network rather than only synthesising keystrokes.
+
+Where those differences do not matter, use QZ. It is older, it is more complete, and
+it knows hardware this project has never seen.
 
 ## Measured on real hardware
 
