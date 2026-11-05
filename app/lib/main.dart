@@ -648,6 +648,48 @@ class TargetScreen extends StatelessWidget {
                       ),
                     ),
                   if (state.injection.usesKeys)
+                    ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                      childrenPadding: EdgeInsets.zero,
+                      title: const Text('Adjust the keys'),
+                      subtitle: Text(
+                        state.hasKeyOverrides
+                            ? 'Changed for ${state.keyProfile.label}'
+                            : 'The shipped table, editable. Press Enter to '
+                                  'apply a key.',
+                      ),
+                      children: <Widget>[
+                        for (final Action action in <Action>[
+                          Action.shiftUp,
+                          Action.shiftDown,
+                          Action.steerLeft,
+                          Action.steerRight,
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                            child: TextFormField(
+                              // The profile and the key are part of the identity:
+                              // switching application must rebuild the field
+                              // instead of keeping the previous text.
+                              key: ValueKey<String>(
+                                '${state.keyProfile.id}.${action.name}.'
+                                '${state.effectiveKeys[action] ?? ''}',
+                              ),
+                              initialValue: state.effectiveKeys[action] ?? '',
+                              decoration: InputDecoration(
+                                isDense: true,
+                                labelText: action.label,
+                                helperText:
+                                    'Empty restores the shipped key for this '
+                                    'application.',
+                              ),
+                              onFieldSubmitted: (String value) =>
+                                  state.setKey(action, value),
+                            ),
+                          ),
+                      ],
+                    ),
+                  if (state.injection.usesKeys)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                       child: TextFormField(

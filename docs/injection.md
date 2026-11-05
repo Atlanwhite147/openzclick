@@ -44,6 +44,10 @@ page each row was read from.
 Zwift and TrainerRoad are absent on purpose: neither exposes a virtual-shifting
 key, so a row for them would be invented.
 
+*Adjust the keys* edits that table in place, per application: a rider whose
+application is not listed types their own key, and an empty field restores the
+shipped binding.
+
 A multiplier (1 to 3) sends that many presses per button push, for applications
 that expose a ladder of gears rather than a ratio. Two presses are separated by
 60 ms, because an application that polls the key state sees nothing if both arrive

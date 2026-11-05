@@ -20,6 +20,7 @@ class SettingsSnapshot {
     this.focusWindow = '',
     this.keyProfileId = 'mywhoosh',
     this.shiftsPerPress = 1,
+    this.keyOverrides = const <String, String>{},
     this.parkedChainringTeeth,
     this.parkedCogTeeth,
   });
@@ -48,6 +49,12 @@ class SettingsSnapshot {
 
   /// Keys sent per button press, 1 to 3.
   final int shiftsPerPress;
+
+  /// Keys the rider changed, as `<action name>` to key.
+  ///
+  /// Stored per application, so switching profile and coming back finds the
+  /// rider's own choices rather than the shipped table.
+  final Map<String, String> keyOverrides;
 
   /// Chainring the chain sits on, `null` until the rider confirms it.
   ///
@@ -79,6 +86,7 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _focusWindowKey = 'openzclick.focusWindow';
   static const String _keyProfileKey = 'openzclick.keyProfile';
   static const String _shiftsPerPressKey = 'openzclick.shiftsPerPress';
+  static const String _keyOverridePrefix = 'openzclick.key.';
   static const String _parkedChainringKey = 'openzclick.parked.chainring';
   static const String _parkedCogKey = 'openzclick.parked.cog';
 
@@ -109,6 +117,21 @@ class PrefsSettingsStore implements SettingsStore {
       focusWindow: prefs.getString(_focusWindowKey) ?? '',
       keyProfileId: prefs.getString(_keyProfileKey) ?? 'mywhoosh',
       shiftsPerPress: prefs.getInt(_shiftsPerPressKey) ?? 1,
+      keyOverrides: <String, String>{
+        for (final String action in <String>[
+          'shiftUp',
+          'shiftDown',
+          'steerLeft',
+          'steerRight',
+        ])
+          if ((prefs.getString(
+                '$_keyOverridePrefix${prefs.getString(_keyProfileKey) ?? 'mywhoosh'}.$action',
+              )) !=
+              null)
+            action: prefs.getString(
+              '$_keyOverridePrefix${prefs.getString(_keyProfileKey) ?? 'mywhoosh'}.$action',
+            )!,
+      },
       parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
       parkedCogTeeth: prefs.getInt(_parkedCogKey),
     );
@@ -123,6 +146,13 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
     await prefs.setString(_keyProfileKey, snapshot.keyProfileId);
     await prefs.setInt(_shiftsPerPressKey, snapshot.shiftsPerPress);
+    for (final MapEntry<String, String> entry
+        in snapshot.keyOverrides.entries) {
+      await prefs.setString(
+        '$_keyOverridePrefix${snapshot.keyProfileId}.${entry.key}',
+        entry.value,
+      );
+    }
     if (snapshot.focusWindow.isEmpty) {
       await prefs.remove(_focusWindowKey);
     } else {
