@@ -9,7 +9,7 @@ void main() {
       watchdog = ControllerLinkWatchdog(
         plainFallbackAfter: const Duration(seconds: 3),
         unlockHintAfter: const Duration(seconds: 10),
-        silenceBeforeReconnect: const Duration(seconds: 45),
+        keepaliveInterval: const Duration(seconds: 3),
       );
       watchdog.onConnected();
     });
@@ -46,41 +46,75 @@ void main() {
     });
 
     test('total silence is blamed on the controller lock, once', () {
+      // Nothing answers at all. The plain handshake goes out, then the keepalive
+      // cadence starts anyway — that write is the only thing that can wake a
+      // controller — and the lock is named once, ten seconds in.
       expect(
         watchdog.onElapsed(const Duration(seconds: 3)),
         ControllerLinkAction.sendPlainHandshake,
       );
-      expect(watchdog.onElapsed(const Duration(seconds: 6)), isNull);
+      expect(
+        watchdog.onElapsed(const Duration(seconds: 3)),
+        ControllerLinkAction.sendKeepalive,
+      );
+      expect(
+        watchdog.onElapsed(const Duration(seconds: 3)),
+        ControllerLinkAction.sendKeepalive,
+      );
       expect(
         watchdog.onElapsed(const Duration(seconds: 1)),
         ControllerLinkAction.needsUnlock,
       );
       expect(watchdog.unlockHinted, isTrue);
-      expect(watchdog.onElapsed(const Duration(seconds: 30)), isNull);
+      expect(
+        watchdog.onElapsed(const Duration(seconds: 10)),
+        anyOf(isNull, ControllerLinkAction.sendKeepalive),
+        reason: 'the unlock hint is said once',
+      );
     });
 
-    test('a silent established link asks for a reconnection', () {
+    test('a silent established link asks for a keepalive, not a reconnection',
+        () {
+      // Measured on a Click v2: the pod drops roughly a minute after the last
+      // write it received, and coasting without pressing a button is normal.
+      // So silence asks for a keepalive, and only a failed write is a reason to
+      // reconnect.
       watchdog.onFrame();
-      expect(watchdog.onElapsed(const Duration(seconds: 44)), isNull);
+      watchdog.onPlainHandshakeSent();
       expect(
-        watchdog.onElapsed(const Duration(seconds: 1)),
-        ControllerLinkAction.reconnect,
+        watchdog.onElapsed(const Duration(seconds: 3)),
+        ControllerLinkAction.sendKeepalive,
       );
+      expect(watchdog.onElapsed(const Duration(seconds: 2)), isNull);
       expect(
         watchdog.onElapsed(const Duration(seconds: 1)),
+        ControllerLinkAction.sendKeepalive,
+        reason: 'three seconds after the last one',
+      );
+      for (int i = 0; i < 200; i++) {
+        final ControllerLinkAction? action = watchdog.onElapsed(
+          const Duration(seconds: 1),
+        );
+        expect(
+          action,
+          anyOf(isNull, ControllerLinkAction.sendKeepalive),
+          reason: 'no reconnection is ever asked for because of silence',
+        );
+      }
+    });
+
+    test('a frame pushes the keepalive back', () {
+      watchdog.onPlainHandshakeSent();
+      expect(watchdog.onElapsed(const Duration(seconds: 2)), isNull);
+      watchdog.onFrame();
+      expect(
+        watchdog.onElapsed(const Duration(seconds: 2)),
         isNull,
-        reason: 'one reconnection at a time',
+        reason: 'the link just spoke',
       );
-    });
-
-    test('traffic pushes the reconnection back', () {
-      watchdog.onFrame();
-      watchdog.onElapsed(const Duration(seconds: 40));
-      watchdog.onFrame();
-      expect(watchdog.onElapsed(const Duration(seconds: 40)), isNull);
       expect(
-        watchdog.onElapsed(const Duration(seconds: 5)),
-        ControllerLinkAction.reconnect,
+        watchdog.onElapsed(const Duration(seconds: 1)),
+        ControllerLinkAction.sendKeepalive,
       );
     });
 
@@ -100,6 +134,13 @@ void main() {
           plainFallbackAfter: const Duration(seconds: 10),
           unlockHintAfter: const Duration(seconds: 3),
         ),
+        throwsArgumentError,
+      );
+    });
+
+    test('a keepalive cadence of zero is refused', () {
+      expect(
+        () => ControllerLinkWatchdog(keepaliveInterval: Duration.zero),
         throwsArgumentError,
       );
     });

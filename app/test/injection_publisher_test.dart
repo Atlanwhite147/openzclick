@@ -61,7 +61,7 @@ void main() {
     expect(keys.usesKeys, isTrue);
     expect(
       keyboard.inputs.whereType<InjectedKey>().map((InjectedKey k) => k.key),
-      <String>['i', 'Left'],
+      <String>['k', 'Left'],
     );
   });
 

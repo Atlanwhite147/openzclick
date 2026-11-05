@@ -94,6 +94,26 @@ abstract final class ControllerHandshake {
   /// Builds the plain handshake, which asks for unencrypted frames.
   static List<int> plainRequest() => List<int>.of(rideOn);
 
+  /// First frame that completes the activation, after the plain handshake.
+  ///
+  /// A Click v2 streams its buttons only once the exchange has been opened with
+  /// the plain `RideOn`; two short writes finish the activation. Lifted from
+  /// `zwiftboard` (MIT), which measured them on Windows: `RideOn 02 03`,
+  /// `00 08 00`, `00 08 10`, then a `RideOn` write every three seconds as a
+  /// keepalive. The previous code sent the plain handshake alone and then
+  /// waited, which works until the pod stops answering.
+  static const List<int> activationFirst = <int>[0x00, 0x08, 0x00];
+
+  /// Second frame of the activation, see [activationFirst].
+  static const List<int> activationSecond = <int>[0x00, 0x08, 0x10];
+
+  /// Frames that open a plain session, in the order they must be written.
+  static List<List<int>> activationSequence() => <List<int>>[
+        plainRequest(),
+        List<int>.of(activationFirst),
+        List<int>.of(activationSecond),
+      ];
+
   /// Builds the encrypted handshake around [publicKey] (64 bytes, X then Y).
   static List<int> encryptedRequest(List<int> publicKey) {
     if (publicKey.length != 64) {

@@ -79,21 +79,35 @@ detected from the bytes:
    link dies about a minute after it is established.
 
 `ControllerLinkWatchdog` in `core/lib/src/protocol/controller_watchdog.dart` turns
-that silence into three explicit actions: send the plain handshake, report that
-the controller needs to be unlocked, or reconnect. It is pure logic: the caller
-feeds it one second at a time, so every rule is tested without hardware.
+that silence into explicit actions: send the plain handshake, report that the
+controller needs to be unlocked, or write the keepalive that holds the session
+open. It is pure logic: the caller feeds it one second at a time, so every rule
+is tested without hardware.
 
 ## When a Click v2 drops after a minute
 
-Documented workaround, from the field: pair the controller once in the official
-application, keep that application open about three minutes rather than a few
-seconds, then switch to the bridge. On the units where the drop was reproduced,
-that is what stopped it. No subscription is needed, only an account that can
-reach the pairing screen.
+Two explanations exist, and the second one is newer and testable:
 
-The bridge cannot repair this by itself: the unlock gesture is a handshake the
-official application performs, and reproducing it means reverse engineering a key
-exchange that requires that application's own identity.
+1. **The unlock story.** Pair the controller once in the official application,
+   keep that application open about three minutes rather than a few seconds,
+   then switch to the bridge. On the units where the drop was reproduced, that is
+   what stopped it. The bridge cannot reproduce that gesture by itself: it is a
+   handshake the official application performs, and copying it means reversing a
+   key exchange that requires that application's identity.
+2. **The keepalive story.** A pod drops about a minute after the **last write it
+   received**, not after the last button. [`zwiftboard`](https://github.com/thomaschampagne/zwiftboard)
+   (MIT) holds a Click v2 for a whole ride on Windows without any account or any
+   unlock, by writing the plain `RideOn` every three seconds, and it says so
+   plainly: button silence never ends a session, a failed write does. This
+   project now does the same, and also writes the two frames that complete the
+   activation (`00 08 00`, `00 08 10`) after the plain handshake.
+
+If the drop disappears with the keepalive, the first story was a misdiagnosis of
+the second: a rider who paired in the official app and then launched the bridge
+would have described a symptom that a three-second write prevents for a reason
+that has nothing to do with pairing. Which of the two is true is settled by one
+test on a controller that still drops — connect the bridge, press nothing for two
+minutes, then press once. If the frame arrives, it was the keepalive.
 
 ## Reporting a controller that does not pair
 
