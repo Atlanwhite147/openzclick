@@ -40,7 +40,8 @@ class InjectionPublisher {
     this.availability,
     this.focuser,
     Map<Action, String>? keys,
-  }) : keys = keys == null ? null : Map<Action, String>.unmodifiable(keys);
+    this.shiftsPerPress = 1,
+  }) : _keys = keys == null ? null : Map<Action, String>.of(keys);
 
   /// Default desktop bindings, matching the shortcuts of common training
   /// applications.
@@ -51,14 +52,38 @@ class InjectionPublisher {
     Action.steerRight: 'Right',
   };
 
+  Map<Action, String>? _keys;
+
   /// Key bound to each action, null when the publisher injects taps.
   ///
   /// The direction is not obvious and the public sources contradict each
-  /// other: in MyWhoosh, `k` shifts to a harder gear and `i` to an easier one.
-  /// The mapping above follows the profile shipped by `zwiftboard` (MIT), which
-  /// was written against a Click v2 and MyWhoosh, rather than the keyboard
-  /// shortcut tables that disagree on which way `i` and `k` go.
-  final Map<Action, String>? keys;
+  /// other: in MyWhoosh, `k` shifts to a harder gear and `i` to an easier one,
+  /// which two independent implementations agree on. The per-application tables
+  /// live in `key_profiles.dart`, with the page each one was read from.
+  Map<Action, String>? get keys => _keys;
+
+  /// Replaces the table, rebuilding the backend on the next injection.
+  set keys(Map<Action, String>? value) {
+    if (value == null && _keys == null) return;
+    if (value != null && _keys != null && _sameKeys(value, _keys!)) return;
+    _keys = value == null ? null : Map<Action, String>.of(value);
+    _dirty = true;
+    _notify();
+  }
+
+  /// Keys sent per button press, 1 to 3.
+  ///
+  /// Some applications have no gear ratio, only a ladder: a rider who wants to
+  /// cross three gears at once should not have to press three times.
+  int shiftsPerPress;
+
+  static bool _sameKeys(Map<Action, String> a, Map<Action, String> b) {
+    if (a.length != b.length) return false;
+    for (final MapEntry<Action, String> entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
 
   /// Optional check performed before the first injection.
   final Future<bool> Function()? readiness;
@@ -86,7 +111,7 @@ class InjectionPublisher {
       injector is! UnsupportedInjector && (availability?.call() ?? true);
 
   /// True when actions are sent as key presses rather than taps.
-  bool get usesKeys => keys != null;
+  bool get usesKeys => _keys != null;
 
   /// Default positions, roughly the lower right corner of a riding screen.
   static const Map<Action, List<double>> defaultPositions =
@@ -154,7 +179,7 @@ class InjectionPublisher {
     try {
       final InjectionBackend? backend = createInjectionBackend(
         injector: injector,
-        keys: keys,
+        keys: _keys,
         positions: positions,
       );
       if (backend == null) {
@@ -196,7 +221,14 @@ class InjectionPublisher {
       return;
     }
     try {
-      await backend.emit(action);
+      for (int i = 0; i < shiftsPerPress; i++) {
+        await backend.emit(action);
+        // Two presses in one buffer are one press for an application that polls
+        // the key state: leave a gap, like a human would.
+        if (i + 1 < shiftsPerPress) {
+          await Future<void>.delayed(const Duration(milliseconds: 60));
+        }
+      }
       error = null;
     } catch (e) {
       error = e.toString();

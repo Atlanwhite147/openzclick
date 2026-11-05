@@ -29,16 +29,33 @@ cd app && DISPLAY=:99 dart run tool/x11_probe.dart i Left k
 
 ## Default bindings
 
-| Action | Key |
-|---|---|
-| shift up (harder) | `k` |
-| shift down (easier) | `i` |
-| steer left | `Left` |
-| steer right | `Right` |
+The keys are per application, because they are not the same: `i` and `k` are
+MyWhoosh, `,` and `.` are Rouvy, `W` and `S` are Biketerra. The Network tab picks
+the application, and the table lives in `app/lib/net/key_profiles.dart` with the
+page each row was read from.
 
-These match the shortcuts of common training applications. They live in `InjectionPublisher.defaultKeys` and are easy to make configurable.
+| Application | Shift up (harder) | Shift down (easier) | Steering | Source |
+|---|---|---|---|---|
+| MyWhoosh | `k` | `i` | arrows | [MyWhoosh shortcuts](https://mywhooshinfo.com/blog/mywhoosh-keyboard-shortcuts) |
+| Rouvy | `.` | `,` | arrows | [Rouvy remote controls](https://support.rouvy.com/hc/en-us/articles/47742964491665-Remote-controllers-and-control-mapping) |
+| Biketerra | `w` | `s` | — | [Biketerra virtual shifting](https://biketerra.com/help-center/virtual-shifting) |
+| Any other | `k` | `i` | arrows | the bridge's own default |
 
-The direction is the one trap in the table. Public shortcut listings disagree on whether `i` or `k` shifts up, and the MyWhoosh page names the two keys without saying which way they go. The mapping above follows the profile shipped by [`zwiftboard`](https://github.com/thomaschampagne/zwiftboard) (MIT), written against a Click v2 and MyWhoosh: there, `k` is a harder gear and `i` an easier one. If a rider reports an inverted ladder, this table is the line to change — not the gear engine.
+Zwift and TrainerRoad are absent on purpose: neither exposes a virtual-shifting
+key, so a row for them would be invented.
+
+A multiplier (1 to 3) sends that many presses per button push, for applications
+that expose a ladder of gears rather than a ratio. Two presses are separated by
+60 ms, because an application that polls the key state sees nothing if both arrive
+in the same buffer.
+
+The direction is the one trap in the table. Public shortcut listings disagree on
+whether `i` or `k` shifts up, and the MyWhoosh page names the two keys without
+saying which way they go. MyWhoosh is set to `k` up and `i` down, which is what
+two independent implementations do — the profile shipped by
+[`zwiftboard`](https://github.com/thomaschampagne/zwiftboard) (MIT) and
+[`ClickShift`](https://github.com/prioneto/ClickShift). If a rider reports an
+inverted ladder, this table is the line to change — not the gear engine.
 
 ## The Windows implementation
 

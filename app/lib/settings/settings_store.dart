@@ -18,6 +18,8 @@ class SettingsSnapshot {
     required this.publishOnStart,
     required this.injectOnStart,
     this.focusWindow = '',
+    this.keyProfileId = 'mywhoosh',
+    this.shiftsPerPress = 1,
     this.parkedChainringTeeth,
     this.parkedCogTeeth,
   });
@@ -40,6 +42,12 @@ class SettingsSnapshot {
   /// Title fragment of the window that must own the focus when a key is
   /// injected. Empty means "whatever window has the focus".
   final String focusWindow;
+
+  /// Identifier of the application whose shortcuts are sent.
+  final String keyProfileId;
+
+  /// Keys sent per button press, 1 to 3.
+  final int shiftsPerPress;
 
   /// Chainring the chain sits on, `null` until the rider confirms it.
   ///
@@ -69,6 +77,8 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _injectKey = 'openzclick.inject';
   static const String _positionPrefix = 'openzclick.position.';
   static const String _focusWindowKey = 'openzclick.focusWindow';
+  static const String _keyProfileKey = 'openzclick.keyProfile';
+  static const String _shiftsPerPressKey = 'openzclick.shiftsPerPress';
   static const String _parkedChainringKey = 'openzclick.parked.chainring';
   static const String _parkedCogKey = 'openzclick.parked.cog';
 
@@ -97,6 +107,8 @@ class PrefsSettingsStore implements SettingsStore {
       publishOnStart: prefs.getBool(_publishKey) ?? false,
       injectOnStart: prefs.getBool(_injectKey) ?? false,
       focusWindow: prefs.getString(_focusWindowKey) ?? '',
+      keyProfileId: prefs.getString(_keyProfileKey) ?? 'mywhoosh',
+      shiftsPerPress: prefs.getInt(_shiftsPerPressKey) ?? 1,
       parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
       parkedCogTeeth: prefs.getInt(_parkedCogKey),
     );
@@ -109,6 +121,8 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
+    await prefs.setString(_keyProfileKey, snapshot.keyProfileId);
+    await prefs.setInt(_shiftsPerPressKey, snapshot.shiftsPerPress);
     if (snapshot.focusWindow.isEmpty) {
       await prefs.remove(_focusWindowKey);
     } else {

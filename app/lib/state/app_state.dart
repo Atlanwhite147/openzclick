@@ -7,6 +7,7 @@ import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
 import '../net/desktop_injection.dart';
 import '../net/injection_publisher.dart';
+import '../net/key_profiles.dart';
 import '../net/publisher.dart';
 import '../platform/capabilities.dart';
 import '../settings/settings_store.dart';
@@ -52,9 +53,38 @@ class AppState extends ChangeNotifier {
             : UnsupportedInjector()),
     availability: _desktop?.availability,
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
-    keys: _desktop == null ? null : InjectionPublisher.defaultKeys,
+    keys: _desktop == null ? null : keyProfileById(_keyProfileId).keys,
     focuser: _desktop?.focuser,
+    shiftsPerPress: keyProfileById(_keyProfileId).shiftsPerPress,
   );
+
+  /// Application whose shortcuts are injected, `mywhoosh` until the rider says
+  /// otherwise.
+  String _keyProfileId = 'mywhoosh';
+
+  /// Profile in use.
+  KeyProfile get keyProfile => keyProfileById(_keyProfileId);
+
+  /// Switches the application the keys are taken from.
+  void setKeyProfile(String id) {
+    final KeyProfile profile = keyProfileById(id);
+    if (profile.id == _keyProfileId) return;
+    _keyProfileId = profile.id;
+    injection.keys = profile.keys;
+    injection.shiftsPerPress = profile.shiftsPerPress;
+    if (profile.windowHint.isNotEmpty && injection.focusWindow.isEmpty) {
+      injection.focusWindow = profile.windowHint;
+    }
+    _persist();
+    notifyListeners();
+  }
+
+  /// Number of keys sent per press, 1 to 3.
+  void setShiftsPerPress(int count) {
+    injection.shiftsPerPress = count.clamp(1, 3);
+    _persist();
+    notifyListeners();
+  }
 
   /// Turns button states into gear changes and direction choices.
   late final ButtonGestureDetector gestures;
@@ -304,6 +334,9 @@ class AppState extends ChangeNotifier {
       injection.setPosition(entry.key, entry.value[0], entry.value[1]);
     }
     injection.focusWindow = snapshot.focusWindow;
+    _keyProfileId = snapshot.keyProfileId;
+    injection.keys = keyProfileById(_keyProfileId).keys;
+    injection.shiftsPerPress = snapshot.shiftsPerPress;
     if (snapshot.publishOnStart) await publisher.start();
     if (snapshot.injectOnStart) await injection.start();
     _syncConsole(Action.none);
@@ -381,6 +414,8 @@ class AppState extends ChangeNotifier {
           publishOnStart: publisher.running,
           injectOnStart: injection.running,
           focusWindow: injection.focusWindow,
+          keyProfileId: _keyProfileId,
+          shiftsPerPress: injection.shiftsPerPress,
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
         ),

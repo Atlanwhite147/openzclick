@@ -49,6 +49,11 @@ action it claims; on the PC, choosing Rouvy sends `,` and `.` and choosing
 MyWhoosh sends `i` and `k`; the multiplier sends two presses for one button push.
 **Effort**: one session. **Risk**: low, no hardware.
 
+**State**: the table, the selector and the multiplier are in
+(`app/lib/net/key_profiles.dart`, tests in `app/test/key_profiles_test.dart`). The
+keymap editor on top of the same screen is still open: today the profiles are
+shipped, not editable.
+
 ## Phase 2 — Both pods, and the buttons the left one owns
 
 *Sources: clickbridge (both units, left and right), click2whoosh (both units, kept
