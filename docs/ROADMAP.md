@@ -24,6 +24,9 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Windows keyboard and pointer injection through `SendInput`, with the buffer
   layout tested in plain Dart and a zero return from the call raised as a
   failure instead of counted as a gear change (`docs/injection.md`).
+- The console route measured end to end on Windows: a console on another machine
+  moved the gear and a focused window that did not own the application received
+  the injected keys (`docs/injection.md`).
 - A device report a rider copies in one tap — version, host, device identity,
   Device Information strings, GATT tree and the last 40 frames with direction
   and timing — because no development machine here has a Bluetooth radio.
@@ -52,12 +55,18 @@ itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
   shifting. The arithmetic and the frames are already written
   (`docs/trainer-proxy.md`); what remains is a Web Bluetooth link to the machine.
 
-### 2. Verifying the Windows injector on hardware
-The code is written and its buffer layout is tested, but nothing here can run it
-against a real application. What is needed is a report: does a shift reach
-MyWhoosh, Zwift and Rouvy on Windows? If one of them ignores injected events
-(Raw Input, DirectInput, exclusive fullscreen), `docs/injection.md` records the
-alternative — a virtual gamepad through ViGEm — and the trade it costs.
+### 2. What the training applications do with injected events
+`SendInput` itself is measured: on a Windows PC, a console on another machine
+moved the gear and a window that did not own the application received `i` and
+`k` (`docs/injection.md`). What no machine here can answer is the next layer —
+does a shift reach MyWhoosh, Zwift and Rouvy? Each application decides at which
+layer it reads the keyboard, and an event that is inserted but never read moves
+nothing, silently. If one of them ignores injected events (Raw Input,
+DirectInput, exclusive fullscreen), `docs/injection.md` records the alternative —
+a virtual gamepad through ViGEm — and the trade it costs. Two smaller
+measurements belong here as well: the same chain with both applications at
+normal integrity, and the refusal UIPI produces when the application runs
+elevated and openzclick does not.
 
 ### 3. macOS keyboard injection
 `CGEventPost`, with the accessibility permission requested from the user.

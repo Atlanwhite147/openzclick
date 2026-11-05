@@ -8,7 +8,7 @@ Some applications accept neither the network protocol nor a Bluetooth controller
 |---|---|---|---|
 | Linux, X11 | yes, through XTest (`libXtst`) | yes, motion and left click | implemented, verified |
 | Android | no (the platform forbids it) | yes, through the accessibility service | implemented, verified |
-| Windows | yes, through `SendInput` (`user32.dll`) | yes, cursor move and left click | implemented, unverified on hardware |
+| Windows | yes, through `SendInput` (`user32.dll`) | yes, cursor move and left click | implemented, measured on one machine: the keys arrive in a window that does not own the application; whether a training application accepts them is unverified (`#measured-on-windows`) |
 | macOS | no | no | **needs a contributor** |
 | iOS | no | no | impossible, iOS has no synthetic input |
 
@@ -48,6 +48,22 @@ These match the shortcuts of common training applications. They live in `Injecti
 - **A key name that the table does not know is refused**, not guessed: a wrong virtual-key code presses a key nobody asked for. `windows_keys.dart` holds the table, which covers the X11 names the bindings already use (`Left`, `Page_Up`, `BackSpace`).
 
 `tapAt` uses `SetCursorPos` followed by `mouse_event`, which is enough for a click on a control. Coordinates are fractions of the screen, as on Linux.
+
+### Measured on Windows
+
+The buffer layout was tested in plain Dart from the start; the call itself had never run, because no machine used to write the project had a Windows desktop to inject into. It has now been measured on a Windows 11 PC (build 26200), driven from another computer over the network:
+
+1. the application ran in the interactive session, with the settings that start the network publication and the injection by themselves;
+2. a console connected to the relay the bridge serves (`ws://<host>:47124/console?token=…`) and typed `shiftUp`, then `shiftDown`;
+3. the state published back by the bridge went from gear 10 to 11 and back to 10;
+4. a plain window that did **not** own the application received `i`, then `k`.
+
+So `SendInput` reaches a normal window from a process that does not have the focus, which is the only thing this design could not promise by reasoning. Two things it does not establish, and which must not be written down as verified:
+
+- **Whether a training application accepts the events.** MyWhoosh, Zwift and Rouvy each decide at which layer they read the keyboard; that is the open question in `docs/ROADMAP.md`, and it needs a ride, not a probe.
+- **The everyday integrity pair.** The measured run had the application started with administrator rights, so it injected from a high-integrity process into a normal window. Two applications both at normal integrity is the common case and should behave the same; an application running *elevated* while openzclick runs normally is the case UIPI refuses, and the code reports it as a refusal rather than as a gear change. Measuring that refusal is worth an afternoon: it is the one failure a rider would otherwise blame on the bridge.
+
+The same run also showed what a missing Windows component costs: MyWhoosh asks for the Xbox Game Bar overlay through the `ms-gamingoverlay:` URI at startup, and on a machine where Game Bar has been removed, Windows answers with a modal *"get an app to open this link"* dialog that sits in front of the game. Nothing in the application can prevent that; it belongs in the install notes.
 
 ### What this design cannot promise, and the alternative
 
