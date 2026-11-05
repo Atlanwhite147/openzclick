@@ -166,7 +166,7 @@ class AppState extends ChangeNotifier {
          initialGear: 5,
        ),
        keymap = Keymap.defaults('default') {
-    controller.onChanged = notifyListeners;
+    controller.onChanged = _onControllerChanged;
     // `this.` on purpose: inside the body, the constructor parameter of the same
     // name would otherwise shadow the field.
     this.publisher.onChanged = notifyListeners;
@@ -189,6 +189,36 @@ class AppState extends ChangeNotifier {
       // the gear and the page follows, instead of drifting beside it.
       _bridgeSubscription = client.bridgeStates.listen(_onBridgeState);
     }
+  }
+
+  /// Battery of the pod in use, and the one warning that follows it.
+  final BatteryWatch battery = BatteryWatch();
+
+  /// Sentence to show when the pod's battery needs attention, null otherwise.
+  ///
+  /// A raw percentage on a screen does not make anyone charge a pod; a sentence
+  /// that appears once per crossing does.
+  String? get batteryWarning {
+    final int? percent = battery.percent;
+    if (percent == null) return null;
+    return switch (battery.notice) {
+      BatteryNotice.low =>
+        'Pod battery at $percent %. Charge it before the next ride.',
+      BatteryNotice.critical =>
+        'Pod battery at $percent %. It may stop before the end of this ride.',
+      BatteryNotice.none || BatteryNotice.recovered => null,
+    };
+  }
+
+  void _onControllerChanged() {
+    if (controller.status == ControllerStatus.idle) {
+      // A pod that leaves is not a pod that recovered: forget the sample rather
+      // than showing the level of a previous ride.
+      battery.reset();
+    } else {
+      battery.observe(controller.batteryPercent);
+    }
+    notifyListeners();
   }
 
   /// Publication supplied by a test, `null` on a real run.
