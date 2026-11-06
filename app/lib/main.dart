@@ -635,7 +635,7 @@ class TargetScreen extends StatelessWidget {
                           const Text('x'),
                           const SizedBox(width: 8),
                           DropdownButton<int>(
-                            value: state.injection.shiftsPerPress,
+                            value: state.shiftsPerPress,
                             items: <DropdownMenuItem<int>>[
                               for (final int n in <int>[1, 2, 3])
                                 DropdownMenuItem<int>(

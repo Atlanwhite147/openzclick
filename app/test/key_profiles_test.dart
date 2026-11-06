@@ -76,12 +76,11 @@ void main() {
       final InjectionPublisher publisher = InjectionPublisher(
         injector: keyboard,
         keys: rouvy.keys,
-        shiftsPerPress: rouvy.shiftsPerPress,
       );
       await publisher.start();
       addTearDown(publisher.stop);
 
-      await publisher.publish(Action.shiftUp);
+      await publisher.publish(Action.shiftUp, repeat: rouvy.shiftsPerPress);
 
       expect(
         keyboard.inputs.whereType<InjectedKey>().map((InjectedKey k) => k.key),
@@ -95,12 +94,11 @@ void main() {
       final InjectionPublisher publisher = InjectionPublisher(
         injector: keyboard,
         keys: rouvy.keys,
-        shiftsPerPress: rouvy.shiftsPerPress,
       );
       await publisher.start();
       addTearDown(publisher.stop);
 
-      await publisher.publish(Action.shiftDown);
+      await publisher.publish(Action.shiftDown, repeat: rouvy.shiftsPerPress);
 
       expect(
         keyboard.inputs.whereType<InjectedKey>().map((InjectedKey k) => k.key),

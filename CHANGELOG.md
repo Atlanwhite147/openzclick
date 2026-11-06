@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- **The multiplier moves the gear everywhere, not only in the typed keys.** Set to three, one press sent three keys to the application while the interface's own gear moved by one — measured on the machine, gear 8 to 9 with the application three gears ahead. The count now drives the ladder, the network publication and the typed keys from one place, so the screen cannot disagree with what the application received. `app/lib/state/app_state.dart`, `app/lib/net/injection_publisher.dart`.
+
 ### Added
 - **A battery warning that fires once, not once per frame.** The pod reports its level repeatedly; a threshold tested on every frame produces a banner nobody can read. `BatteryWatch` announces one notice per crossing, escalates from low to critical, needs the level to climb clear before it clears (so 19, 21, 19, 21 is one battery), treats `0xFF` as "no news" rather than "recovered", and forgets everything when the pod disconnects. The controllers screen shows the sentence. `core/lib/src/protocol/battery_watch.dart`.
 - **One place that decides whether a link should exist.** `LinkPolicy` answers a question the watchdog does not: release the pod when nothing has wanted it for ten minutes, reconnect only on a failed write, never cut a rider mid-ride for a battery level. Pure logic with every rule tested; **not wired to a timer yet**, because the delays need one measured session to be honest rather than invented. `core/lib/src/protocol/link_policy.dart`.

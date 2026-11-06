@@ -55,7 +55,6 @@ class AppState extends ChangeNotifier {
     readiness: AndroidInjection.supported ? AndroidInjection.isReady : null,
     keys: _desktop == null ? null : keyProfileById(_keyProfileId).keys,
     focuser: _desktop?.focuser,
-    shiftsPerPress: keyProfileById(_keyProfileId).shiftsPerPress,
   );
 
   /// Application whose shortcuts are injected, `mywhoosh` until the rider says
@@ -64,6 +63,12 @@ class AppState extends ChangeNotifier {
 
   /// Profile in use.
   KeyProfile get keyProfile => keyProfileById(_keyProfileId);
+
+  /// Gears crossed by one press, 1 to 3.
+  int _shiftsPerPress = 1;
+
+  /// Gears crossed by one press, 1 to 3.
+  int get shiftsPerPress => _shiftsPerPress;
 
   /// Keys the rider changed, for the current application only.
   final Map<String, String> _overrides = <String, String>{};
@@ -105,7 +110,7 @@ class AppState extends ChangeNotifier {
     _keyProfileId = profile.id;
     _overrides.clear();
     injection.keys = effectiveKeys;
-    injection.shiftsPerPress = profile.shiftsPerPress;
+    _shiftsPerPress = profile.shiftsPerPress;
     if (profile.windowHint.isNotEmpty && injection.focusWindow.isEmpty) {
       injection.focusWindow = profile.windowHint;
     }
@@ -115,7 +120,7 @@ class AppState extends ChangeNotifier {
 
   /// Number of keys sent per press, 1 to 3.
   void setShiftsPerPress(int count) {
-    injection.shiftsPerPress = count.clamp(1, 3);
+    _shiftsPerPress = count.clamp(1, 3);
     _persist();
     notifyListeners();
   }
@@ -315,22 +320,32 @@ class AppState extends ChangeNotifier {
   }
 
   /// Shifts up.
-  void shiftUp() {
-    engine.shiftUp();
-    _persist();
-    _syncConsole(Action.shiftUp);
-    unawaited(publisher.publish(Action.shiftUp));
-    unawaited(injection.publish(Action.shiftUp));
-    notifyListeners();
-  }
+  void shiftUp() => _shift(up: true, action: Action.shiftUp);
 
   /// Shifts down.
-  void shiftDown() {
-    engine.shiftDown();
+  void shiftDown() => _shift(up: false, action: Action.shiftDown);
+
+  /// Moves the ladder by as many gears as one press is configured to cross.
+  ///
+  /// The multiplier cannot live in the key injector alone: the gear the interface
+  /// shows, the gear sent over the network and the keys typed at the application
+  /// would then disagree, and the first symptom is a rider who counts one gear on
+  /// screen while their application has moved three.
+  void _shift({required bool up, required Action action}) {
+    final int count = _shiftsPerPress.clamp(1, 3);
+    for (int i = 0; i < count; i++) {
+      if (up) {
+        engine.shiftUp();
+      } else {
+        engine.shiftDown();
+      }
+    }
     _persist();
-    _syncConsole(Action.shiftDown);
-    unawaited(publisher.publish(Action.shiftDown));
-    unawaited(injection.publish(Action.shiftDown));
+    _syncConsole(action);
+    for (int i = 0; i < count; i++) {
+      unawaited(publisher.publish(action));
+    }
+    unawaited(injection.publish(action, repeat: count));
     notifyListeners();
   }
 
@@ -403,7 +418,7 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(snapshot.keyOverrides);
     injection.keys = effectiveKeys;
-    injection.shiftsPerPress = snapshot.shiftsPerPress;
+    _shiftsPerPress = snapshot.shiftsPerPress.clamp(1, 3);
     if (snapshot.publishOnStart) await publisher.start();
     if (snapshot.injectOnStart) await injection.start();
     _syncConsole(Action.none);
@@ -482,7 +497,7 @@ class AppState extends ChangeNotifier {
           injectOnStart: injection.running,
           focusWindow: injection.focusWindow,
           keyProfileId: _keyProfileId,
-          shiftsPerPress: injection.shiftsPerPress,
+          shiftsPerPress: _shiftsPerPress,
           keyOverrides: Map<String, String>.of(_overrides),
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
