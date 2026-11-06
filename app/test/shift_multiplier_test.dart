@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/state/app_state.dart';
-import 'package:openzclick_core/openzclick_core.dart';
 
 import 'fake_publisher.dart';
 
