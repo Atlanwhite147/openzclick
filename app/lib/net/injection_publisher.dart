@@ -40,7 +40,6 @@ class InjectionPublisher {
     this.availability,
     this.focuser,
     Map<Action, String>? keys,
-    this.shiftsPerPress = 1,
   }) : _keys = keys == null ? null : Map<Action, String>.of(keys);
 
   /// Default desktop bindings, matching the shortcuts of common training
@@ -70,12 +69,6 @@ class InjectionPublisher {
     _dirty = true;
     _notify();
   }
-
-  /// Keys sent per button press, 1 to 3.
-  ///
-  /// Some applications have no gear ratio, only a ladder: a rider who wants to
-  /// cross three gears at once should not have to press three times.
-  int shiftsPerPress;
 
   static bool _sameKeys(Map<Action, String> a, Map<Action, String> b) {
     if (a.length != b.length) return false;
@@ -209,7 +202,7 @@ class InjectionPublisher {
   }
 
   /// Injects [action], and records the outcome.
-  Future<void> publish(Action action) async {
+  Future<void> publish(Action action, {int repeat = 1}) async {
     if (!running) return;
     await _applyPositions();
     final InjectionBackend? backend = _backend;
@@ -221,11 +214,11 @@ class InjectionPublisher {
       return;
     }
     try {
-      for (int i = 0; i < shiftsPerPress; i++) {
+      for (int i = 0; i < repeat; i++) {
         await backend.emit(action);
         // Two presses in one buffer are one press for an application that polls
         // the key state: leave a gap, like a human would.
-        if (i + 1 < shiftsPerPress) {
+        if (i + 1 < repeat) {
           await Future<void>.delayed(const Duration(milliseconds: 60));
         }
       }
