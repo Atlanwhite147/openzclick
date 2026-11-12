@@ -53,6 +53,14 @@ Only `+` and `B` reach the gear engine: they are the two a rider shifts with,
 and mapping the other three would change gear on a button pressed for another
 reason. Naming the rest is a one-line change once a use for them exists.
 
+The frame is decoded into a mask of the pressed positions rather than into two
+booleans, so an unmapped button is still visible in the diagnostics instead of
+vanishing between the decoder and the gear engine, and a frame repeated by the
+second pod of a pair is a state the application already had rather than a second
+press. The left pod's arrows have no measured offset yet: a guessed one would
+turn a steering press into a gear change, so the device report — which keeps
+frames as they arrived, in hexadecimal — is what will name them.
+
 ## The three behaviours a controller can have
 
 A controller answers the host in one of three ways, and only the first two can be

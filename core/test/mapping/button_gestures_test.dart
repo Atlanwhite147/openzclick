@@ -29,36 +29,36 @@ void main() {
     test('a press shifts at once, without waiting for a window', () {
       // The whole point of this mode: a gear change is the gesture a rider
       // repeats most, so it must not cost a third of a second.
-      detector().feed(const ClickButtons(up: true, down: false));
+      detector().feed(const ClickButtonMask(up: true, down: false));
       expect(actions, <Action>[Action.shiftUp]);
     });
 
     test('the second press of a double tap adds the direction choice', () {
       final ButtonGestureDetector g = detector();
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       expect(actions, <Action>[Action.shiftUp, Action.steerLeft]);
     });
 
     test('two presses further apart are two shifts', () async {
       final ButtonGestureDetector g = detector();
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 80));
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       expect(actions, <Action>[Action.shiftUp, Action.shiftUp]);
     });
 
     test('the down button keeps its own gestures', () {
       final ButtonGestureDetector g = detector();
-      g.feed(const ClickButtons(up: false, down: true));
-      g.feed(const ClickButtons(up: false, down: true));
+      g.feed(const ClickButtonMask(up: false, down: true));
+      g.feed(const ClickButtonMask(up: false, down: true));
       expect(actions, <Action>[Action.shiftDown]);
-      g.feed(ClickButtons.released);
-      g.feed(const ClickButtons(up: false, down: true));
+      g.feed(ClickButtonMask.released);
+      g.feed(const ClickButtonMask(up: false, down: true));
       expect(actions, <Action>[Action.shiftDown, Action.steerRight]);
     });
   });
@@ -66,8 +66,8 @@ void main() {
   group('deferred mode', () {
     test('a single tap waits for the window, then acts', () async {
       final ButtonGestureDetector g = detector(mode: GestureMode.deferred);
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       expect(actions, isEmpty, reason: 'decision is deferred');
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(actions, <Action>[Action.shiftUp]);
@@ -75,11 +75,11 @@ void main() {
 
     test('a double tap produces the direction choice only', () async {
       final ButtonGestureDetector g = detector(mode: GestureMode.deferred);
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(actions, <Action>[Action.steerLeft]);
     });
@@ -87,9 +87,9 @@ void main() {
     test('both buttons pressed together are two independent decisions',
         () async {
       final ButtonGestureDetector g = detector(mode: GestureMode.deferred);
-      g.feed(const ClickButtons(up: true, down: true));
+      g.feed(const ClickButtonMask(up: true, down: true));
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      g.feed(ClickButtons.released);
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(actions, <Action>[Action.shiftUp, Action.shiftDown]);
     });
@@ -104,10 +104,10 @@ void main() {
         mode: GestureMode.deferred,
         up: defaultUpBindings.withLongPress(Action.menu),
       );
-      g.feed(const ClickButtons(up: true, down: false));
+      g.feed(const ClickButtonMask(up: true, down: false));
       await Future<void>.delayed(const Duration(milliseconds: 160));
       expect(actions, <Action>[Action.menu]);
-      g.feed(ClickButtons.released);
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(actions, <Action>[Action.menu], reason: 'no shift after a hold');
     });
@@ -120,7 +120,7 @@ void main() {
       final ButtonGestureDetector g = detector(
         up: defaultUpBindings.withLongPress(Action.menu),
       );
-      g.feed(const ClickButtons(up: true, down: false));
+      g.feed(const ClickButtonMask(up: true, down: false));
       await Future<void>.delayed(const Duration(milliseconds: 160));
       expect(actions, <Action>[Action.shiftUp, Action.menu]);
     });
@@ -129,8 +129,8 @@ void main() {
       final ButtonGestureDetector g = detector(
         up: defaultUpBindings.withLongPress(Action.menu),
       );
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 160));
       expect(actions, <Action>[Action.shiftUp]);
       expect(actions.contains(Action.menu), isFalse);
@@ -138,9 +138,9 @@ void main() {
 
     test('an unconfigured long press stays silent', () async {
       final ButtonGestureDetector g = detector();
-      g.feed(const ClickButtons(up: true, down: false));
+      g.feed(const ClickButtonMask(up: true, down: false));
       await Future<void>.delayed(const Duration(milliseconds: 160));
-      g.feed(ClickButtons.released);
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(actions, <Action>[Action.shiftUp]);
     });
@@ -151,12 +151,60 @@ void main() {
         up: defaultUpBindings.withLongPress(Action.emote),
         down: defaultDownBindings.withLongPress(Action.confirm),
       );
-      g.feed(const ClickButtons(up: true, down: true));
+      g.feed(const ClickButtonMask(up: true, down: true));
       await Future<void>.delayed(const Duration(milliseconds: 160));
       expect(actions, <Action>[Action.emote, Action.confirm]);
-      g.feed(ClickButtons.released);
+      g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(actions.length, 2, reason: 'one long press, one action');
+    });
+  });
+
+  group('the decoded frame decides', () {
+    /// The mask a real `0x23` frame yields, decoded rather than built by hand:
+    /// a test that constructs the mask itself proves nothing about the wire.
+    ClickButtonMask decoded(List<int> bits) {
+      int raw = 0xFFFFFFFF;
+      for (final int bit in bits) {
+        raw &= ~(1 << bit);
+      }
+      final ClickButtonMask? mask = ControllerCodec.parseButtonMask(
+        <int>[0x08, ..._varint(raw)],
+      );
+      return mask!;
+    }
+
+    test('a measured press still shifts once', () {
+      final ButtonGestureDetector g = detector();
+      g.feed(decoded(<int>[ControllerButtonBits.plus]));
+      g.feed(decoded(<int>[]));
+      expect(actions, <Action>[Action.shiftUp]);
+    });
+
+    test('the pod mirroring the frame does not shift twice', () {
+      // Both pods of a pair send the same state. Two frames, one press.
+      final ButtonGestureDetector g = detector();
+      final ClickButtonMask pressed = decoded(<int>[ControllerButtonBits.plus]);
+      g.feed(pressed);
+      g.feed(pressed);
+      expect(actions, <Action>[Action.shiftUp]);
+    });
+
+    test('a button the project does not map moves nothing', () {
+      final ButtonGestureDetector g = detector();
+      g.feed(decoded(<int>[ControllerButtonBits.a]));
+      g.feed(decoded(<int>[ControllerButtonBits.a, ControllerButtonBits.z]));
+      g.feed(decoded(<int>[]));
+      expect(actions, isEmpty);
+    });
+
+    test('a shift keeps working while an unmapped button is held', () {
+      // The frame carries every position at once: holding A must not swallow
+      // the plus press that follows it.
+      final ButtonGestureDetector g = detector();
+      g.feed(decoded(<int>[ControllerButtonBits.a]));
+      g.feed(decoded(<int>[ControllerButtonBits.a, ControllerButtonBits.plus]));
+      expect(actions, <Action>[Action.shiftUp]);
     });
   });
 
@@ -178,11 +226,23 @@ void main() {
         mode: GestureMode.deferred,
         doubleTapWindow: const Duration(milliseconds: 40),
       );
-      g.feed(const ClickButtons(up: true, down: false));
-      g.feed(ClickButtons.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
       g.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 70));
       expect(actions, isEmpty);
     });
   });
+}
+
+/// Protobuf varint encoding, used to rebuild the mask a controller sent.
+List<int> _varint(int value) {
+  final List<int> out = <int>[];
+  int remaining = value;
+  while (remaining >= 0x80) {
+    out.add((remaining & 0x7F) | 0x80);
+    remaining >>= 7;
+  }
+  out.add(remaining);
+  return out;
 }

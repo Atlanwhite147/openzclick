@@ -69,40 +69,40 @@ void main() {
         ];
 
     test('field 1 at zero means the up button is pressed', () {
-      final ClickButtons? buttons =
+      final ClickButtonMask? buttons =
           ControllerCodec.parseClickNotification(notification(up: 0));
-      expect(buttons, const ClickButtons(up: true, down: false));
+      expect(buttons, const ClickButtonMask(up: true, down: false));
     });
 
     test('field 2 at zero means the down button is pressed', () {
-      final ClickButtons? buttons =
+      final ClickButtonMask? buttons =
           ControllerCodec.parseClickNotification(notification(down: 0));
-      expect(buttons, const ClickButtons(up: false, down: true));
+      expect(buttons, const ClickButtonMask(up: false, down: true));
     });
 
     test('non-zero values mean released', () {
-      final ClickButtons? buttons =
+      final ClickButtonMask? buttons =
           ControllerCodec.parseClickNotification(notification(up: 1, down: 2));
-      expect(buttons, ClickButtons.released);
+      expect(buttons, ClickButtonMask.released);
     });
 
     test('both buttons can be pressed at once', () {
-      final ClickButtons? buttons =
+      final ClickButtonMask? buttons =
           ControllerCodec.parseClickNotification(notification(up: 0, down: 0));
-      expect(buttons, const ClickButtons(up: true, down: true));
+      expect(buttons, const ClickButtonMask(up: true, down: true));
     });
 
     test('unknown fields are ignored', () {
       final List<int> body = <int>[0x08, 0, 0x18, 5, 0x20, 9];
       expect(
         ControllerCodec.parseClickNotification(body),
-        const ClickButtons(up: true, down: false),
+        const ClickButtonMask(up: true, down: false),
       );
     });
 
     test('an empty body means nothing pressed', () {
       expect(ControllerCodec.parseClickNotification(<int>[]),
-          ClickButtons.released);
+          ClickButtonMask.released);
     });
   });
 

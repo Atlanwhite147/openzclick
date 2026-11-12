@@ -126,7 +126,7 @@ class ButtonGestureDetector {
   bool get pendingDown => _downState.pending;
 
   /// Feeds the latest button state.
-  void feed(ClickButtons buttons) {
+  void feed(ClickButtonMask buttons) {
     _apply(buttons.up, _upState, up);
     _apply(buttons.down, _downState, down);
   }

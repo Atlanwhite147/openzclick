@@ -267,7 +267,7 @@ void main() {
       expect(message, isA<ClickMessage>());
       expect(
           (message! as ClickMessage).buttons,
-          const ClickButtons(
+          const ClickButtonMask(
             up: true,
             down: false,
           ));
@@ -279,7 +279,7 @@ void main() {
       );
       expect(
           (message! as ClickMessage).buttons,
-          const ClickButtons(
+          const ClickButtonMask(
             up: false,
             down: true,
           ));
@@ -289,44 +289,48 @@ void main() {
       final ControllerMessage? message = decodeFrame(
         <int>[0x23, 0x08, 0xff, 0xff, 0xff, 0xff, 0x0f],
       );
-      expect((message! as ClickMessage).buttons, ClickButtons.released);
+      expect((message! as ClickMessage).buttons, ClickButtonMask.released);
     });
 
     test('a mask without field 1 is not read as a press', () {
       expect(decodeFrame(<int>[0x23, 0x10, 0x00]), isNull);
     });
 
-    test('Y, Z and A do not move a gear', () {
+    test('Y, Z and A do not move a gear, but the frame keeps them', () {
       // Each bit was measured alone: Y clears 6, Z clears 7, A clears 4. They
       // are not the buttons the rider shifts with, so a press must reach the
-      // application as "nothing pressed" rather than as a gear change.
+      // application as no gear change. The mask still carries the position: a
+      // frame reduced to two booleans threw away the only evidence the left
+      // pod's arrows would give.
       for (final int bit in <int>[
         ControllerButtonBits.y,
         ControllerButtonBits.z,
         ControllerButtonBits.a,
       ]) {
         final int mask = 0xFFFFFFFF & ~(1 << bit);
-        final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+        final ClickButtonMask? buttons = ControllerCodec.parseButtonMask(
           <int>[0x08, ..._varint(mask)],
         );
-        expect(buttons, ClickButtons.released, reason: 'bit $bit');
+        expect(buttons!.isPressed(bit), isTrue, reason: 'bit $bit');
+        expect(buttons.up, isFalse, reason: 'bit $bit');
+        expect(buttons.down, isFalse, reason: 'bit $bit');
       }
     });
 
     test('the plus button is the one that shifts up', () {
       final int mask = 0xFFFFFFFF & ~(1 << ControllerButtonBits.plus);
-      final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+      final ClickButtonMask? buttons = ControllerCodec.parseButtonMask(
         <int>[0x08, ..._varint(mask)],
       );
-      expect(buttons, const ClickButtons(up: true, down: false));
+      expect(buttons, const ClickButtonMask(up: true, down: false));
     });
 
     test('the B button is the one that shifts down', () {
       final int mask = 0xFFFFFFFF & ~(1 << ControllerButtonBits.b);
-      final ClickButtons? buttons = ControllerCodec.parseButtonMask(
+      final ClickButtonMask? buttons = ControllerCodec.parseButtonMask(
         <int>[0x08, ..._varint(mask)],
       );
-      expect(buttons, const ClickButtons(up: false, down: true));
+      expect(buttons, const ClickButtonMask(up: false, down: true));
     });
   });
 }

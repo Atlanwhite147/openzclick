@@ -63,6 +63,11 @@ abstract final class ControllerMessageType {
 /// A press clears the bit; every other bit stays set. Only [plus] and [b] reach
 /// the gear engine: they are the two the rider uses to shift, so mapping the
 /// other three would move a gear on a button pressed for another reason.
+///
+/// The positions of the left pod's arrows are deliberately absent: they have not
+/// been measured here, and a guessed offset would decode a steering press as a
+/// gear change. The frame is kept whole by [ClickButtonMask], so a reader of the
+/// device report can name them the day one is measured.
 abstract final class ControllerButtonBits {
   /// Y, the blue button at the top of the pod.
   static const int y = 6;
@@ -78,6 +83,23 @@ abstract final class ControllerButtonBits {
 
   /// The large `+` under the cluster: shift up.
   static const int plus = 12;
+
+  /// Names of the measured positions, in English (code identifiers), for the
+  /// diagnostics and the device report.
+  static const Map<int, String> names = <int, String>{
+    a: 'a',
+    b: 'b',
+    y: 'y',
+    z: 'z',
+    plus: 'plus',
+  };
+
+  /// Measured positions, ascending.
+  static const List<int> all = <int>[a, b, y, z, plus];
+
+  /// Returns the name of [bit], or `bit <n>` when the position was never
+  /// measured: an unnamed bit is a finding, not a reason to invent a name.
+  static String nameOf(int bit) => names[bit] ?? 'bit $bit';
 }
 
 /// Handshake bytes.
@@ -140,29 +162,70 @@ abstract final class ControllerHandshake {
   }
 }
 
-/// State of the two buttons of the controller.
-class ClickButtons {
-  /// Up (plus) button pressed.
-  final bool up;
+/// State of the buttons of a controller, as a bitfield.
+///
+/// A `0x23` frame carries a 32-bit mask in which a pressed button has its bit
+/// **cleared**; this class stores the opposite, a set bit meaning pressed, and
+/// the decoder flips it once. Two booleans were enough while one pod was
+/// decoded, and they threw away everything else the frame said: the left pod's
+/// arrows, and the fact that a press on one pod is mirrored by the other.
+class ClickButtonMask {
+  /// Bitfield of the pressed positions, one bit per [ControllerButtonBits].
+  final int pressed;
 
-  /// Down (minus) button pressed.
-  final bool down;
+  /// Builds a mask from the two shifting buttons.
+  const ClickButtonMask({bool up = false, bool down = false})
+      : pressed = (up ? 1 << ControllerButtonBits.plus : 0) |
+            (down ? 1 << ControllerButtonBits.b : 0);
 
-  /// Creates a button state.
-  const ClickButtons({required this.up, required this.down});
+  /// Builds a mask from a raw bitfield of pressed positions.
+  const ClickButtonMask.bits(this.pressed);
 
   /// Neutral state: nothing pressed.
-  static const ClickButtons released = ClickButtons(up: false, down: false);
+  static const ClickButtonMask released = ClickButtonMask();
+
+  /// Whether the position [bit] is pressed.
+  bool isPressed(int bit) => (pressed >> bit) & 1 == 1;
+
+  /// Whether the up (`+`) button is pressed.
+  bool get up => isPressed(ControllerButtonBits.plus);
+
+  /// Whether the down (`B`) button is pressed.
+  bool get down => isPressed(ControllerButtonBits.b);
+
+  /// Whether no button is pressed.
+  bool get isEmpty => pressed == 0;
+
+  /// Pressed positions, ascending.
+  List<int> get pressedBits => <int>[
+        for (int bit = 0; bit < 32; bit++)
+          if (isPressed(bit)) bit,
+      ];
+
+  /// Positions this mask presses and [previous] did not.
+  ///
+  /// The rule the two pods need: the left and the right one mirror each other's
+  /// frames, so a state repeated by the second pod must not fire a second time.
+  ClickButtonMask newlyPressedSince(ClickButtonMask previous) =>
+      ClickButtonMask.bits(pressed & ~previous.pressed);
+
+  /// Positions [previous] held and this mask released.
+  ClickButtonMask releasedSince(ClickButtonMask previous) =>
+      ClickButtonMask.bits(previous.pressed & ~pressed);
 
   @override
   bool operator ==(Object other) =>
-      other is ClickButtons && other.up == up && other.down == down;
+      other is ClickButtonMask && other.pressed == pressed;
 
   @override
-  int get hashCode => Object.hash(up, down);
+  int get hashCode => pressed.hashCode;
 
   @override
-  String toString() => 'ClickButtons(up: $up, down: $down)';
+  String toString() {
+    final List<int> bits = pressedBits;
+    if (bits.isEmpty) return 'ClickButtonMask(none)';
+    return 'ClickButtonMask(${bits.map(ControllerButtonBits.nameOf).join(', ')})';
+  }
 }
 
 /// Decoded message from the controller.
@@ -174,7 +237,7 @@ sealed class ControllerMessage {
 /// Button notification.
 class ClickMessage extends ControllerMessage {
   /// Current button state.
-  final ClickButtons buttons;
+  final ClickButtonMask buttons;
 
   /// Creates a button notification.
   const ClickMessage(this.buttons);
@@ -209,10 +272,10 @@ abstract final class ControllerCodec {
     final List<int> body = frame.sublist(1);
     switch (type) {
       case ControllerMessageType.buttons:
-        final ClickButtons? buttons = parseButtonMask(body);
+        final ClickButtonMask? buttons = parseButtonMask(body);
         return buttons == null ? null : ClickMessage(buttons);
       case ControllerMessageType.click:
-        final ClickButtons? buttons = parseClickNotification(body);
+        final ClickButtonMask? buttons = parseClickNotification(body);
         return buttons == null ? null : ClickMessage(buttons);
       case ControllerMessageType.battery:
         return body.isEmpty ? null : BatteryMessage(body[0]);
@@ -227,9 +290,11 @@ abstract final class ControllerCodec {
   /// Parses the button mask of a `0x23` frame.
   ///
   /// Field 1 carries one varint: a 32-bit mask, all ones at rest, with the bit
-  /// of a pressed button cleared. Returns null when the frame carries no such
+  /// of a pressed button cleared. Every position is kept, not only the two that
+  /// shift: the rest of the frame is what the left pod's arrows will be read
+  /// from once they are measured. Returns null when the frame carries no such
   /// field, so a future firmware cannot be mistaken for a press.
-  static ClickButtons? parseButtonMask(List<int> body) {
+  static ClickButtonMask? parseButtonMask(List<int> body) {
     int index = 0;
     while (index < body.length) {
       final int tag = body[index++];
@@ -246,11 +311,11 @@ abstract final class ControllerCodec {
       final _VarintResult varint = _readVarint(body, index);
       index = varint.nextIndex;
       if (field != 1) continue;
-      final int mask = varint.value;
-      return ClickButtons(
-        up: (mask >> ControllerButtonBits.plus) & 1 == 0,
-        down: (mask >> ControllerButtonBits.b) & 1 == 0,
-      );
+      // The wire clears the bit of a pressed button, and only a 32-bit window is
+      // described by the specification: a wider varint would otherwise report
+      // phantom presses in the higher positions.
+      final int cleared = (~varint.value) & 0xFFFFFFFF;
+      return ClickButtonMask.bits(cleared);
     }
     return null;
   }
@@ -260,7 +325,7 @@ abstract final class ControllerCodec {
   /// Field 1 is the up button, field 2 the down button; a varint equal to 0
   /// means pressed, any other value means released. Unknown fields are ignored
   /// so that a firmware update adding fields does not break the bridge.
-  static ClickButtons? parseClickNotification(List<int> body) {
+  static ClickButtonMask? parseClickNotification(List<int> body) {
     bool up = false;
     bool down = false;
     int index = 0;
@@ -285,7 +350,7 @@ abstract final class ControllerCodec {
       if (field == 2) down = pressed;
     }
 
-    return ClickButtons(up: up, down: down);
+    return ClickButtonMask(up: up, down: down);
   }
 }
 

@@ -57,8 +57,8 @@ void main() {
       doubleTapWindow: const Duration(milliseconds: 20),
     );
     final int before = state.engine.gearIndex;
-    state.handleButtons(const ClickButtons(up: true, down: false));
-    state.handleButtons(ClickButtons.released);
+    state.handleButtons(const ClickButtonMask(up: true, down: false));
+    state.handleButtons(ClickButtonMask.released);
     await Future<void>.delayed(const Duration(milliseconds: 40));
     expect(state.engine.gearIndex, before + 1);
     state.dispose();
@@ -69,8 +69,8 @@ void main() {
       doubleTapWindow: const Duration(milliseconds: 20),
     );
     final int before = state.engine.gearIndex;
-    state.handleButtons(const ClickButtons(up: false, down: true));
-    state.handleButtons(ClickButtons.released);
+    state.handleButtons(const ClickButtonMask(up: false, down: true));
+    state.handleButtons(ClickButtonMask.released);
     await Future<void>.delayed(const Duration(milliseconds: 40));
     expect(state.engine.gearIndex, before - 1);
     state.dispose();
@@ -81,11 +81,11 @@ void main() {
       doubleTapWindow: const Duration(milliseconds: 40),
     );
     final int before = state.engine.gearIndex;
-    state.handleButtons(const ClickButtons(up: true, down: false));
-    state.handleButtons(ClickButtons.released);
+    state.handleButtons(const ClickButtonMask(up: true, down: false));
+    state.handleButtons(ClickButtonMask.released);
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    state.handleButtons(const ClickButtons(up: true, down: false));
-    state.handleButtons(ClickButtons.released);
+    state.handleButtons(const ClickButtonMask(up: true, down: false));
+    state.handleButtons(ClickButtonMask.released);
     await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(state.engine.gearIndex, before);
     expect(state.lastAction, Action.steerLeft);

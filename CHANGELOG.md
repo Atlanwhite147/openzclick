@@ -14,6 +14,26 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- **The button frame is kept whole.** The `23 08 <varint>` notification was
+  projected onto two booleans, `up` and `down`, the moment it was decoded: every
+  other position the controller reports was thrown away before anything could see
+  it, which is why the left pod's arrows could not even be looked for. The frame
+  is now a `ClickButtonMask` — a bitfield of the pressed positions, with the
+  wire's inverted convention (a press **clears** the bit) flipped once at the
+  decoder so no rule downstream has to remember it — and `ClickMessage` carries
+  it. `ClickButtons` is gone; the gear engine reads the same two bits through
+  `up` and `down`, so nothing a rider does has changed. A position that was never
+  measured is named `bit 17` rather than given a plausible name, and the left
+  pod's arrows stay unnamed until the device report says what they are.
+- **A frame repeated by the second pod is not a second press.** The two pods of a
+  pair mirror each other's state, and an action fired on the state rather than on
+  its change counts one press twice. The mask makes the difference explicit
+  (`newlyPressedSince`, `releasedSince`), and a test decodes the same frame twice
+  and asserts one gear moved, not two: `core/test/mapping/button_gestures_test.dart`.
+  `core/lib/src/protocol/controller_protocol.dart`, `core/test/protocol/button_mask_test.dart`,
+  `docs/controllers.md` and `docs/INTEGRATION-PLAN.md` follow.
+
 ### Fixed
 - **The multiplier moves the gear everywhere, not only in the typed keys.** Set to three, one press sent three keys to the application while the interface's own gear moved by one — measured on the machine, gear 8 to 9 with the application three gears ahead. The count now drives the ladder, the network publication and the typed keys from one place, so the screen cannot disagree with what the application received. `app/lib/state/app_state.dart`, `app/lib/net/injection_publisher.dart`.
 

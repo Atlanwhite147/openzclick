@@ -138,7 +138,7 @@ class AppState extends ChangeNotifier {
   String lastDecoded = '';
 
   /// Last button state received from the controller.
-  ClickButtons? lastButtons;
+  ClickButtonMask? lastButtons;
 
   /// Persistence port, null until [restore] is called.
   SettingsStore? store;
@@ -152,7 +152,7 @@ class AppState extends ChangeNotifier {
 
   Timer? _persistTimer;
 
-  StreamSubscription<ClickButtons>? _buttonSubscription;
+  StreamSubscription<ClickButtonMask>? _buttonSubscription;
   StreamSubscription<Action>? _consoleSubscription;
   StreamSubscription<Map<String, Object?>>? _bridgeSubscription;
 
@@ -272,7 +272,7 @@ class AppState extends ChangeNotifier {
   /// Applies a button state coming from the physical controller.
   ///
   /// Exposed for tests: the Bluetooth link feeds it through the stream.
-  void handleButtons(ClickButtons buttons) {
+  void handleButtons(ClickButtonMask buttons) {
     lastButtons = buttons;
     gestures.feed(buttons);
     notifyListeners();

@@ -34,7 +34,7 @@ enum ControllerStatus {
 /// The class owns one BLE connection at a time. It performs the encrypted
 /// handshake, falls back to the plain one when the firmware ignores it,
 /// decodes frames with [ControllerCodec] and republishes button states as a
-/// stream of [ClickButtons].
+/// stream of [ClickButtonMask].
 ///
 /// The three characteristics of the controller do not do the same job, and
 /// swapping two of them produces a link that connects and then stays silent:
@@ -88,8 +88,8 @@ class ControllerConnection {
   final FrameRing _frames = FrameRing();
   DateTime? _connectedAt;
 
-  final StreamController<ClickButtons> _buttons =
-      StreamController<ClickButtons>.broadcast();
+  final StreamController<ClickButtonMask> _buttons =
+      StreamController<ClickButtonMask>.broadcast();
 
   /// True once the handshake completed with encryption enabled.
   bool encrypted = false;
@@ -119,7 +119,7 @@ class ControllerConnection {
   final List<ScanResult> _found = <ScanResult>[];
 
   /// Button states, emitted on every change.
-  Stream<ClickButtons> get buttons => _buttons.stream;
+  Stream<ClickButtonMask> get buttons => _buttons.stream;
 
   /// Devices discovered during the last scan.
   List<ScanResult> get found => List<ScanResult>.unmodifiable(_found);

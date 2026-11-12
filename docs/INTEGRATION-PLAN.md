@@ -81,6 +81,20 @@ pause changes nothing.
 **Risk**: medium — the protocol is now documented by others, but the pair's
 behaviour only shows on hardware.
 
+**State**: the first bullet is in. `ClickButtons` became `ClickButtonMask`
+(`core/lib/src/protocol/controller_protocol.dart`): the `23 08 <varint>`
+notification is decoded whole, with a set bit meaning pressed and the wire's
+inverted convention flipped once at the decoder, so an unmapped position stays
+visible instead of vanishing; the mask carries `pressed`, `released`,
+`newlyPressedSince` and `releasedSince`, and `ControllerButtonBits.nameOf` names a
+position it has never measured as `bit <n>` rather than guessing. A press is
+fired on the change, and a test feeds the same decoded frame twice — what the
+second pod of a pair sends — to prove it moves one gear, not two. What remains is
+the rest of the phase: two links held at once, the left pod kept awake, and its
+arrows routed to the network publisher — the last two need the pair on a desk,
+and the report keeps the frames in hexadecimal precisely so that session can name
+the offsets.
+
 ## Phase 3 — Gestures the controller already has
 
 *Sources: click2whoosh (click, double click, long press), clickbridge (explicitly
