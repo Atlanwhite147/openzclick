@@ -109,6 +109,12 @@ class ControllerConnection {
   /// both announce it stopped do not restart it twice.
   bool _resetting = false;
 
+  /// How many arming frames this link has written, for the heartbeat line.
+  int _armingWrites = 0;
+
+  /// Ceiling on one write, see [_tryWrite].
+  static const Duration _writeTimeout = Duration(seconds: 5);
+
   /// Which pod of a pair the link is on, when the advertising data said.
   ///
   /// Two pods announce the same name and only the left one is locked to Zwift,
@@ -447,6 +453,18 @@ class ControllerConnection {
   /// Feeds the watchdog and carries out what it asks for.
   void _supervise() {
     _secondsSinceConnect++;
+    // Every ten seconds, one line saying what the loop believes. A loop that
+    // stops writing while the status still says "connected" leaves a report
+    // that cannot be read; this line is what distinguishes the two.
+    if (_secondsSinceConnect % 10 == 0) {
+      final Duration? age = _connectedAt == null
+          ? null
+          : DateTime.now().difference(_connectedAt!);
+      _event(
+        'supervising: ${age?.inSeconds ?? '-'} s link, '
+        '$_armingWrites arming writes, resetting: $_resetting',
+      );
+    }
     final ControllerLinkAction? action = _watchdog.onElapsed(
       const Duration(seconds: 1),
     );
@@ -527,6 +545,7 @@ class ControllerConnection {
   /// alone and lost the link at 57-62 s, with a bare `RideOn` every three
   /// seconds failing to hold it.
   Future<void> _armSession() async {
+    _armingWrites++;
     final bool sent = await _tryWrite(ControllerHandshake.startAfterOpening);
     if (sent) return;
     // A refused write is the disconnect signal this stack gives on time: the
@@ -555,7 +574,8 @@ class ControllerConnection {
     if (_resetting) return;
     _resetting = true;
     _event('controller stopped talking ($reason): restarting it');
-    await _tryWrite(ControllerHandshake.reset);
+    final bool reset = await _tryWrite(ControllerHandshake.reset);
+    _event('reset frame ${reset ? 'accepted' : 'refused ($error)'}');
     await Future<void>.delayed(const Duration(seconds: 1));
     _connectedAt = null;
     _resetting = false;
@@ -570,8 +590,16 @@ class ControllerConnection {
   Future<bool> _tryWrite(List<int> frame) async {
     _record(frame, FrameDirection.outbound, _writeTarget?.uuid.toString());
     try {
-      await _writeTarget?.write(frame);
+      // Bounded: a WinRT write to a device that has gone away can hang for ever,
+      // and this loop is what carries the whole link. Measured on 2026-11-12: a
+      // session that stopped being written at +23 s and reported nothing after
+      // it, with the status still saying "connected".
+      await _writeTarget?.write(frame).timeout(_writeTimeout);
       return true;
+    } on TimeoutException {
+      error = 'the write did not return within ${_writeTimeout.inSeconds} s';
+      _notify();
+      return false;
     } catch (e) {
       error = explainControllerError(
         e,
