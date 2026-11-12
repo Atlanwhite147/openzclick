@@ -105,6 +105,10 @@ class ControllerConnection {
   /// True once the handshake completed with encryption enabled.
   bool encrypted = false;
 
+  /// True while a restart of the controller is in flight, so two frames that
+  /// both announce it stopped do not restart it twice.
+  bool _resetting = false;
+
   /// Which pod of a pair the link is on, when the advertising data said.
   ///
   /// Two pods announce the same name and only the left one is locked to Zwift,
@@ -455,9 +459,11 @@ class ControllerConnection {
         needsUnlock = true;
         _notify();
       case ControllerLinkAction.sendKeepalive:
-        // Only in a plain session: an encrypted one answers frames by itself,
-        // and a stray `RideOn` in the middle of it would be noise.
-        if (_crypto == null) unawaited(_keepalive());
+        // `FF 04 00`, the frame that arms the session, rather than a bare
+        // `RideOn`: a second marker looks like a new handshake, and a pod that
+        // is already open does not need one. Only in a plain session — an
+        // encrypted one answers frames by itself.
+        if (_crypto == null) unawaited(_armSession());
     }
 
     // Restart before the controller closes the session, not after: a pod that
@@ -502,39 +508,58 @@ class ControllerConnection {
       }
       await Future<void>.delayed(const Duration(milliseconds: 30));
     }
-    _event('plain session opened');
+    // The opening is not finished at `RideOn 02 03`: the controller waits for
+    // `FF 04 00` before it holds the session open.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final bool armed = await _tryWrite(ControllerHandshake.startAfterOpening);
+    _event('plain session opened${armed ? '' : ', arming frame refused'}');
   }
 
   /// The bytes of [frame], for an event line.
   static String _hexOf(List<int> frame) =>
       frame.map((int b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
 
-  /// Holds the plain session open.
+  /// Arms the plain session with the frame the controller expects after the
+  /// opening, and again when the watchdog asks for a keepalive.
   ///
-  /// The frame is the activation one, not the bare marker. Measured on the right
-  /// pod on 2026-11-12: with a plain `RideOn` every three seconds the pod still
-  /// closed the session at ~57-62 s, and a lone right pod is documented to drop
-  /// about 65 s after **the last write it received** — so the marker is not
-  /// counted as a write it received. `00 08 00` is the frame that armed the
-  /// session in the first place, which makes it the one worth repeating.
-  Future<void> _keepalive() async {
-    final bool sent = await _tryWrite(ControllerHandshake.activationFirst);
-    if (!sent) {
-      // A refused write is the disconnect signal this stack gives on time: the
-      // `disconnected` event arrives late, or never. Measured on the right pod
-      // on 2026-11-12: the first refusal came at +62 s and the first
-      // reconnection at +98 s, because every failing keepalive re-armed the
-      // retry timer that the previous one had already set. Reconnecting from
-      // here removes the wait instead of measuring it.
-      _event('keepalive write failed: ${error ?? 'no reason given'}');
-      _noteLinkEnd();
-      _connectedAt = null;
-      await _attemptReconnect();
-    }
+  /// `clickbridge`, which has sessions lasting a whole ride on this firmware,
+  /// sends `RideOn 02 03` and then `FF 04 00`; this application sent the opening
+  /// alone and lost the link at 57-62 s, with a bare `RideOn` every three
+  /// seconds failing to hold it.
+  Future<void> _armSession() async {
+    final bool sent = await _tryWrite(ControllerHandshake.startAfterOpening);
+    if (sent) return;
+    // A refused write is the disconnect signal this stack gives on time: the
+    // `disconnected` event arrives late, or never. Measured on the right pod on
+    // 2026-11-12: the first refusal came at +62 s and the first reconnection at
+    // +98 s, because every failing keepalive re-armed the retry timer that the
+    // previous one had already set. Reconnecting from here removes the wait.
+    _event('arming write failed: ${error ?? 'no reason given'}');
+    _noteLinkEnd();
+    _connectedAt = null;
+    await _attemptReconnect();
   }
 
   Future<void> _write(List<int> frame) async {
     await _tryWrite(frame);
+  }
+
+  /// Restarts a controller that has announced it stopped talking.
+  ///
+  /// The frame is `0x18` on the write characteristic, the one `clickbridge`
+  /// sends before reconnecting. It is the only way back into a pod that has
+  /// closed its session: such a pod is asleep and refuses every connection until
+  /// a button wakes it, which is exactly what a rider must not have to do
+  /// mid-ride.
+  Future<void> _restartController(String reason) async {
+    if (_resetting) return;
+    _resetting = true;
+    _event('controller stopped talking ($reason): restarting it');
+    await _tryWrite(ControllerHandshake.reset);
+    await Future<void>.delayed(const Duration(seconds: 1));
+    _connectedAt = null;
+    _resetting = false;
+    await _attemptReconnect();
   }
 
   /// Writes [frame], and says whether the link accepted it.
@@ -766,6 +791,15 @@ class ControllerConnection {
     // is precisely what a maintainer needs to see.
     _record(frame, FrameDirection.inbound, source.uuid.toString());
     if (frame.isEmpty) return;
+
+    // The controller announces its own end (`FF 05 00 EA 05` or `... FA 05`)
+    // before it goes quiet, which is the one moment it can still be restarted
+    // from here. Waiting for the stack to notice costs the rest of the ride: a
+    // pod that has closed its session is asleep and refuses every connection.
+    if (ControllerSignals.stopped(frame)) {
+      unawaited(_restartController(_hexOf(frame)));
+      return;
+    }
 
     // Handshake acknowledgement: RideOn, optionally followed by a public key.
     if (frame.length >= ControllerHandshake.rideOn.length) {

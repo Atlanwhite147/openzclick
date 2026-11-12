@@ -158,6 +158,21 @@ abstract final class ControllerHandshake {
   /// Second frame of the activation, see [activationFirst].
   static const List<int> activationSecond = <int>[0x00, 0x08, 0x10];
 
+  /// Written 300 ms after the opening frame, and until today missing here.
+  ///
+  /// `clickbridge` sends it after `RideOn 02 03` and gets sessions that last a
+  /// whole ride; this application sent the opening frame alone and lost the link
+  /// at 57-62 s. Treated as part of the opening, not as a keepalive.
+  static const List<int> startAfterOpening = <int>[0xFF, 0x04, 0x00];
+
+  /// Restarts the controller, which is the only way back into one that has gone
+  /// quiet without asking the rider to press a button.
+  ///
+  /// Sent on the write characteristic once the controller announces that it has
+  /// stopped talking ([ControllerSignals.stoppedPrefixes]); the device reboots,
+  /// advertises again, and accepts a new session.
+  static const List<int> reset = <int>[0x18];
+
   /// Frames that open a plain session, in the order they must be written.
   ///
   /// The opening frame is `RideOn 02 03`, not the bare marker: it is the
@@ -192,6 +207,33 @@ abstract final class ControllerHandshake {
       return null;
     }
     return frame.sublist(prefix);
+  }
+}
+
+/// What the controller says about itself, unprompted.
+abstract final class ControllerSignals {
+  /// `FF 05 00 EA 05` and `FF 05 00 FA 05`: the controller announcing that it has
+  /// stopped talking and needs a new session.
+  ///
+  /// Taken from `clickbridge` (MIT), which listens for exactly these two and
+  /// then restarts the unit. They arrive on the reply channel while the link is
+  /// still up — the last moment a restart can be sent.
+  static const List<List<int>> stoppedPrefixes = <List<int>>[
+    <int>[0xFF, 0x05, 0x00, 0xEA, 0x05],
+    <int>[0xFF, 0x05, 0x00, 0xFA, 0x05],
+  ];
+
+  /// Whether [frame] is the controller saying it stopped.
+  static bool stopped(List<int> frame) => stoppedPrefixes.any(
+        (List<int> prefix) => _startsWith(frame, prefix),
+      );
+
+  static bool _startsWith(List<int> frame, List<int> prefix) {
+    if (frame.length < prefix.length) return false;
+    for (int i = 0; i < prefix.length; i++) {
+      if (frame[i] != prefix[i]) return false;
+    }
+    return true;
   }
 }
 
