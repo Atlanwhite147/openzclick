@@ -466,14 +466,14 @@ class ControllerConnection {
         if (_crypto == null) unawaited(_armSession());
     }
 
-    // Restart before the controller closes the session, not after: a pod that
-    // has closed it is asleep, and no connection wakes it. Two or three seconds
-    // of link per minute, and the rider never presses anything.
+    // Restart the controller while it is still answering, not after it is gone:
+    // a pod that has closed its session is asleep and refuses every connection.
+    // The frame matters as much as the moment — `clickbridge`'s periodic reset
+    // writes `0x18` first, and that is what makes the unit come back; a plain
+    // disconnection and reconnection leaves it in the state it died in.
     if (_connectedAt != null &&
         _policy.wantsRestart(DateTime.now().difference(_connectedAt!))) {
-      _event('restarting the link before the controller closes it');
-      _connectedAt = null;
-      unawaited(_attemptReconnect());
+      unawaited(_restartController('link age'));
       return;
     }
 
