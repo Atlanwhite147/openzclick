@@ -12,6 +12,15 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Controller link supervision: plain-handshake fallback, silence detection and
   automatic reconnection, with the locked-controller case named instead of
   hanging (`docs/controllers.md`).
+- A Click v2 held open past the minute it used to die at, without the Zwift
+  application: `FF 04 00` finishes the opening, and a `0x18` reset every 50 s —
+  while the link still answers — makes the pod reboot, re-advertise and reopen its
+  session in about two seconds. Verified on the right pod in MyWhoosh on
+  2026-11-12, including repeated shifts from quick presses
+  (`docs/controllers.md`, `docs/INTEGRATION-PLAN.md`).
+- The pod in hand is named: both pods announce themselves as `Zwift Click`, and
+  the manufacturer data says which one it is, so a pairing list can no longer
+  quietly pair the left one — the only one Zwift locks.
 - The "needs unlock" hint: a controller that stays silent says what to do
   instead of showing a link that looks alive.
 - Browser build: one codebase, a capability layer that names what a page cannot

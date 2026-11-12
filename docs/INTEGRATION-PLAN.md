@@ -81,7 +81,30 @@ pause changes nothing.
 **Risk**: medium — the protocol is now documented by others, but the pair's
 behaviour only shows on hardware.
 
-**State**: the first bullet is in. `ClickButtons` became `ClickButtonMask`
+**State, 2026-11-12 — the right pod works end to end, without Zwift.** Verified on
+hardware in MyWhoosh: the pod shifts, repeated presses shift repeatedly, and the
+link outlives the minute that used to end every session. Three things had to be
+established first, and they change what "kept awake" means here:
+
+- the pod's side is readable from its advertising data (`0x094A`, `0x0A` right,
+  `0x0B` left), so the right pod could be confirmed rather than assumed — the
+  story that "the right pod needs no unlock" was worth checking, and it does not
+  hold on this unit;
+- a Click v2 closes a plain session 57 to 62 s after it opens, whatever is
+  written to it. A bare `RideOn` every three seconds and the activation frame
+  `00 08 00` were both measured; neither held it;
+- the way back is `0x18`, a reset, written on the write characteristic. Sent every
+  50 s while the link answers — `clickbridge`'s periodic mode — the pod reboots,
+  re-advertises and the session reopens in about two seconds, with no press from
+  the rider. That, rather than a keepalive, is what keeps a lone right pod alive.
+
+The second bullet above is therefore settled differently from the plan: a lone
+right pod is usable, at the cost of a two-second hole every fifty seconds. The
+left pod is still locked to Zwift (its unlock is a signed reply from Zwift's
+d-lock service, which `zwiftboard` obtains with an account), so the rest of the
+phase is now about a pair only for riders who want steering from the pod.
+
+**State, phase 2 first bullet.** `ClickButtons` became `ClickButtonMask`
 (`core/lib/src/protocol/controller_protocol.dart`): the `23 08 <varint>`
 notification is decoded whole, with a set bit meaning pressed and the wire's
 inverted convention flipped once at the decoder, so an unmapped position stays

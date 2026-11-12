@@ -29,6 +29,14 @@ All notable changes to this project are documented here. The format follows [Kee
   `notifying` flag states what is actually notifying instead of what was
   advertised before them. `app/lib/ble/device_report.dart`,
   `app/lib/ble/controller_connection.dart`.
+- **The pairing list and the report name which pod is in hand.** Both pods of a
+  pair announce themselves as `Zwift Click`, and the difference is not cosmetic:
+  only the left one is locked to Zwift, so a rider told "use the right pod" had no
+  way to check which one the application had found. The advertising data carries
+  the answer — manufacturer `0x094A`, first byte `0x0A` for the right pod and
+  `0x0B` for the left — and an unknown code stays unnamed rather than guessed.
+  `core/lib/src/protocol/controller_side.dart`, `app/lib/main.dart`,
+  `app/lib/ble/device_report.dart`.
 
 ### Fixed
 - **The CI stops following the Flutter channel.** Every workflow asked for
@@ -47,6 +55,37 @@ All notable changes to this project are documented here. The format follows [Kee
   `none: the controller exposes no 0x180a service` in Chrome. The report now
   words the absence after the host that looked. `app/lib/ble/device_report.dart`,
   `app/test/device_report_test.dart`.
+- **The link now survives past a minute on a Click v2, verified on hardware.**
+  Three frames were missing, and each one was found in
+  [`clickbridge`](https://github.com/jasasonc/clickbridge), which rides on this
+  firmware with no Zwift application installed. `FF 04 00`, 300 ms after the
+  opening `RideOn 02 03`: the opening is not finished at the marker, and without
+  this frame the pod holds 57 to 62 s and then stops, whether the host writes a
+  bare `RideOn` every three seconds or the activation frame `00 08 00` — both
+  were measured and neither held it. Then `0x18`, a reset, which is the only way
+  back into a pod that has closed its session: such a pod is asleep and refuses
+  every connection. It announces that state itself, on the reply channel, with
+  `FF 05 00 EA 05` or `... FA 05`, and the reset is now also written on a
+  **periodic** cadence every 50 s while the link still answers — the mode that
+  works here, where the announcement never arrives before the drop. Measured on
+  the right pod on 2026-11-12: three complete cycles, the pod rebooting,
+  re-advertising and the session reopening in about two seconds, `Connected`
+  after five minutes, and a rider shifting in MyWhoosh without touching the pod.
+- **A write can no longer wedge the supervision.** A WinRT write to a pod that has
+  gone away can hang for ever, and that loop carries the whole link: measured, a
+  session that stopped being written at +23 s while the screen still read
+  "connected". Each write now has a five-second ceiling, and a line every ten
+  seconds records the age of the link, the number of arming frames written and
+  whether a restart is in flight, so a report can tell a loop that stopped from a
+  controller that died.
+- **Two quick presses are two gear changes.** Reported from MyWhoosh: going down
+  several gears needed a pause between presses. The detector defaulted to the
+  deferred mode with a 320 ms window, and the second press inside that window was
+  spent on the double-tap action — steering — so it never reached the gears,
+  while the first press waited a third of a second before acting. The immediate
+  mode is now the default, and no button spends its double tap on steering unless
+  the rider binds it; a button without a double-tap action treats a second press
+  as what it looks like, the next gear. `core/lib/src/mapping/button_gestures.dart`.
 
 ### Changed
 - **The browser asks for the battery and the Device Information service.** A page
@@ -104,6 +143,9 @@ All notable changes to this project are documented here. The format follows [Kee
   and asserts one gear moved, not two: `core/test/mapping/button_gestures_test.dart`.
   `core/lib/src/protocol/controller_protocol.dart`, `core/test/protocol/button_mask_test.dart`,
   `docs/controllers.md` and `docs/INTEGRATION-PLAN.md` follow.
+- **`docs/controllers.md` carries the frames this bridge was missing**: the
+  opening, the arming frame that follows it, the reset, and why a pod that has
+  closed its session refuses every connection until it is restarted.
 
 ### Fixed
 - **The multiplier moves the gear everywhere, not only in the typed keys.** Set to three, one press sent three keys to the application while the interface's own gear moved by one — measured on the machine, gear 8 to 9 with the application three gears ahead. The count now drives the ladder, the network publication and the typed keys from one place, so the screen cannot disagree with what the application received. `app/lib/state/app_state.dart`, `app/lib/net/injection_publisher.dart`.
