@@ -434,7 +434,14 @@ class ControllersScreen extends StatelessWidget {
                       ? result.device.remoteId.toString()
                       : result.device.platformName,
                 ),
-                subtitle: Text(result.device.remoteId.toString()),
+                // Two pods of a pair announce the same name, and only the left
+                // one is locked to Zwift: the side is what tells a rider which
+                // pod they are about to pair, and it comes from the
+                // manufacturer data rather than from the label.
+                subtitle: Text(
+                  '${result.device.remoteId}\n'
+                  '${controllerSideLabel(controllerSideFromAdvertisement(result.advertisementData.manufacturerData))}',
+                ),
                 trailing: TextButton(
                   onPressed: busy ? null : () => link.connect(result.device),
                   child: const Text('Connect'),

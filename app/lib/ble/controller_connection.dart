@@ -105,6 +105,15 @@ class ControllerConnection {
   /// True once the handshake completed with encryption enabled.
   bool encrypted = false;
 
+  /// Which pod of a pair the link is on, when the advertising data said.
+  ///
+  /// Two pods announce the same name and only the left one is locked to Zwift,
+  /// so a rider told "use the right pod" had no way to check which one the
+  /// application had actually found.
+  ControllerSide? side;
+
+  final Map<String, ControllerSide?> _sides = <String, ControllerSide?>{};
+
   ControllerKeyPair? _keyPair;
   ControllerCrypto? _crypto;
   BluetoothCharacteristic? _writeTarget;
@@ -179,6 +188,9 @@ class ControllerConnection {
       (List<ScanResult> results) {
         for (final ScanResult result in results) {
           if (!_looksLikeController(result)) continue;
+          _sides[result.device.remoteId.str] = controllerSideFromAdvertisement(
+            result.advertisementData.manufacturerData,
+          );
           if (_found.every(
             (ScanResult r) => r.device.remoteId != result.device.remoteId,
           )) {
@@ -285,6 +297,7 @@ class ControllerConnection {
     _keepLinked = true;
     _notify();
     device = target;
+    side = _sides[target.remoteId.str];
 
     try {
       await FlutterBluePlus.stopScan();
@@ -733,6 +746,7 @@ class ControllerConnection {
       host: Capabilities.hostName,
       deviceName: device?.platformName,
       deviceId: device?.remoteId.toString(),
+      side: side,
       status: status.name,
       // Nothing to claim about encryption before a link exists: the field is a
       // fact about a session, and "plain" over an idle application reads as one.

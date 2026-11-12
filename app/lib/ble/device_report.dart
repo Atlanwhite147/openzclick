@@ -13,6 +13,8 @@
 /// on every platform.
 library;
 
+import 'package:openzclick_core/openzclick_core.dart';
+
 import 'bluetooth_uuid.dart';
 
 /// Where a frame went.
@@ -177,6 +179,7 @@ class DeviceReport {
     required this.host,
     this.deviceName,
     this.deviceId,
+    this.side,
     this.status,
     this.encrypted,
     this.needsUnlock,
@@ -202,6 +205,13 @@ class DeviceReport {
 
   /// Platform identifier, which differs from the name.
   final String? deviceId;
+
+  /// Which pod of a pair this is, when the advertising data said.
+  ///
+  /// Two pods answer to the same name, and only the left one is locked to
+  /// Zwift: a report that cannot name the side leaves the reader unable to tell
+  /// a protocol fault from the wrong pod in their hand.
+  final ControllerSide? side;
 
   /// Last link status, in the code's own words.
   final String? status;
@@ -275,6 +285,7 @@ class DeviceReport {
     if (needsUnlock == true) {
       out.writeln('  unlock   silent after the handshake');
     }
+    if (side != null) out.writeln('  side     ${controllerSideLabel(side)}');
     if (batteryPercent != null) out.writeln('  battery  $batteryPercent %');
     if (error != null && error!.isNotEmpty) out.writeln('  error    $error');
 

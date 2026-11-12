@@ -8,6 +8,7 @@ export 'battery_watch.dart';
 export 'button_ids.dart';
 export 'controller_crypto.dart';
 export 'controller_protocol.dart';
+export 'controller_side.dart';
 export 'controller_watchdog.dart';
 export 'codec.dart';
 export 'dns_sd.dart';
