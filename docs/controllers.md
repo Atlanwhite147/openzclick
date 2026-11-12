@@ -131,6 +131,27 @@ exactly what this unit answers when it grants a plain session
 `RideOn` then `FF 04 00`. The bridge now asks in the unit's own words and keeps
 the rest of the activation as its fallback.
 
+### The two frames this bridge was missing
+
+[`clickbridge`](https://github.com/jasasonc/clickbridge) (MIT, Linux) rides with
+no Zwift application installed and reports sessions lasting a whole ride, so its
+sequence is the one to copy. It writes:
+
+1. `RideOn 02 03` — the opening this bridge already sent;
+2. `FF 04 00`, 300 ms later, on the same write characteristic — **missing here
+   until 2026-11-12**. The opening is not finished at the marker: without this
+   frame the pod holds for 57 to 62 s and then stops, whatever else is written.
+3. `0x18` — a reset — when the pod announces it stopped talking. It announces it
+   itself, on the reply channel, with `FF 05 00 EA 05` or `FF 05 00 FA 05`, while
+   the link is still up. That announcement is the last moment a restart can be
+   sent: once the link is gone the pod is asleep and refuses every connection,
+   which is why a rider used to need a button press mid-ride. The unit reboots,
+   advertises again, and accepts a new session.
+
+A keepalive is therefore not needed and a second `RideOn` is worse than nothing:
+it looks like a fresh handshake to a pod that is already open. The period the
+watchdog asks for now carries `FF 04 00` instead.
+
 ## Reporting a controller that does not pair
 
 Open an issue and paste the device report: **Controllers**, then *Copy device
