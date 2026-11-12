@@ -576,7 +576,16 @@ class ControllerConnection {
     _notify();
     try {
       await _clearLink();
-      await connect(target);
+      // A device object that has already seen a session end keeps a dead GATT
+      // session on Windows: the reconnect then returns without a link and the
+      // discovery fails with `device is not connected`, forever, on the same
+      // object. Measured on the right pod on 2026-11-12, where the browser — a
+      // fresh object each time — reconnected on its own while this path could
+      // not. A handle rebuilt from the identifier carries no such history.
+      final BluetoothDevice fresh = BluetoothDevice.fromId(target.remoteId.str);
+      device = fresh;
+      _event('rebuilt the device handle from ${target.remoteId}');
+      await connect(fresh);
       if (status == ControllerStatus.ready) {
         _attempts = 0;
         _event('reconnected');
