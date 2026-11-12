@@ -483,10 +483,14 @@ class ControllerConnection {
 
   /// Holds the plain session open.
   ///
-  /// A pod drops roughly a minute after the last write it received; button
-  /// silence is normal riding and says nothing about the link.
+  /// The frame is the activation one, not the bare marker. Measured on the right
+  /// pod on 2026-11-12: with a plain `RideOn` every three seconds the pod still
+  /// closed the session at ~57-62 s, and a lone right pod is documented to drop
+  /// about 65 s after **the last write it received** — so the marker is not
+  /// counted as a write it received. `00 08 00` is the frame that armed the
+  /// session in the first place, which makes it the one worth repeating.
   Future<void> _keepalive() async {
-    final bool sent = await _tryWrite(ControllerHandshake.plainRequest());
+    final bool sent = await _tryWrite(ControllerHandshake.activationFirst);
     if (!sent) {
       // A refused write is the disconnect signal this stack gives on time: the
       // `disconnected` event arrives late, or never. Measured on the right pod
