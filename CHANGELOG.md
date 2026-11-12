@@ -14,6 +14,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- **The browser's report no longer blames the controller.** A page only ever
+  receives the GATT services it named when it opened the link, so a missing
+  `0x180a` there means "this page did not ask", not "this controller has no
+  Device Information service". Measured on the right pod on 2026-11-12: the same
+  controller answered all five `180a` strings over Windows and showed
+  `none: the controller exposes no 0x180a service` in Chrome. The report now
+  words the absence after the host that looked. `app/lib/ble/device_report.dart`,
+  `app/test/device_report_test.dart`.
+
 ### Changed
 - **The link is no longer given up after one refusal.** A Click v2 sleeps, drops
   about a minute and a half into a session when its Zwift encryption context has

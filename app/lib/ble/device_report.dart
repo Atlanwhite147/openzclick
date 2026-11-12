@@ -197,6 +197,21 @@ class DeviceReport {
   /// Last error, verbatim.
   final String? error;
 
+  /// Why no Device Information string was read, in the terms of the host that
+  /// looked.
+  ///
+  /// The web build gets this wrong in a way that costs a maintainer an hour: a
+  /// page only ever receives the services it named when it opened the link, so
+  /// an absent `180a` says nothing about the controller. Reporting it as "the
+  /// controller exposes no 0x180a service" sends the reader looking for a
+  /// firmware difference that does not exist — measured with the right pod on
+  /// 2026-11-12, where the same pod answered `180a` on Windows and appeared
+  /// without it in the browser.
+  String get missingInformationReason => host == 'web'
+      ? '  none: the page did not ask for 0x180a, and Web Bluetooth returns only '
+            'the services a page names'
+      : '  none: no answer on 0x180a';
+
   /// Device Information strings.
   final DeviceInformation information;
 
@@ -240,7 +255,7 @@ class DeviceReport {
       _field(out, 'hardware', information.hardware);
     } else {
       out.writeln('device information');
-      out.writeln('  none: the controller exposes no 0x180a service');
+      out.writeln(missingInformationReason);
     }
 
     out.writeln('gatt tree (${services.length} services)');
