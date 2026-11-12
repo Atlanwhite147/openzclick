@@ -46,7 +46,7 @@ other bit stays set, so the resting frame is `23 08 ff ff ff ff 0f`.
 | `+` (under the cluster) | 12 | `23 08 ff df ff ff 0f` |
 | `B` (bottom, pink) | 5 | `23 08 df ff ff ff 0f` |
 | `Y` (top, blue) | 6 | `23 08 bf ff ff ff 0f` |
-| `Z` (left, orange) | 7 | `23 08 7f ff ff ff 0f` |
+| `Z` (left, orange) | 7 | `23 08 ff fe ff ff 0f` |
 | `A` (right, green) | 4 | `23 08 ef ff ff ff 0f` |
 
 Only `+` and `B` reach the gear engine: they are the two a rider shifts with,
@@ -94,28 +94,42 @@ is tested without hardware.
 
 ## When a Click v2 drops after a minute
 
-Two explanations exist, and the second one is newer and testable:
+The test that section used to call for has been run, and it settles the question
+against the keepalive. On 2026-11-12, on Windows, with a Click v2 (firmware
+1.1.0, serial `0A-34C459DD3C3D`), the application held the link and wrote the
+plain `RideOn` every three seconds: the pod echoed every write, then went quiet
+and dropped **92 seconds** after the link came up, with the last echo 2.9 s
+before the end and no stop notice on `0004`. The keepalive is not what holds a
+Click v2.
 
-1. **The unlock story.** Pair the controller once in the official application,
-   keep that application open about three minutes rather than a few seconds,
-   then switch to the bridge. On the units where the drop was reproduced, that is
-   what stopped it. The bridge cannot reproduce that gesture by itself: it is a
-   handshake the official application performs, and copying it means reversing a
-   key exchange that requires that application's identity.
-2. **The keepalive story.** A pod drops about a minute after the **last write it
-   received**, not after the last button. [`zwiftboard`](https://github.com/thomaschampagne/zwiftboard)
-   (MIT) holds a Click v2 for a whole ride on Windows without any account or any
-   unlock, by writing the plain `RideOn` every three seconds, and it says so
-   plainly: button silence never ends a session, a failed write does. This
-   project now does the same, and also writes the two frames that complete the
-   activation (`00 08 00`, `00 08 10`) after the plain handshake.
+What the drop actually is, per [BikeControl](https://bikecontrol.app/controller-zwift-click-v2/),
+which documents the same unit for every non-Zwift application: the Click v2
+expects an encrypted handshake refreshed with Zwift's service roughly every
+**24 hours**, and once that context lapses it stops sending button events about
+**a minute** after being connected. It is the first cause they list for a pod
+that goes quiet elsewhere, and it is not something a host can derive on its own.
+Two remedies exist:
 
-If the drop disappears with the keepalive, the first story was a misdiagnosis of
-the second: a rider who paired in the official app and then launched the bridge
-would have described a symptom that a three-second write prevents for a reason
-that has nothing to do with pairing. Which of the two is true is settled by one
-test on a controller that still drops — connect the bridge, press nothing for two
-minutes, then press once. If the frame arrives, it was the keepalive.
+- **Run the right pod alone.** BikeControl reports that the right pod needs no
+  unlock at all; only the left one carries the daily requirement. Most riders
+  only need `+` and `B`, which the right pod sends.
+- **Ask Zwift once a day.** Open the Zwift application, connect the controller,
+  keep it connected about thirty seconds, close it. The context is refreshed and
+  any other host can read the buttons for the rest of the day.
+
+Since the drop cannot be prevented from this side, the bridge is built to make it
+invisible: it reconnects every three seconds until the link is back, rescans if
+the address stops answering, and says on screen that the controller needs a
+Zwift refresh when a link dies inside two minutes. That policy is the one
+[`pizero_bikecomputer`](https://github.com/hishizuka/pizero_bikecomputer) uses
+against the same pod, and it writes no keepalive at all.
+
+The two open sources disagree on the opening frame, and the difference is small
+enough to be worth recording: `zwiftboard` (MIT) sends `RideOn 02 03`, which is
+exactly what this unit answers when it grants a plain session
+(`52 69 64 65 4F 6E 02 03 C8 00 …`), while `pizero_bikecomputer` sends a bare
+`RideOn` then `FF 04 00`. The bridge now asks in the unit's own words and keeps
+the rest of the activation as its fallback.
 
 ## Reporting a controller that does not pair
 

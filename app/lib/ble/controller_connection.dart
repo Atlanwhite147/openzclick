@@ -114,6 +114,26 @@ class ControllerConnection {
   int _secondsSinceConnect = 0;
   bool _reconnecting = false;
 
+  /// Delay between two reconnection attempts.
+  ///
+  /// Three seconds is the delay `pizero_bikecomputer` uses against the same
+  /// pod. A Click v2 that drops is not broken, it is asleep: the next press
+  /// wakes it, and the application only has to be asking when it does.
+  static const Duration reconnectDelay = Duration(seconds: 3);
+
+  /// True while the rider wants a link, false once they pressed Disconnect.
+  bool _keepLinked = false;
+  Timer? _retry;
+  int _attempts = 0;
+
+  /// True when the last link died too soon to be a normal end of session.
+  ///
+  /// A Click v2 expects a fresh encryption context from Zwift about once a
+  /// day; once it lapses, the pod stops sending button events roughly a minute
+  /// after the link comes up. The interface must say so, because no amount of
+  /// reconnecting repairs it and the rider needs to open Zwift once.
+  bool needsZwiftRefresh = false;
+
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   final List<ScanResult> _found = <ScanResult>[];
@@ -239,6 +259,8 @@ class ControllerConnection {
     status = ControllerStatus.connecting;
     error = null;
     needsUnlock = false;
+    needsZwiftRefresh = false;
+    _keepLinked = true;
     _notify();
     device = target;
 
@@ -320,8 +342,10 @@ class ControllerConnection {
       ) {
         if (state == BluetoothConnectionState.disconnected &&
             status != ControllerStatus.idle) {
+          _noteLinkEnd();
           status = ControllerStatus.idle;
           _notify();
+          _scheduleReconnect();
         }
       });
 
@@ -346,6 +370,7 @@ class ControllerConnection {
       );
 
       status = ControllerStatus.ready;
+      _attempts = 0;
       _notify();
     } catch (e) {
       status = ControllerStatus.failed;
@@ -402,7 +427,7 @@ class ControllerConnection {
       final bool sent = await _tryWrite(frame);
       if (!sent) {
         // A failed write is the only observable sign that the session ended.
-        unawaited(_reconnect());
+        _scheduleReconnect();
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -415,7 +440,7 @@ class ControllerConnection {
   /// silence is normal riding and says nothing about the link.
   Future<void> _keepalive() async {
     final bool sent = await _tryWrite(ControllerHandshake.plainRequest());
-    if (!sent) unawaited(_reconnect());
+    if (!sent) _scheduleReconnect();
   }
 
   Future<void> _write(List<int> frame) async {
@@ -443,20 +468,63 @@ class ControllerConnection {
     }
   }
 
-  Future<void> _reconnect() async {
+  /// Notes how long the link lasted, for the one failure the rider must fix.
+  void _noteLinkEnd() {
+    final DateTime? start = _connectedAt;
+    if (start == null) return;
+    final Duration lived = DateTime.now().difference(start);
+    // A Click v2 that dies inside two minutes is telling the host that its
+    // encryption context lapsed, not that the radio is bad: a healthy session
+    // ends with the rider, hours later, or with a press on Disconnect.
+    needsZwiftRefresh = lived < const Duration(seconds: 120);
+  }
+
+  /// Programmes the next attempt, without ever giving up.
+  ///
+  /// One attempt is not a policy. The pod sleeps, refuses one connection and
+  /// takes the next; an application that stops after a single refusal hands the
+  /// rider back to Scan and Connect in the middle of a ride.
+  void _scheduleReconnect({Duration delay = reconnectDelay}) {
+    if (!_keepLinked || device == null) return;
+    _retry?.cancel();
+    _retry = Timer(delay, () => unawaited(_attemptReconnect()));
+  }
+
+  Future<void> _attemptReconnect() async {
     final BluetoothDevice? target = device;
-    if (target == null || _reconnecting) {
-      return;
-    }
+    if (!_keepLinked || target == null || _reconnecting) return;
     _reconnecting = true;
-    error = 'the controller stopped acknowledging writes, reconnecting';
+    status = ControllerStatus.connecting;
+    error = 'the controller stopped answering, reconnecting';
     _notify();
     try {
       await _clearLink();
       await connect(target);
+      if (status == ControllerStatus.ready) {
+        _attempts = 0;
+        return;
+      }
+      _attempts++;
+      // Every third refusal, look for the pod instead of dialling an address
+      // that no longer answers: a sleeping controller comes back through its
+      // advertising, and a wake-up press is what puts it there.
+      if (_attempts % 3 == 0) await _rescan(target);
+    } catch (_) {
+      _attempts++;
     } finally {
       _reconnecting = false;
     }
+    _scheduleReconnect();
+  }
+
+  /// Scans again and picks the controller out of what answered.
+  Future<void> _rescan(BluetoothDevice previous) async {
+    await scan(timeout: const Duration(seconds: 8));
+    final String wanted = previous.remoteId.toString();
+    for (final ScanResult result in _found) {
+      if (result.device.remoteId.toString() == wanted) return;
+    }
+    if (_found.isNotEmpty) device = _found.first.device;
   }
 
   /// Appends [bytes] to the ring, timed from the moment the link was made.
@@ -634,6 +702,12 @@ class ControllerConnection {
 
   /// Closes the connection and releases the subscriptions.
   Future<void> disconnect() async {
+    // The rider asked for this: stop the retry loop before it climbs back.
+    _keepLinked = false;
+    _retry?.cancel();
+    _retry = null;
+    _attempts = 0;
+    needsZwiftRefresh = false;
     await _clearLink();
     await _scanSubscription?.cancel();
     _scanSubscription = null;

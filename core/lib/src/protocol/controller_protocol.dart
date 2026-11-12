@@ -116,6 +116,18 @@ abstract final class ControllerHandshake {
   /// Builds the plain handshake, which asks for unencrypted frames.
   static List<int> plainRequest() => List<int>.of(rideOn);
 
+  /// Suffix the controller itself answers with when it grants a plain session.
+  ///
+  /// Measured on a Click v2, firmware 1.1.0: the reply to an encrypted request
+  /// is `RideOn 02 03 C8 00 …`, and `zwiftboard` opens its own session by
+  /// sending exactly these eight bytes. `pizero_bikecomputer` writes a bare
+  /// `RideOn` followed by `FF 04 00` instead. Both are attempts at the same
+  /// answer, and this one is the one the controller gave us.
+  static const List<int> plainGrant = <int>[0x02, 0x03];
+
+  /// Opening frame of a plain session: the `RideOn` marker, then `02 03`.
+  static List<int> plainStart() => <int>[...rideOn, ...plainGrant];
+
   /// First frame that completes the activation, after the plain handshake.
   ///
   /// A Click v2 streams its buttons only once the exchange has been opened with
@@ -130,8 +142,12 @@ abstract final class ControllerHandshake {
   static const List<int> activationSecond = <int>[0x00, 0x08, 0x10];
 
   /// Frames that open a plain session, in the order they must be written.
+  ///
+  /// The opening frame is `RideOn 02 03`, not the bare marker: it is the
+  /// answer the controller gives when it grants the session, so asking for it
+  /// in the same words is the least guesswork available without Zwift.
   static List<List<int>> activationSequence() => <List<int>>[
-        plainRequest(),
+        plainStart(),
         List<int>.of(activationFirst),
         List<int>.of(activationSecond),
       ];

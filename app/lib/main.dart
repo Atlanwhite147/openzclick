@@ -319,6 +319,14 @@ class ControllersScreen extends StatelessWidget {
                             'the known Click v2 behaviour: pair it once in the '
                             'Zwift application, keep that application open '
                             'about three minutes, then come back here.'
+                      : link.needsZwiftRefresh
+                      ? 'The link dropped a few seconds after it came up. A '
+                            'Click v2 asks Zwift for a fresh encryption '
+                            'context about once a day, and stops sending '
+                            'buttons when it lapses. Open the Zwift '
+                            'application once, keep the controller connected '
+                            'about thirty seconds, then come back: this window '
+                            'reconnects on its own.'
                       : link.error ??
                             (ready
                                 ? '${link.encrypted ? 'encrypted' : 'plain'} session'

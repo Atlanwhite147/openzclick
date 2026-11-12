@@ -8,6 +8,22 @@ void main() {
           <int>[82, 105, 100, 101, 79, 110]);
     });
 
+    // The opening frame is the answer the pod itself gives when it grants a
+    // plain session: `52 69 64 65 4F 6E 02 03 C8 00 …`, measured on a Click v2,
+    // firmware 1.1.0. zwiftboard opens with exactly these eight bytes.
+    test('a plain session opens with RideOn then 02 03', () {
+      expect(ControllerHandshake.plainStart(),
+          <int>[82, 105, 100, 101, 79, 110, 0x02, 0x03]);
+    });
+
+    test('the activation starts with the granted plain session', () {
+      final List<List<int>> frames = ControllerHandshake.activationSequence();
+      expect(frames.length, 3);
+      expect(frames.first, ControllerHandshake.plainStart());
+      expect(frames[1], ControllerHandshake.activationFirst);
+      expect(frames.last, ControllerHandshake.activationSecond);
+    });
+
     test('encrypted request appends the 64-byte public key', () {
       final List<int> key = List<int>.generate(64, (int i) => i);
       final List<int> frame = ControllerHandshake.encryptedRequest(key);
@@ -115,6 +131,40 @@ void main() {
       ]);
       expect(message, isA<ClickMessage>());
       expect((message! as ClickMessage).buttons.up, isTrue);
+    });
+
+    // Frames copied byte for byte from the application's own device report, on
+    // a Click v2, firmware 1.1.0, serial 0A-34C459DD3C3D, 2026-11-12. They are
+    // what a real pod sends, not a reading of the specification.
+    group('measured frames', () {
+      List<int> frame(String hex) => <int>[
+            for (final String byte in hex.split(' '))
+              int.parse(byte, radix: 16),
+          ];
+
+      test('the resting frame presses nothing', () {
+        final ClickMessage message =
+            ControllerCodec.decode(frame('23 08 ff ff ff ff 0f'))!
+                as ClickMessage;
+        expect(message.buttons.isEmpty, isTrue);
+        expect(message.buttons.toString(), 'ClickButtonMask(none)');
+      });
+
+      test('a held Z is bit 7 and nothing else', () {
+        final ClickMessage message =
+            ControllerCodec.decode(frame('23 08 ff fe ff ff 0f'))!
+                as ClickMessage;
+        expect(message.buttons.pressedBits, <int>[ControllerButtonBits.z]);
+        expect(message.buttons.toString(), 'ClickButtonMask(z)');
+      });
+
+      test('a held plus is bit 12 and nothing else', () {
+        final ClickMessage message =
+            ControllerCodec.decode(frame('23 08 ff df ff ff 0f'))!
+                as ClickMessage;
+        expect(message.buttons.pressedBits, <int>[ControllerButtonBits.plus]);
+        expect(message.buttons.up, isTrue);
+      });
     });
 
     test('decodes a battery frame', () {

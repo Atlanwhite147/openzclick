@@ -15,6 +15,30 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Changed
+- **The link is no longer given up after one refusal.** A Click v2 sleeps, drops
+  about a minute and a half into a session when its Zwift encryption context has
+  lapsed, and refuses the first reconnection that follows. The bridge used to try
+  exactly once, then sit on `failed` until the rider pressed *Scan* and *Connect*
+  again, which is a controller lost mid-ride. It now retries every three seconds
+  until the link is back, rescans when the address stops answering, and stops only
+  when the rider presses *Disconnect*. The cadence is the one
+  `pizero_bikecomputer` uses against the same pod.
+- **The plain session opens in the controller's own words.** The opening frame was
+  a bare `RideOn`; it is now `RideOn 02 03`, which is exactly what this unit
+  answers when it grants a plain session (`52 69 64 65 4F 6E 02 03 C8 00 …`) and
+  what `zwiftboard` sends. The two activation frames follow as before.
+- **A drop inside two minutes is explained, not just reported.** The controllers
+  screen now names the cause — the Click v2 encryption context that Zwift
+  refreshes about once a day — and the two remedies, instead of showing `failed`
+  and nothing else.
+- **The keepalive story is corrected by measurement.** `docs/controllers.md`
+  claimed a three-second `RideOn` holds a Click v2 for a whole ride. Measured on
+  hardware: the pod echoed every write and still dropped 92 seconds after the link
+  came up. The section now records the measurement, the 24-hour rule and its
+  source.
+- The `Z` row of the button table was wrong: `23 08 7f ff ff ff 0f` ends its
+  varint on the first byte and clears bits 7 to 31. The frame a pod actually sends
+  for `Z` is `23 08 ff fe ff ff 0f`, measured on firmware 1.1.0.
 - **The button frame is kept whole.** The `23 08 <varint>` notification was
   projected onto two booleans, `up` and `down`, the moment it was decoded: every
   other position the controller reports was thrown away before anything could see
