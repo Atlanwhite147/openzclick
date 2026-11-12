@@ -687,7 +687,9 @@ class ControllerConnection {
       deviceName: device?.platformName,
       deviceId: device?.remoteId.toString(),
       status: status.name,
-      encrypted: encrypted,
+      // Nothing to claim about encryption before a link exists: the field is a
+      // fact about a session, and "plain" over an idle application reads as one.
+      encrypted: device == null ? null : encrypted,
       needsUnlock: needsUnlock,
       batteryPercent: batteryPercent,
       error: error,
