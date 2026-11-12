@@ -152,6 +152,46 @@ void main() {
       expect(text, contains('the link exchanged nothing'));
     });
 
+    test('the link events are the sequence a dropout is read from', () {
+      // Measured on the Windows build on 2026-11-12: the report could only say
+      // `device is not connected`, which cannot distinguish a refused
+      // subscription from a link the pod closed. The events say which.
+      final String text = DeviceReport(
+        generatedAt: DateTime.utc(2026, 11, 12, 13, 17, 27),
+        appVersion: '0.3.0+3',
+        host: 'windows',
+        deviceName: 'Zwift Click',
+        status: 'ready',
+        events: const <LinkEvent>[
+          LinkEvent(elapsed: Duration.zero, label: 'connected'),
+          LinkEvent(
+            elapsed: Duration(milliseconds: 240),
+            label: 'notify on 0002: refused',
+          ),
+          LinkEvent(
+            elapsed: Duration(seconds: 57, milliseconds: 412),
+            label: 'link ended after 57 s, 19 frames kept',
+          ),
+        ],
+      ).render();
+      expect(text, contains('link (3, oldest first)'));
+      expect(text, contains('+0000.000 connected'));
+      expect(text, contains('+0000.240 notify on 0002: refused'));
+      expect(text, contains('+0057.412 link ended after 57 s'));
+      expect(
+        text.indexOf('notify on 0002'),
+        lessThan(text.indexOf('link ended')),
+        reason: 'oldest first, or the sequence reads backwards',
+      );
+    });
+
+    test('a log with no events says so rather than showing a bare heading', () {
+      expect(
+        report().render(),
+        contains('nothing was recorded about the link'),
+      );
+    });
+
     test('a device that stayed silent is flagged in words', () {
       final String text = report(needsUnlock: true, status: 'ready').render();
       expect(text, contains('unlock   silent after the handshake'));

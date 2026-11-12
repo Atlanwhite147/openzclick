@@ -24,6 +24,26 @@ enum FrameDirection {
   outbound,
 }
 
+/// One event of the link itself, with the moment it happened.
+///
+/// Separate from a frame because a frame is what the controller said, and these
+/// are what the host and the link did: a subscription accepted or refused, a
+/// session opened in the plain form, a link that ended after fifty-seven
+/// seconds. A dropout is explained by that sequence, not by the last bytes.
+class LinkEvent {
+  /// Creates an event.
+  const LinkEvent({required this.elapsed, required this.label});
+
+  /// Time since the link was established.
+  final Duration elapsed;
+
+  /// What happened, in the code's own words.
+  final String label;
+
+  @override
+  String toString() => '[$elapsed] $label';
+}
+
 /// One frame, as it appeared on the wire.
 class FrameRecord {
   /// Creates a record.
@@ -165,6 +185,7 @@ class DeviceReport {
     this.information = const DeviceInformation(),
     this.services = const <GattServiceInfo>[],
     this.frames = const <FrameRecord>[],
+    this.events = const <LinkEvent>[],
   });
 
   /// When the report was taken.
@@ -220,6 +241,17 @@ class DeviceReport {
 
   /// Frames exchanged, oldest first.
   final List<FrameRecord> frames;
+
+  /// What happened to the link itself, oldest first.
+  ///
+  /// Frames say what the controller said; these say what the host and the link
+  /// did around it, which is what a dropout is made of: when notifications were
+  /// enabled, whether they were accepted, when the session opened in the plain
+  /// form, when the link ended and how long it had lived. Measured need: the
+  /// Windows build lost its controller at ~57 s and the report could only say
+  /// `device is not connected`, with no way to tell a refused subscription from
+  /// a link the pod closed.
+  final List<LinkEvent> events;
 
   /// Renders the report as plain text.
   ///
@@ -293,6 +325,14 @@ class DeviceReport {
         '${canonicalUuid(frame.characteristic)} ${_hex(frame.bytes)}$repeated',
       );
     }
+
+    out.writeln('link (${events.length}, oldest first)');
+    if (events.isEmpty) {
+      out.writeln('  none: nothing was recorded about the link itself');
+    }
+    for (final LinkEvent event in events) {
+      out.writeln('  ${_elapsed(event.elapsed)} ${event.label}');
+    }
     return out.toString();
   }
 
@@ -357,4 +397,33 @@ class FrameRing {
 
   /// Forgets everything, on each new link.
   void clear() => _frames.clear();
+}
+
+/// Keeps the last [capacity] events of a link, oldest first.
+///
+/// A ring, not a log: the interesting part of a dropout is the minute before it,
+/// and an unbounded list would make the report too long to paste.
+class LinkLog {
+  /// Creates a log holding at most [capacity] events.
+  LinkLog({this.capacity = 30})
+    : assert(capacity > 0, 'a log that holds nothing reports nothing');
+
+  /// Maximum number of events kept.
+  final int capacity;
+
+  final List<LinkEvent> _events = <LinkEvent>[];
+
+  /// Events currently held, oldest first.
+  List<LinkEvent> get events => List<LinkEvent>.unmodifiable(_events);
+
+  /// Adds [event], dropping the oldest beyond [capacity].
+  void add(LinkEvent event) {
+    _events.add(event);
+    if (_events.length > capacity) {
+      _events.removeRange(0, _events.length - capacity);
+    }
+  }
+
+  /// Forgets everything, on each new link.
+  void clear() => _events.clear();
 }

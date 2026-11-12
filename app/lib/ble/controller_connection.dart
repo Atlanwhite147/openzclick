@@ -86,6 +86,17 @@ class ControllerConnection {
   List<GattServiceInfo> gattTree = const <GattServiceInfo>[];
 
   final FrameRing _frames = FrameRing();
+
+  /// What happened to the link itself, kept across reconnections.
+  ///
+  /// Not cleared with [_frames], on purpose: the failure worth diagnosing is a
+  /// drop followed by a reconnection, so the report has to be able to say both
+  /// "the link ended after 57 s" and what the next attempt did.
+  final LinkLog _linkLog = LinkLog();
+
+  /// Events of the link, oldest first, for [buildReport].
+  List<LinkEvent> get linkEvents => _linkLog.events;
+
   DateTime? _connectedAt;
 
   final StreamController<ClickButtonMask> _buttons =
@@ -277,12 +288,19 @@ class ControllerConnection {
         license: License.nonprofit,
         timeout: const Duration(seconds: 15),
       );
+      // The clock starts at the connection, not at the end of discovery: a
+      // report that dates the subscriptions before the link existed cannot be
+      // read.
+      _connectedAt = DateTime.now();
+      _frames.clear();
+      _event('connected');
       // Windows answers the first discovery after a connection with a partial
       // table: the vendor service arrives on the second or third call. Asking
       // once reported "channels are missing" on a controller that had them.
       final List<BluetoothService> services = await _discoverControllerServices(
         target,
       );
+      _event('services discovered: ${services.length}');
 
       BluetoothCharacteristic? asyncChannel;
       BluetoothCharacteristic? writeTarget;
@@ -323,13 +341,13 @@ class ControllerConnection {
       gattTree = _describe(services);
       information = await _readDeviceInformation(services);
 
-      _connectedAt = DateTime.now();
-      _frames.clear();
-
       // Buttons arrive on the asynchronous channel, the handshake reply on the
       // synchronous one: listening to both is the difference between a link
       // that works and a link that connects and says nothing.
       await asyncChannel.setNotifyValue(true);
+      _event(
+        'notify on 0002: ${asyncChannel.isNotifying ? 'accepted' : 'refused'}',
+      );
       _frameSubscriptions.add(
         asyncChannel.onValueReceived.listen(
           (List<int> frame) => _onFrame(frame, asyncChannel!),
@@ -338,12 +356,16 @@ class ControllerConnection {
       if (syncReply != null) {
         final BluetoothCharacteristic reply = syncReply;
         await reply.setNotifyValue(true);
+        _event('notify on 0004: ${reply.isNotifying ? 'accepted' : 'refused'}');
         _frameSubscriptions.add(
           reply.onValueReceived.listen(
             (List<int> frame) => _onFrame(frame, reply),
           ),
         );
       }
+      // Rebuilt once the subscriptions exist, so the tree states what is
+      // actually notifying rather than what was advertised before.
+      gattTree = _describe(services);
       _connectionSubscription = target.connectionState.listen((
         BluetoothConnectionState state,
       ) {
@@ -430,16 +452,23 @@ class ControllerConnection {
     if (_plainHandshakeSent) return;
     _plainHandshakeSent = true;
     _watchdog.onPlainHandshakeSent();
+    _event('opening the plain session');
     for (final List<int> frame in ControllerHandshake.activationSequence()) {
       final bool sent = await _tryWrite(frame);
       if (!sent) {
         // A failed write is the only observable sign that the session ended.
+        _event('activation write failed: ${_hexOf(frame)}');
         _scheduleReconnect();
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 30));
     }
+    _event('plain session opened');
   }
+
+  /// The bytes of [frame], for an event line.
+  static String _hexOf(List<int> frame) =>
+      frame.map((int b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
 
   /// Holds the plain session open.
   ///
@@ -447,7 +476,10 @@ class ControllerConnection {
   /// silence is normal riding and says nothing about the link.
   Future<void> _keepalive() async {
     final bool sent = await _tryWrite(ControllerHandshake.plainRequest());
-    if (!sent) _scheduleReconnect();
+    if (!sent) {
+      _event('keepalive write failed: ${error ?? 'no reason given'}');
+      _scheduleReconnect();
+    }
   }
 
   Future<void> _write(List<int> frame) async {
@@ -480,10 +512,28 @@ class ControllerConnection {
     final DateTime? start = _connectedAt;
     if (start == null) return;
     final Duration lived = DateTime.now().difference(start);
+    _event(
+      'link ended after ${lived.inSeconds} s, '
+      '${_frames.frames.length} frames kept',
+    );
     // A Click v2 that dies inside two minutes is telling the host that its
     // encryption context lapsed, not that the radio is bad: a healthy session
     // ends with the rider, hours later, or with a press on Disconnect.
     needsZwiftRefresh = lived < const Duration(seconds: 120);
+  }
+
+  /// Records one event of the link itself, stamped against the link's start.
+  ///
+  /// These are what a dropout is made of: the moment the subscriptions were
+  /// accepted, the opening that was written, the second the session ended. The
+  /// frames alone could not say why the Windows build lost its controller at
+  /// ~57 s while the same code held it in a browser.
+  void _event(String label) {
+    final DateTime? start = _connectedAt;
+    final Duration elapsed = start == null
+        ? Duration.zero
+        : DateTime.now().difference(start);
+    _linkLog.add(LinkEvent(elapsed: elapsed, label: label));
   }
 
   /// Programmes the next attempt, without ever giving up.
@@ -501,6 +551,7 @@ class ControllerConnection {
     final BluetoothDevice? target = device;
     if (!_keepLinked || target == null || _reconnecting) return;
     _reconnecting = true;
+    _event('reconnect attempt ${_attempts + 1}');
     status = ControllerStatus.connecting;
     error = 'the controller stopped answering, reconnecting';
     _notify();
@@ -509,15 +560,21 @@ class ControllerConnection {
       await connect(target);
       if (status == ControllerStatus.ready) {
         _attempts = 0;
+        _event('reconnected');
         return;
       }
       _attempts++;
+      _event('reconnect refused: ${error ?? 'no answer'}');
       // Every third refusal, look for the pod instead of dialling an address
       // that no longer answers: a sleeping controller comes back through its
       // advertising, and a wake-up press is what puts it there.
-      if (_attempts % 3 == 0) await _rescan(target);
-    } catch (_) {
+      if (_attempts % 3 == 0) {
+        _event('rescanning, three refusals in a row');
+        await _rescan(target);
+      }
+    } catch (e) {
       _attempts++;
+      _event('reconnect threw: $e');
     } finally {
       _reconnecting = false;
     }
@@ -637,6 +694,7 @@ class ControllerConnection {
       information: information,
       services: gattTree,
       frames: _frames.frames,
+      events: _linkLog.events,
     );
   }
 

@@ -14,6 +14,22 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- **The report now says what the link itself did.** Frames say what the
+  controller said; they cannot say whether the subscription to `0002` was ever
+  accepted, when the plain session opened, or how long the link lived. Measured
+  need: the Windows build lost its controller at **~57 s** on 2026-11-12 and the
+  report could only offer `discoverServices | device is not connected`, which is
+  the same line a refused subscription and a closed link both produce. A
+  `link (N, oldest first)` section now carries the sequence — connected, services
+  discovered, `notify on 0002: accepted|refused`, opening the plain session,
+  link ended after N s, reconnect attempts and their refusals — kept across
+  reconnections, because the failure worth reading is a drop followed by what the
+  next attempt did. The GATT tree is also rebuilt after the subscriptions, so its
+  `notifying` flag states what is actually notifying instead of what was
+  advertised before them. `app/lib/ble/device_report.dart`,
+  `app/lib/ble/controller_connection.dart`.
+
 ### Fixed
 - **The CI stops following the Flutter channel.** Every workflow asked for
   `channel: stable`, so the toolchain changed under a green build: on 2026-11-12
