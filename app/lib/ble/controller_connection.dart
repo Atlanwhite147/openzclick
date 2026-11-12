@@ -113,6 +113,10 @@ class ControllerConnection {
   Timer? _supervision;
   final ControllerLinkWatchdog _watchdog = ControllerLinkWatchdog();
 
+  /// What the link should do about its own age, so a controller that closes a
+  /// session on a timer is restarted before the rider notices.
+  final LinkPolicy _policy = const LinkPolicy();
+
   /// True once the plain handshake was written on this link.
   ///
   /// The encrypted request and the plain one are not the same question: a
@@ -441,6 +445,17 @@ class ControllerConnection {
         // Only in a plain session: an encrypted one answers frames by itself,
         // and a stray `RideOn` in the middle of it would be noise.
         if (_crypto == null) unawaited(_keepalive());
+    }
+
+    // Restart before the controller closes the session, not after: a pod that
+    // has closed it is asleep, and no connection wakes it. Two or three seconds
+    // of link per minute, and the rider never presses anything.
+    if (_connectedAt != null &&
+        _policy.wantsRestart(DateTime.now().difference(_connectedAt!))) {
+      _event('restarting the link before the controller closes it');
+      _connectedAt = null;
+      unawaited(_attemptReconnect());
+      return;
     }
 
     // A Click v2 answers the encrypted request with a bare `RideOn` echo and

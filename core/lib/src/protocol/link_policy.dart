@@ -80,6 +80,7 @@ class LinkPolicy {
   const LinkPolicy({
     this.releaseAfter = const Duration(minutes: 10),
     this.releaseOnCriticalBattery = false,
+    this.restartAfter = const Duration(seconds: 50),
   });
 
   /// Idle time after which a link is released.
@@ -87,6 +88,21 @@ class LinkPolicy {
 
   /// Whether a critical battery releases the link immediately.
   final bool releaseOnCriticalBattery;
+
+  /// Age at which a healthy link is restarted rather than left to die.
+  ///
+  /// A Click v2 closes a plain session **57 to 62 s** after it opened, whatever
+  /// is written to it: measured on the right pod on 2026-11-12 with a keepalive
+  /// every three seconds, first as a bare `RideOn`, then as the activation frame
+  /// `00 08 00`. Once it has closed, the pod is asleep and cannot be reached
+  /// again without a button press — every attempt returned
+  /// `device is not connected`. Restarting a few seconds early costs two or
+  /// three seconds of link and never asks the rider for anything, which is the
+  /// workaround `BikeControl` documents for the same pod.
+  final Duration restartAfter;
+
+  /// Whether a link that has lived [lived] should be restarted now.
+  bool wantsRestart(Duration lived) => lived >= restartAfter;
 
   /// Decides what to do.
   LinkDecision decide(LinkSituation situation) {
