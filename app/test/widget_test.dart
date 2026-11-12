@@ -76,7 +76,10 @@ void main() {
     state.dispose();
   });
 
-  test('a double tap chooses a direction instead of shifting', () async {
+  test('two quick presses are two gear changes', () async {
+    // Reported from MyWhoosh on 2026-11-12: going down several gears needed a
+    // pause between presses. The second press inside the double-tap window was
+    // being spent on a direction choice instead of the next gear.
     final AppState state = AppState(
       doubleTapWindow: const Duration(milliseconds: 40),
     );
@@ -87,8 +90,7 @@ void main() {
     state.handleButtons(const ClickButtonMask(up: true, down: false));
     state.handleButtons(ClickButtonMask.released);
     await Future<void>.delayed(const Duration(milliseconds: 60));
-    expect(state.engine.gearIndex, before);
-    expect(state.lastAction, Action.steerLeft);
+    expect(state.engine.gearIndex, before + 2);
     state.dispose();
   });
 

@@ -63,16 +63,22 @@ class GestureBindings {
       );
 }
 
-/// Default bindings: gears on a tap, directions on a double tap.
+/// Default bindings: gears on a tap, and nothing on a double tap.
+///
+/// A double tap used to mean "steer", which cost the gesture a rider repeats
+/// most: pressing twice quickly for two gears was read as one direction choice,
+/// so a second change had to wait out the window. Steering is worth a binding
+/// only for a rider who steers with the pod, and it is then their choice to
+/// trade the second gear for it.
 const GestureBindings defaultUpBindings = GestureBindings(
   tap: Action.shiftUp,
-  doubleTap: Action.steerLeft,
+  doubleTap: Action.none,
 );
 
 /// Default bindings for the second button.
 const GestureBindings defaultDownBindings = GestureBindings(
   tap: Action.shiftDown,
-  doubleTap: Action.steerRight,
+  doubleTap: Action.none,
 );
 
 /// Converts button states into actions, with double tap and long press.
@@ -87,7 +93,7 @@ class ButtonGestureDetector {
     required this.onAction,
     this.doubleTapWindow = const Duration(milliseconds: 320),
     this.longPressAfter = const Duration(milliseconds: 650),
-    this.mode = GestureMode.deferred,
+    this.mode = GestureMode.immediate,
     this.up = defaultUpBindings,
     this.down = defaultDownBindings,
   }) {
@@ -161,7 +167,17 @@ class ButtonGestureDetector {
       });
     }
 
-    if (second) {
+    if (second && bindings.doubleTap == Action.none) {
+      // No gesture is bound: a second press inside the window is simply the
+      // next gear change, and must not wait for the window to close.
+      state.lastPressAt = null;
+      if (mode == GestureMode.immediate) {
+        _emit(bindings.tap);
+        return;
+      }
+    }
+
+    if (second && bindings.doubleTap != Action.none) {
       // The second press is the gesture, whatever the first one did.
       state.pendingTimer?.cancel();
       state.pendingTimer = null;

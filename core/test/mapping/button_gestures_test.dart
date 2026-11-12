@@ -34,12 +34,44 @@ void main() {
     });
 
     test('the second press of a double tap adds the direction choice', () {
-      final ButtonGestureDetector g = detector();
+      // Steering has to be asked for: it costs the second gear change, which is
+      // the gesture a rider repeats most. See the test below.
+      final ButtonGestureDetector g = detector(
+        up: const GestureBindings(
+          tap: Action.shiftUp,
+          doubleTap: Action.steerLeft,
+        ),
+        down: const GestureBindings(
+          tap: Action.shiftDown,
+          doubleTap: Action.steerRight,
+        ),
+      );
       g.feed(const ClickButtonMask(up: true, down: false));
       g.feed(ClickButtonMask.released);
       g.feed(const ClickButtonMask(up: true, down: false));
       g.feed(ClickButtonMask.released);
       expect(actions, <Action>[Action.shiftUp, Action.steerLeft]);
+    });
+
+    test('two quick presses are two gear changes, and cost no window', () {
+      // Measured in MyWhoosh on 2026-11-12: shifting two gears down needed a
+      // pause between the presses, because the second one inside the window was
+      // read as a direction choice. It is the same press, twice.
+      final ButtonGestureDetector g = detector();
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
+      g.feed(const ClickButtonMask(up: true, down: false));
+      g.feed(ClickButtonMask.released);
+      expect(actions, <Action>[Action.shiftUp, Action.shiftUp]);
+    });
+
+    test('three quick presses are three gear changes', () {
+      final ButtonGestureDetector g = detector();
+      for (int i = 0; i < 3; i++) {
+        g.feed(const ClickButtonMask(up: true, down: false));
+        g.feed(ClickButtonMask.released);
+      }
+      expect(actions, <Action>[Action.shiftUp, Action.shiftUp, Action.shiftUp]);
     });
 
     test('two presses further apart are two shifts', () async {
@@ -53,7 +85,12 @@ void main() {
     });
 
     test('the down button keeps its own gestures', () {
-      final ButtonGestureDetector g = detector();
+      final ButtonGestureDetector g = detector(
+        down: const GestureBindings(
+          tap: Action.shiftDown,
+          doubleTap: Action.steerRight,
+        ),
+      );
       g.feed(const ClickButtonMask(up: false, down: true));
       g.feed(const ClickButtonMask(up: false, down: true));
       expect(actions, <Action>[Action.shiftDown]);
@@ -74,7 +111,17 @@ void main() {
     });
 
     test('a double tap produces the direction choice only', () async {
-      final ButtonGestureDetector g = detector(mode: GestureMode.deferred);
+      final ButtonGestureDetector g = detector(
+        mode: GestureMode.deferred,
+        up: const GestureBindings(
+          tap: Action.shiftUp,
+          doubleTap: Action.steerLeft,
+        ),
+        down: const GestureBindings(
+          tap: Action.shiftDown,
+          doubleTap: Action.steerRight,
+        ),
+      );
       g.feed(const ClickButtonMask(up: true, down: false));
       g.feed(ClickButtonMask.released);
       await Future<void>.delayed(const Duration(milliseconds: 10));
