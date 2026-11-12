@@ -32,6 +32,23 @@ abstract final class ControllerUuids {
 
   /// Standard battery service.
   static const String batteryService = '0000180f-0000-1000-8000-00805f9b34fb';
+
+  /// Standard Device Information service: manufacturer, serial, firmware.
+  static const String deviceInformationService =
+      '0000180a-0000-1000-8000-00805f9b34fb';
+
+  /// What a client has to be granted to do its job, vendor service first.
+  ///
+  /// A browser is granted only what the page names when it pairs, and a page
+  /// that named the vendor service alone could never show a battery level or a
+  /// firmware revision: measured on a Click v2 on 2026-11-12, where the same
+  /// controller answered `180a` and `180f` under Windows and the browser build
+  /// reported that it exposed neither.
+  static const List<String> requested = <String>[
+    service,
+    batteryService,
+    deviceInformationService,
+  ];
 }
 
 /// Message types carried in the first byte of an unencrypted frame.

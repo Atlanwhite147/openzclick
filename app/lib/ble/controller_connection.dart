@@ -192,8 +192,15 @@ class ControllerConnection {
         // [_looksLikeController], which reads both the announced services and
         // the name.
         withServices: const <Guid>[],
+        // A page only ever receives the services it names here, so a browser
+        // that asked for the vendor service alone could never show the battery
+        // or the firmware: measured on the right pod on 2026-11-12, where the
+        // same controller answered `180a` and `180f` on Windows and the web
+        // report read "the controller exposes no 0x180a service". The three are
+        // asked together, and the vendor one stays first because it is the only
+        // one a controller is guaranteed to have.
         webOptionalServices: kIsWeb
-            ? <Guid>[Guid(ControllerUuids.service)]
+            ? ControllerUuids.requested.map(Guid.new).toList()
             : const <Guid>[],
         timeout: timeout,
       );

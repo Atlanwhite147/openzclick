@@ -25,6 +25,13 @@ All notable changes to this project are documented here. The format follows [Kee
   `app/test/device_report_test.dart`.
 
 ### Changed
+- **The browser asks for the battery and the Device Information service.** A page
+  is granted only the services it names when it pairs, so the web build named the
+  vendor service alone and could never show a battery level or a firmware
+  revision: measured on the right pod on 2026-11-12, where the same controller
+  answered all five `180a` strings and the battery service under Windows. The
+  requested list now lives in `ControllerUuids.requested`, vendor service first,
+  and `app/lib/ble/controller_connection.dart` asks for it on the web.
 - **The link is no longer given up after one refusal.** A Click v2 sleeps, drops
   about a minute and a half into a session when its Zwift encryption context has
   lapsed, and refuses the first reconnection that follows. The bridge used to try
