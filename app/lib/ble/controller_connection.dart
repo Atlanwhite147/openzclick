@@ -288,6 +288,17 @@ class ControllerConnection {
         license: License.nonprofit,
         timeout: const Duration(seconds: 15),
       );
+      // A connection call that returns is not a link. Measured on Windows on
+      // 2026-11-12: after the pod went to sleep, `connect()` came back without
+      // an error, the report announced `connected` at +0000.000, and the very
+      // next discovery failed with `device is not connected` — a line that reads
+      // like a protocol fault and is only a pod that is not there.
+      if (!target.isConnected) {
+        throw StateError(
+          'the connection was accepted but no link came up: the controller is '
+          'asleep or out of range',
+        );
+      }
       // The clock starts at the connection, not at the end of discovery: a
       // report that dates the subscriptions before the link existed cannot be
       // read.
@@ -477,8 +488,16 @@ class ControllerConnection {
   Future<void> _keepalive() async {
     final bool sent = await _tryWrite(ControllerHandshake.plainRequest());
     if (!sent) {
+      // A refused write is the disconnect signal this stack gives on time: the
+      // `disconnected` event arrives late, or never. Measured on the right pod
+      // on 2026-11-12: the first refusal came at +62 s and the first
+      // reconnection at +98 s, because every failing keepalive re-armed the
+      // retry timer that the previous one had already set. Reconnecting from
+      // here removes the wait instead of measuring it.
       _event('keepalive write failed: ${error ?? 'no reason given'}');
-      _scheduleReconnect();
+      _noteLinkEnd();
+      _connectedAt = null;
+      await _attemptReconnect();
     }
   }
 
