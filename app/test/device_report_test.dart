@@ -194,5 +194,104 @@ void main() {
         throwsUnsupportedError,
       );
     });
+
+    // Measured: a Click v2 sends its resting mask `23 08 ff ff ff ff 0f` about
+    // ten times a second. Forty raw slots hold four seconds, which is why a
+    // rider's presses were gone by the time they copied the report.
+    test('a frame repeated unchanged takes one slot, not forty', () {
+      final FrameRing ring = FrameRing();
+      const List<int> resting = <int>[0x23, 0x08, 0xff, 0xff, 0xff, 0xff, 0x0f];
+      for (int i = 0; i < 40; i++) {
+        ring.add(
+          FrameRecord(
+            elapsed: Duration(milliseconds: 100 * i),
+            characteristic: '0002',
+            direction: FrameDirection.inbound,
+            bytes: resting,
+          ),
+        );
+      }
+      expect(ring.frames.length, 1);
+      expect(ring.frames.single.repeats, 40);
+      // Timed from the first arrival: the run started there.
+      expect(ring.frames.single.elapsed, Duration.zero);
+    });
+
+    test('a press breaks the run and keeps its own time', () {
+      final FrameRing ring = FrameRing();
+      FrameRecord frame(int ms, List<int> bytes) => FrameRecord(
+        elapsed: Duration(milliseconds: ms),
+        characteristic: '0002',
+        direction: FrameDirection.inbound,
+        bytes: bytes,
+      );
+      const List<int> resting = <int>[0x23, 0x08, 0xff, 0xff, 0xff, 0xff, 0x0f];
+      const List<int> plus = <int>[0x23, 0x08, 0xff, 0xdf, 0xff, 0xff, 0x0f];
+      ring
+        ..add(frame(0, resting))
+        ..add(frame(100, resting))
+        ..add(frame(200, plus))
+        ..add(frame(300, plus))
+        ..add(frame(400, resting));
+      expect(ring.frames.length, 3);
+      expect(ring.frames[0].repeats, 2);
+      expect(ring.frames[1].bytes, plus);
+      expect(ring.frames[1].repeats, 2);
+      expect(ring.frames[1].elapsed, const Duration(milliseconds: 200));
+      expect(ring.frames[2].repeats, 1);
+    });
+
+    test('the same bytes in two directions are two frames', () {
+      final FrameRing ring = FrameRing();
+      ring
+        ..add(
+          const FrameRecord(
+            elapsed: Duration.zero,
+            characteristic: '0003',
+            direction: FrameDirection.outbound,
+            bytes: <int>[0x52, 0x69],
+          ),
+        )
+        ..add(
+          const FrameRecord(
+            elapsed: Duration(milliseconds: 90),
+            characteristic: '0004',
+            direction: FrameDirection.inbound,
+            bytes: <int>[0x52, 0x69],
+          ),
+        );
+      expect(ring.frames.length, 2);
+    });
+  });
+
+  group('the report says what was collapsed', () {
+    test('a run of identical frames is shown with its count', () {
+      final String text = report(
+        frames: const <FrameRecord>[
+          FrameRecord(
+            elapsed: Duration(milliseconds: 335),
+            characteristic: '0002',
+            direction: FrameDirection.inbound,
+            bytes: <int>[0x23, 0x08, 0xff, 0xff, 0xff, 0xff, 0x0f],
+            repeats: 31,
+          ),
+        ],
+      ).render();
+      expect(text, contains('+0000.335 <- 0002 23 08 ff ff ff ff 0f  x31'));
+    });
+
+    test('a single frame carries no count', () {
+      final String text = report(
+        frames: const <FrameRecord>[
+          FrameRecord(
+            elapsed: Duration(milliseconds: 12),
+            characteristic: '0002',
+            direction: FrameDirection.inbound,
+            bytes: <int>[0x23, 0x08],
+          ),
+        ],
+      ).render();
+      expect(text, contains('+0000.012 <- 0002 23 08\n'));
+    });
   });
 }

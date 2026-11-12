@@ -32,6 +32,7 @@ class FrameRecord {
     required this.characteristic,
     required this.direction,
     required this.bytes,
+    this.repeats = 1,
   });
 
   /// Time since the link was established.
@@ -49,6 +50,36 @@ class FrameRecord {
 
   /// Bytes, exactly as they were exchanged.
   final List<int> bytes;
+
+  /// How many times this frame arrived unchanged, this one included.
+  ///
+  /// A Click v2 streams its mask about ten times a second whether or not a
+  /// button is involved, so forty raw frames cover four seconds of a ride. A
+  /// report that keeps them cannot show what a rider did a minute ago; one that
+  /// collapses a run of identical bytes covers minutes and still shows every
+  /// change of state, which is the only part worth reading.
+  final int repeats;
+
+  /// Whether [other] carries the same bytes in the same direction on the same
+  /// channel, which is what makes two frames one record.
+  bool follows(FrameRecord other) {
+    if (direction != other.direction) return false;
+    if (characteristic != other.characteristic) return false;
+    if (bytes.length != other.bytes.length) return false;
+    for (int i = 0; i < bytes.length; i++) {
+      if (bytes[i] != other.bytes[i]) return false;
+    }
+    return true;
+  }
+
+  /// This frame seen [count] times in total, timed from its first arrival.
+  FrameRecord repeated(int count) => FrameRecord(
+    elapsed: elapsed,
+    characteristic: characteristic,
+    direction: direction,
+    bytes: bytes,
+    repeats: count,
+  );
 }
 
 /// A characteristic as the device describes it.
@@ -241,9 +272,10 @@ class DeviceReport {
       final String arrow = frame.direction == FrameDirection.inbound
           ? '<-'
           : '->';
+      final String repeated = frame.repeats > 1 ? '  x${frame.repeats}' : '';
       out.writeln(
         '  ${_elapsed(frame.elapsed)} $arrow '
-        '${canonicalUuid(frame.characteristic)} ${_hex(frame.bytes)}',
+        '${canonicalUuid(frame.characteristic)} ${_hex(frame.bytes)}$repeated',
       );
     }
     return out.toString();
@@ -290,7 +322,18 @@ class FrameRing {
   List<FrameRecord> get frames => List<FrameRecord>.unmodifiable(_frames);
 
   /// Adds [frame], dropping the oldest beyond [capacity].
+  ///
+  /// A frame identical to the one before it does not take a new slot: its
+  /// predecessor's repeat count is incremented instead. The controller streams
+  /// its resting mask ten times a second, so without this the ring holds a few
+  /// seconds of a ride and the presses a rider reports have already scrolled
+  /// out by the time they copy the report.
   void add(FrameRecord frame) {
+    final FrameRecord? last = _frames.isEmpty ? null : _frames.last;
+    if (last != null && frame.follows(last)) {
+      _frames[_frames.length - 1] = last.repeated(last.repeats + 1);
+      return;
+    }
     _frames.add(frame);
     if (_frames.length > capacity) {
       _frames.removeRange(0, _frames.length - capacity);

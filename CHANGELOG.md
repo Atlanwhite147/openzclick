@@ -36,6 +36,12 @@ All notable changes to this project are documented here. The format follows [Kee
   hardware: the pod echoed every write and still dropped 92 seconds after the link
   came up. The section now records the measurement, the 24-hour rule and its
   source.
+- **The device report collapses a run of identical frames.** A Click v2 streams
+  its resting mask about ten times a second, so the forty slots of the ring held
+  four seconds of a ride: a rider pressed five buttons and copied a report that
+  showed none of them. A frame identical to the one before it now takes no new
+  slot and increments a count instead, drawn as `23 08 ff ff ff ff 0f  x31`, so
+  the same forty entries cover minutes and still show every change of state.
 - The `Z` row of the button table was wrong: `23 08 7f ff ff ff 0f` ends its
   varint on the first byte and clears bits 7 to 31. The frame a pod actually sends
   for `Z` is `23 08 ff fe ff ff 0f`, measured on firmware 1.1.0.
