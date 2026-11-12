@@ -15,6 +15,14 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Fixed
+- **The CI stops following the Flutter channel.** Every workflow asked for
+  `channel: stable`, so the toolchain changed under a green build: on 2026-11-12
+  stable moved to 3.50.0, which deprecates `package:flutter/material.dart` in
+  favour of `material_ui`, and the four build workflows plus the CI job failed on
+  `flutter analyze` — 14 findings reported as errors — while the same commands
+  passed on 3.47.9 locally. The version is now pinned to 3.47.9 in all five
+  workflows, and `CONTRIBUTING.md` says how to move it: bump the pin and migrate
+  the imports in the same commit.
 - **The browser's report no longer blames the controller.** A page only ever
   receives the GATT services it named when it opened the link, so a missing
   `0x180a` there means "this page did not ask", not "this controller has no

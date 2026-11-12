@@ -25,6 +25,14 @@ cd ../app && flutter pub get && flutter analyze && flutter test
 
 The CI runs exactly these commands, plus `flutter build apk` and a macOS build of the iOS application, so a green local run is a good predictor.
 
+The CI pins the Flutter version (`flutter-version` in every workflow) instead of
+following `stable`, and it pins the one this project is developed against. The
+reason is a measured one: on 2026-11-12 the stable channel moved to 3.50.0, which
+deprecates `package:flutter/material.dart` in favour of `material_ui`, and every
+workflow started failing on `flutter analyze` while the same commands passed on
+3.47.9. A toolchain that changes under a green build is not a toolchain: bump the
+pin, migrate the imports in the same commit, and let the CI prove it.
+
 ## Reporting a controller that does not pair
 
 Open a bug report and include:
