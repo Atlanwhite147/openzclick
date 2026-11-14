@@ -73,7 +73,14 @@ jobs:
         run: |
           npx --yes wbn -d app/build/web -b "isolated-app://$IWA_ID/" -o app.wbn
           npx --yes wbn-sign sign app.wbn "$RUNNER_TEMP/appkey.pem" -o app.swbn
-          npx --yes wbn-sign info app.swbn | grep -q "is correct: Yes"
+          # Not `| grep -q`: under `pipefail`, grep exits at the first match, the
+          # producer dies of SIGPIPE, and the pipeline reports failure on a
+          # signature that is perfectly correct.
+          INFO=$(npx --yes wbn-sign info app.swbn)
+          case "$INFO" in
+            *"is correct: Yes"*) ;;
+            *) echo "signature invalide"; echo "$INFO"; exit 1 ;;
+          esac
           python3 - <<'EOF'
           import base64, hashlib, json
           data = open('app.swbn', 'rb').read()
