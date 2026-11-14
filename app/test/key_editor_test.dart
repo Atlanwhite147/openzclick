@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/main.dart';
+import 'package:openzclick/net/desktop_injection_native.dart';
 import 'package:openzclick/settings/settings_store.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 import 'fake_publisher.dart';
+
+/// The key editor only exists where a desktop backend does — Linux and Windows.
+///
+/// Not a disguise of the host: the widget itself is absent on macOS and iOS, so
+/// asserting it there would be asserting something no rider can see.
+final bool _hasDesktopBackend = createDesktopInjection() != null;
 
 void main() {
   testWidgets('a rider can change the key of an action', (
@@ -38,7 +45,7 @@ void main() {
     expect(state.hasKeyOverrides, isTrue);
     // The publisher is rebuilt with the new table, not only the screen.
     expect(state.injection.keys?[Action.shiftUp], 'x');
-  });
+  }, skip: !_hasDesktopBackend);
 
   testWidgets('emptying a field restores the shipped key', (
     WidgetTester tester,
@@ -53,7 +60,7 @@ void main() {
     expect(state.hasKeyOverrides, isFalse);
     expect(state.effectiveKeys[Action.shiftUp], 'k');
     expect(state.injection.keys?[Action.shiftUp], 'k');
-  });
+  }, skip: !_hasDesktopBackend);
 
   testWidgets('changing the application drops the changes of the old one', (
     WidgetTester tester,
@@ -87,5 +94,5 @@ void main() {
 
     expect(second.keyProfile.id, 'rouvy');
     expect(second.effectiveKeys[Action.shiftDown], 'v');
-  });
+  }, skip: !_hasDesktopBackend);
 }
