@@ -303,13 +303,27 @@ The detailed roadmap, including what is open to a first contribution, lives in [
 
 <div align="center">
 
-| Start | Gears | Controllers | Network |
+| First start | Gears | Controllers | Start |
 |---|---|---|---|
-| ![Start](docs/screenshots/start.png) | ![Gears](docs/screenshots/gears.png) | ![Controllers](docs/screenshots/controllers.png) | ![Network](docs/screenshots/network.png) |
+| ![First start](docs/screenshots/onboarding.png) | ![Gears](docs/screenshots/gears.png) | ![Controllers](docs/screenshots/controllers.png) | ![Start](docs/screenshots/start.png) |
 
 </div>
 
-Captured on Windows 11 from the current build: the four steps, the gear with its chain-setup card, the controller screen, and the publication with the QR code a phone scans to become the console. The **Controllers** shot shows the state before pairing, which is the honest one to publish: a connected Click v2 is the same screen with a green icon, the session type and the battery percentage.
+Captured from the web build of the current version, at 1280 by 800. The four
+screenshots are the same pixels on every platform: one theme, one layout, no
+platform-specific furniture. The **Gears** shot leads with the gear in tabular
+figures and draws the cassette as a ladder, so the room left before the largest
+gear is visible at a glance; the two shift paddles carry the pod's own colours —
+orange for the harder gear, rose for the easier one. The **Controllers** shot is
+the state before pairing, which is the honest one to publish: a connected pod is
+the same screen with a green lamp, the pod's side, the session type and the
+battery percentage, and the four buttons of the pod are named in their colours.
+
+The **Network** tab is not in the table because a browser cannot listen on the
+network: a page shows the limitation instead of the publication. Run the
+application on a computer or an Android phone and the same tab carries the
+switch, the announced name and the QR code a phone scans to become the console —
+see [docs/android.md](docs/android.md) for the whole chain on one phone.
 
 ## Contributing
 
