@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide Action;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:openzclick/main.dart';
+import 'package:openzclick/ui/screens/controllers_screen.dart';
 import 'package:openzclick/platform/capabilities.dart';
 import 'package:openzclick/platform/version.dart';
 import 'package:openzclick/state/app_state.dart';

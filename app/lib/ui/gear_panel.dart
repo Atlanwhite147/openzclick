@@ -65,7 +65,7 @@ class GearPanel extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Paddle(
-                      label: 'Shift up',
+                      label: Action.shiftUp.label,
                       icon: Icons.keyboard_arrow_up,
                       color: Tokens.orange,
                       onPressed: engine.atHighest ? null : state.shiftUp,
@@ -74,7 +74,7 @@ class GearPanel extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Paddle(
-                      label: 'Shift down',
+                      label: Action.shiftDown.label,
                       icon: Icons.keyboard_arrow_down,
                       color: Tokens.rose,
                       onPressed: engine.atLowest ? null : state.shiftDown,

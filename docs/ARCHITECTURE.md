@@ -13,6 +13,30 @@ core/         pure core: protocol, shifting, mapping, devices
 
 Golden rule: `core` knows neither Flutter, nor Bluetooth, nor the file system at runtime (device definitions are loaded by the caller, not by the core).
 
+## Inside `app/`
+
+```
+main.dart              bootstrap only: the application root and the state
+ui/shell.dart          the four sections, their navigation, the readiness lamp
+ui/screens/            one file per section, no shared state of their own
+  start_screen         the four steps, and the single button the web gets
+  gears_screen         the gear panel, and the chain question
+  controllers_screen   pairing, the pod's side, the device report
+  network_screen       publication, the console relay, the key editor
+ui/console_cards.dart  the bridge console and the page console
+ui/design.dart         colours, spacing, type, and the shared widgets
+ui/onboarding.dart     the first-start guide
+ui/one_tap.dart        the page's single action
+ui/gear_panel.dart     the readout, the ladder, the two paddles
+ui/mywhoosh_guide.dart the four-step card MyWhoosh needs
+ui/parked_gear_card.dart the chain question
+```
+
+The split is not decoration: a screen that shares a file with the navigation
+shell cannot be read on its own, and every one of these files fits on a screen.
+`main.dart` holds nothing but the root, so a reader looking for a behaviour knows
+where to look — the section is the file name.
+
 ## Flow of a button press
 
 1. An input backend (BLE, keyboard, HID device) produces a `ButtonEvent`.

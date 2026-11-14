@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openzclick/main.dart';
+import 'package:openzclick/ui/screens/network_screen.dart';
 import 'package:openzclick/net/publisher_port.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:qr_flutter/qr_flutter.dart';

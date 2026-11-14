@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' hide Action;
 
-import 'package:openzclick/main.dart' show ControllersScreen;
+import 'package:openzclick/ui/screens/controllers_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/ble/controller_connection.dart';
 import 'package:openzclick/state/app_state.dart';
