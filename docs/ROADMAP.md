@@ -7,6 +7,12 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
 - Binary protocol of the controller, encrypted sessions, gear engine, gestures.
 - Network publication with mDNS and TCP, in the shared core.
 - Android tap injection through an accessibility service.
+- The whole chain on one Android phone: the pod over Bluetooth, the gear published
+  as OpenBikeControl over the phone's own network, MyWhoosh reading it on the same
+  device, and a foreground service that keeps the link alive while MyWhoosh is in
+  front (`docs/android.md`). Verified: the announcement itself, browsed from
+  another machine (PTR, SRV on 47123, and the six TXT fields the protocol asks
+  for). Not yet verified on an Android device.
 - Linux keyboard and pointer injection through X11 and XTest.
 - Persisted settings, gear profile selection, continuous Android and iOS builds.
 - Controller link supervision: plain-handshake fallback, silence detection and
