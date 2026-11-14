@@ -186,16 +186,18 @@ class _ModeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
+    // The pod's top button is blue, and blue is this application's word for
+    // information: which mode the ride is in, and what it targets.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
+        color: Tokens.blue.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         erg ? 'ERG $ergWatts W' : 'SIM',
-        style: Theme.of(context).textTheme.labelMedium,
+        style: Theme.of(context).textTheme.labelMedium!
+            .copyWith(color: Tokens.blue, fontWeight: FontWeight.w700),
       ),
     );
   }

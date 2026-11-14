@@ -480,6 +480,24 @@ class ControllersScreen extends StatelessWidget {
               ),
             const Divider(height: 32),
             Text('Last buttons: ${state.lastButtons ?? 'none'}'),
+            const SizedBox(height: 10),
+            // The pod's own colours, named: a rider holding the thing can tell
+            // which button the application calls what, and the palette stops
+            // being decoration.
+            const Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                ButtonSwatch(
+                  label: '+',
+                  color: Tokens.orange,
+                  meaning: 'harder',
+                ),
+                ButtonSwatch(label: 'B', color: Tokens.rose, meaning: 'easier'),
+                ButtonSwatch(label: 'Y', color: Tokens.blue, meaning: 'top'),
+                ButtonSwatch(label: 'A', color: Tokens.green, meaning: 'right'),
+              ],
+            ),
             // Asked for by the one person who could close the loop: the bridge
             // is written on a machine with no radio, so a dropout can only be
             // diagnosed from what a rider's device actually exposes. A

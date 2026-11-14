@@ -275,33 +275,33 @@ class Paddle extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
+      // Solid, in the pod's own colour. A tinted button at twelve percent is a
+      // button nobody notices, and the whole point of the palette is that the
+      // screen and the object in the rider's hand look like the same thing.
       child: Material(
-        color: enabled ? color.withValues(alpha: 0.12) : Tokens.raised,
+        color: enabled ? color : Tokens.raised,
         borderRadius: BorderRadius.circular(Tokens.radius),
+        elevation: enabled ? 2 : 0,
+        shadowColor: enabled ? color.withValues(alpha: 0.45) : null,
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(Tokens.radius),
-          child: Container(
+          child: SizedBox(
             height: 68,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(Tokens.radius),
-              border: Border.all(
-                color: enabled
-                    ? color.withValues(alpha: 0.35)
-                    : Tokens.ink.withValues(alpha: 0.05),
-              ),
-            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Icon(icon, size: 24, color: enabled ? color : Tokens.muted),
+                Icon(
+                  icon,
+                  size: 24,
+                  color: enabled ? Colors.white : Tokens.muted,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                    color: enabled ? color : Tokens.muted,
-                    fontWeight: FontWeight.w600,
+                    color: enabled ? Colors.white : Tokens.muted,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -309,6 +309,69 @@ class Paddle extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One button of the pod, in its own colour, with what the application does with
+/// it.
+///
+/// It answers the question a rider actually asks at a controller screen — "which
+/// one did I just press?" — and it is the only place where all four pod colours
+/// appear side by side.
+class ButtonSwatch extends StatelessWidget {
+  /// Creates a swatch.
+  const ButtonSwatch({
+    required this.label,
+    required this.color,
+    required this.meaning,
+    super.key,
+  });
+
+  /// The letter printed on the button.
+  final String label;
+
+  /// The colour of that button.
+  final Color color;
+
+  /// What the application does with it.
+  final String meaning;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 16,
+            height: 16,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            meaning,
+            style: Theme.of(context).textTheme.labelMedium!
+                .copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
