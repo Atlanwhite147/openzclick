@@ -9,6 +9,7 @@ import '../net/desktop_injection.dart';
 import '../net/injection_publisher.dart';
 import '../net/key_profiles.dart';
 import '../net/publisher.dart';
+import '../platform/android_keepalive.dart';
 import '../platform/capabilities.dart';
 import '../settings/settings_store.dart';
 
@@ -174,7 +175,10 @@ class AppState extends ChangeNotifier {
     controller.onChanged = _onControllerChanged;
     // `this.` on purpose: inside the body, the constructor parameter of the same
     // name would otherwise shadow the field.
-    this.publisher.onChanged = notifyListeners;
+    this.publisher.onChanged = () {
+      _syncKeepAlive();
+      notifyListeners();
+    };
     injection.onChanged = () {
       _persist();
       notifyListeners();
@@ -216,6 +220,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _onControllerChanged() {
+    _syncKeepAlive();
     if (controller.status == ControllerStatus.idle) {
       // A pod that leaves is not a pod that recovered: forget the sample rather
       // than showing the level of a previous ride.
@@ -224,6 +229,27 @@ class AppState extends ChangeNotifier {
       battery.observe(controller.batteryPercent);
     }
     notifyListeners();
+  }
+
+  /// True while the host is holding the process for us.
+  bool _keepAliveOn = false;
+
+  /// Holds the process whenever something depends on it staying awake.
+  ///
+  /// Two things do: the controller link and the network publication. Both die
+  /// with a suspended application, and the rider is in another application by
+  /// definition — the training one is in front. Android only; elsewhere this is
+  /// a no-op, which is why the decision lives here rather than in the platform.
+  void _syncKeepAlive() {
+    final bool wanted =
+        controller.status == ControllerStatus.ready || publisher.running;
+    if (wanted == _keepAliveOn) return;
+    _keepAliveOn = wanted;
+    if (wanted) {
+      AndroidKeepAlive.start();
+    } else {
+      AndroidKeepAlive.stop();
+    }
   }
 
   /// Publication supplied by a test, `null` on a real run.

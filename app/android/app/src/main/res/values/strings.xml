@@ -2,4 +2,8 @@
 <resources>
     <string name="injection_service_description">Lets openzclick tap the on-screen gear controls of your training application. It reads nothing.</string>
     <string name="injection_service_label">openzclick taps</string>
+    <string name="keepalive_title">openzclick is holding your pod</string>
+    <string name="keepalive_text">Your controller stays connected while you ride.</string>
+    <string name="keepalive_channel">Pod link</string>
+    <string name="keepalive_channel_description">Shown while openzclick keeps the controller link and the network publication alive.</string>
 </resources>

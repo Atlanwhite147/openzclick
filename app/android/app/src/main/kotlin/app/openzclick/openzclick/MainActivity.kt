@@ -37,6 +37,24 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        // The link has to survive the rider switching to the training
+        // application: Android suspends a background application, and a suspended
+        // one loses its Bluetooth link and its socket.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "openzclick/keepalive")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        KeepAliveService.start(applicationContext)
+                        result.success(true)
+                    }
+                    "stop" -> {
+                        KeepAliveService.stop(applicationContext)
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         // Taps towards the training application, performed by the accessibility
         // service the user has to enable once.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, InjectionService.CHANNEL)
