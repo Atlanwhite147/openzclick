@@ -29,7 +29,7 @@ class _HomeShellState extends State<HomeShell> {
   // lives at the bottom of the Network tab, where the rest of the technical
   // material already was.
   static const List<String> _titles = <String>[
-    'MyWhoosh',
+    'Start',
     'Gears',
     'Controllers',
     'Network',
@@ -74,7 +74,14 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_index]),
-        actions: <Widget>[_ReadinessChip(state: state)],
+        actions: <Widget>[
+          _ReadinessChip(
+            state: state,
+            // The lamp states a problem; a rider should not have to guess which
+            // tab fixes it. Tapping it goes there.
+            onGoTo: (int tab) => setState(() => _index = tab),
+          ),
+        ],
       ),
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
@@ -108,9 +115,12 @@ class _HomeShellState extends State<HomeShell> {
 /// question still shifts perfectly. Counting it here would leave them on "Not
 /// ready" while everything worked, which is worse than saying nothing.
 class _ReadinessChip extends StatelessWidget {
-  const _ReadinessChip({required this.state});
+  const _ReadinessChip({required this.state, required this.onGoTo});
 
   final AppState state;
+
+  /// Opens the section that would clear the lamp.
+  final void Function(int tab) onGoTo;
 
   @override
   Widget build(BuildContext context) {
@@ -123,20 +133,42 @@ class _ReadinessChip extends StatelessWidget {
         final bool chain =
             !Capabilities.drivesTrainerItself || state.physicalSetup.isComplete;
         final bool ready = bridge && chain;
+        final String label = ready
+            ? 'Ready'
+            : bridge
+            ? 'Waiting for the chain'
+            : 'Not ready';
+        // The lamp is the one thing a rider reads before starting, so it is also
+        // the shortest path to the fix: the bridge is started from Network, the
+        // chain answered from Gears.
+        final Widget lamp = Lamp(
+          on: ready,
+          color: ready ? Tokens.good : Tokens.alarm,
+          label: label,
+        );
         return Padding(
           padding: const EdgeInsets.only(right: 16),
           // A lamp, not a chip: this is a state, and a chip reads like a label
           // or a filter next to the tabs. It says the one thing a rider needs
           // before starting, in the same vocabulary on every screen.
-          child: Lamp(
-            on: ready,
-            color: ready ? Tokens.good : Tokens.alarm,
-            label: ready
-                ? 'Ready'
-                : bridge
-                ? 'Waiting for the chain'
-                : 'Not ready',
-          ),
+          child: ready
+              ? lamp
+              : Tooltip(
+                  message: bridge
+                      ? 'Tap to answer the chain question'
+                      : 'Tap to start the bridge',
+                  child: InkWell(
+                    onTap: () => onGoTo(bridge ? 1 : 3),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 6,
+                      ),
+                      child: lamp,
+                    ),
+                  ),
+                ),
         );
       },
     );

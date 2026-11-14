@@ -78,4 +78,29 @@ void main() {
     expect(find.text('Where is your chain? (optional)'), findsOneWidget);
     expect(find.text('Where is your chain?'), findsNothing);
   });
+
+  testWidgets('the lamp is also the way to the fix', (
+    WidgetTester tester,
+  ) async {
+    // "Not ready" without a next step is a dead end: the rider is told something
+    // is wrong and left to find the tab. The lamp says where to go.
+    final FakePublisher publisher = FakePublisher();
+    final AppState state = AppState(publisher: publisher);
+    addTearDown(state.dispose);
+    state.completeOnboarding();
+
+    await tester.pumpWidget(MaterialApp(home: HomeShell(state: state)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not ready'), findsOneWidget);
+    // Nothing from the Network screen is on screen yet.
+    expect(find.text('Publish on the network'), findsNothing);
+
+    await tester.tap(find.text('Not ready'));
+    await tester.pumpAndSettle();
+
+    // The bridge is started from Network, so that is where the lamp sends them:
+    // a section only that screen carries proves the tab actually changed.
+    expect(find.text('Publish on the network'), findsOneWidget);
+  });
 }
