@@ -18,6 +18,7 @@ import 'state/app_state.dart';
 import 'ui/design.dart';
 import 'ui/gear_panel.dart';
 import 'ui/mywhoosh_guide.dart';
+import 'ui/onboarding.dart';
 import 'ui/parked_gear_card.dart';
 
 void main() => runApp(const OpenZclickApp());
@@ -25,14 +26,20 @@ void main() => runApp(const OpenZclickApp());
 /// Application root: dark theme, four sections.
 class OpenZclickApp extends StatefulWidget {
   /// Creates the application.
-  const OpenZclickApp({super.key});
+  ///
+  /// [state] exists for tests, which start the application in a known state —
+  /// past the first-start guide, or with a publisher that is not a socket.
+  const OpenZclickApp({this.state, super.key});
+
+  /// State to run with, `null` on a real launch.
+  final AppState? state;
 
   @override
   State<OpenZclickApp> createState() => _OpenZclickAppState();
 }
 
 class _OpenZclickAppState extends State<OpenZclickApp> {
-  final AppState _state = AppState();
+  late final AppState _state = widget.state ?? AppState();
 
   @override
   void initState() {
@@ -112,6 +119,29 @@ class _HomeShellState extends State<HomeShell> {
       TargetScreen(state: state, onOpenGuide: () => setState(() => _index = 0)),
     ];
 
+    // The first-start guide takes the whole screen, once. It is not an overlay on
+    // top of a half-configured application: a rider meeting the tabs before
+    // knowing the order reads them as a settings app.
+    return ListenableBuilder(
+      listenable: state,
+      builder: (BuildContext context, Widget? _) {
+        if (!state.onboardingDone) {
+          return OnboardingScreen(
+            onDone: state.completeOnboarding,
+            onOpenTab: (int tab) {
+              // Going to the screen is answering the step: the guide closes and
+              // the rider can bring it back from the first screen.
+              state.completeOnboarding();
+              setState(() => _index = tab);
+            },
+          );
+        }
+        return _shell(state, pages);
+      },
+    );
+  }
+
+  Widget _shell(AppState state, List<Widget> pages) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_index]),
@@ -210,6 +240,16 @@ class MyWhooshGuideScreen extends StatelessWidget {
       children: <Widget>[
         MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
         const SizedBox(height: 8),
+        // The guide is shown once, so it has to be findable again: a rider who
+        // skipped it to ride, then came back a week later, has no other door.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: state.replayOnboarding,
+            icon: const Icon(Icons.replay, size: 18),
+            label: const Text('Show the first-start guide again'),
+          ),
+        ),
         const Card(
           child: Padding(
             padding: EdgeInsets.all(16),

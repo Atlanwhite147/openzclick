@@ -17,7 +17,11 @@ void main() {
   testWidgets('the gear screen shows the default gear', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const OpenZclickApp());
+    // The application disposes the state it was handed, so the test does not.
+    final AppState state = AppState();
+    // Past the first-start guide: these tests are about the shell.
+    state.completeOnboarding();
+    await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gears'));
     await tester.pumpAndSettle();
@@ -29,7 +33,11 @@ void main() {
   testWidgets('shift up changes the displayed gear', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const OpenZclickApp());
+    // The application disposes the state it was handed, so the test does not.
+    final AppState state = AppState();
+    // Past the first-start guide: these tests are about the shell.
+    state.completeOnboarding();
+    await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gears'));
     await tester.pumpAndSettle();
@@ -45,7 +53,11 @@ void main() {
   ) async {
     // The test bench sat in the navigation bar beside the gear, which is what
     // made the application look like something to configure rather than use.
-    await tester.pumpWidget(const OpenZclickApp());
+    // The application disposes the state it was handed, so the test does not.
+    final AppState state = AppState();
+    // Past the first-start guide: these tests are about the shell.
+    state.completeOnboarding();
+    await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationDestination), findsNWidgets(4));

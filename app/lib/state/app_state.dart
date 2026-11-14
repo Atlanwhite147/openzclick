@@ -419,11 +419,38 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether the first-start guide has been seen.
+  ///
+  /// True once the rider walked through it or skipped it. It is asked of the
+  /// store, not guessed from a first launch: an empty store also happens when a
+  /// rider clears the data, and being shown the guide again in that case is the
+  /// honest outcome.
+  bool onboardingDone = false;
+
+  /// Records that the guide was walked through, and stops showing it.
+  void completeOnboarding() {
+    if (onboardingDone) return;
+    onboardingDone = true;
+    _persist();
+    notifyListeners();
+  }
+
+  /// Shows the guide again, from the first screen.
+  void replayOnboarding() {
+    onboardingDone = false;
+    _persist();
+    notifyListeners();
+  }
+
   /// Restores the stored settings, then optionally resumes publishing.
   Future<void> restore(SettingsStore settings) async {
     store = settings;
     final SettingsSnapshot? snapshot = await settings.load();
-    if (snapshot == null) return;
+    if (snapshot == null) {
+      notifyListeners();
+      return;
+    }
+    onboardingDone = snapshot.onboardingDone;
 
     final GearProfile profile =
         GearProfile.byId(snapshot.profileId) ?? GearProfile.road12;
@@ -527,6 +554,7 @@ class AppState extends ChangeNotifier {
           keyOverrides: Map<String, String>.of(_overrides),
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
+          onboardingDone: onboardingDone,
         ),
       );
     });

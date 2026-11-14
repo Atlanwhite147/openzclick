@@ -67,6 +67,7 @@ class GearPanel extends StatelessWidget {
                     child: Paddle(
                       label: 'Shift up',
                       icon: Icons.keyboard_arrow_up,
+                      color: Tokens.orange,
                       onPressed: engine.atHighest ? null : state.shiftUp,
                     ),
                   ),
@@ -75,6 +76,7 @@ class GearPanel extends StatelessWidget {
                     child: Paddle(
                       label: 'Shift down',
                       icon: Icons.keyboard_arrow_down,
+                      color: Tokens.rose,
                       onPressed: engine.atLowest ? null : state.shiftDown,
                     ),
                   ),

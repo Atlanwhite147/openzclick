@@ -23,6 +23,7 @@ class SettingsSnapshot {
     this.keyOverrides = const <String, String>{},
     this.parkedChainringTeeth,
     this.parkedCogTeeth,
+    this.onboardingDone = false,
   });
 
   /// Identifier of the gear profile.
@@ -55,6 +56,13 @@ class SettingsSnapshot {
   /// Stored per application, so switching profile and coming back finds the
   /// rider's own choices rather than the shipped table.
   final Map<String, String> keyOverrides;
+
+  /// Whether the first-start guide has been walked through, or skipped.
+  ///
+  /// Stored rather than inferred: a rider who skipped it on purpose must not be
+  /// shown it again on every launch, and a rider who wants it back asks for it
+  /// from the first screen.
+  final bool onboardingDone;
 
   /// Chainring the chain sits on, `null` until the rider confirms it.
   ///
@@ -89,6 +97,7 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _keyOverridePrefix = 'openzclick.key.';
   static const String _parkedChainringKey = 'openzclick.parked.chainring';
   static const String _parkedCogKey = 'openzclick.parked.cog';
+  static const String _onboardingKey = 'openzclick.onboarding';
 
   @override
   Future<SettingsSnapshot?> load() async {
@@ -134,6 +143,7 @@ class PrefsSettingsStore implements SettingsStore {
       },
       parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
       parkedCogTeeth: prefs.getInt(_parkedCogKey),
+      onboardingDone: prefs.getBool(_onboardingKey) ?? false,
     );
   }
 
@@ -143,6 +153,7 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setString(_profileKey, snapshot.profileId);
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
+    await prefs.setBool(_onboardingKey, snapshot.onboardingDone);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
     await prefs.setString(_keyProfileKey, snapshot.keyProfileId);
     await prefs.setInt(_shiftsPerPressKey, snapshot.shiftsPerPress);

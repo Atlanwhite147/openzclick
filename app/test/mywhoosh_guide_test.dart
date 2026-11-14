@@ -169,7 +169,9 @@ void main() {
   testWidgets('the guide is the first screen, so it is seen without looking', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const OpenZclickApp());
+    final AppState state = AppState();
+    state.completeOnboarding();
+    await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();
 
     expect(find.text('Ride with MyWhoosh'), findsOneWidget);

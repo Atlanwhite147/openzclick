@@ -17,45 +17,72 @@ library;
 import 'package:flutter/material.dart';
 
 /// Colours, spacing and radii, in one place.
+///
+/// The palette is taken from the pod itself. A Zwift Click has four buttons and
+/// four colours — orange, rose, blue, green — and those four are the only accents
+/// this application spends: orange for the harder gear, rose for the easier one,
+/// blue for information, green for a link that works. Nothing here was chosen
+/// because it looks technical; it was chosen because the rider is holding it.
 abstract final class Tokens {
-  /// The page behind everything.
-  static const Color ink = Color(0xFF0B0F10);
+  /// The page behind everything: a cool paper, not a warm cream.
+  static const Color paper = Color(0xFFF5F7F9);
 
-  /// A grouped surface, one step above [ink].
-  static const Color surface = Color(0xFF141A1C);
+  /// A surface that groups content.
+  static const Color surface = Color(0xFFFFFFFF);
 
-  /// A surface that expects a press.
-  static const Color raised = Color(0xFF1C2427);
+  /// A surface that expects a press, or a field.
+  static const Color raised = Color(0xFFEDF1F4);
 
   /// Body text.
-  static const Color text = Color(0xFFECF1F2);
+  static const Color ink = Color(0xFF11171B);
 
   /// Labels, units, secondary sentences.
-  static const Color muted = Color(0xFF8A979C);
+  static const Color muted = Color(0xFF66727C);
 
-  /// The engaged gear, a live link, the one thing to look at. Used once.
-  static const Color signal = Color(0xFFFFC24B);
+  /// The pod's left button (Z): the harder gear.
+  static const Color orange = Color(0xFFE8622C);
 
-  /// Information that is neither a warning nor a confirmation.
-  static const Color steel = Color(0xFF7FA8BE);
+  /// The pod's bottom button (B): the easier gear.
+  static const Color rose = Color(0xFFD6427E);
 
-  /// Something the rider has to act on.
-  static const Color alarm = Color(0xFFFF6B5A);
+  /// The pod's top button (Y): information.
+  static const Color blue = Color(0xFF2F6BEA);
 
-  /// A link that works, a battery that is fine.
-  static const Color good = Color(0xFF63D2A4);
+  /// The pod's right button (A): a link that works.
+  static const Color green = Color(0xFF17A673);
+
+  /// Kept for the names the rest of the code already uses.
+  static const Color text = ink;
+  static const Color signal = orange;
+  static const Color steel = blue;
+  static const Color good = green;
+  static const Color alarm = rose;
 
   /// Space between two blocks.
-  static const double gap = 12;
+  static const double gap = 14;
 
   /// Padding inside a surface.
-  static const double pad = 18;
+  static const double pad = 20;
 
   /// Corner radius of a surface.
-  static const double radius = 16;
+  static const double radius = 20;
 
   /// Thickness of a rule.
   static const double hairline = 1;
+
+  /// The shadow a surface carries: one soft lift, never a glow.
+  static List<BoxShadow> get lift => <BoxShadow>[
+    BoxShadow(
+      color: ink.withValues(alpha: 0.05),
+      blurRadius: 2,
+      offset: const Offset(0, 1),
+    ),
+    BoxShadow(
+      color: ink.withValues(alpha: 0.06),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }
 
 /// Text styles that carry the instrument.
@@ -66,10 +93,10 @@ abstract final class Type {
   /// layout sideways, and a rider reads the change, not the movement.
   static TextStyle readout(BuildContext context) =>
       Theme.of(context).textTheme.displayLarge!.copyWith(
-        fontSize: 76,
+        fontSize: 84,
         height: 0.9,
         fontWeight: FontWeight.w600,
-        letterSpacing: -2,
+        letterSpacing: -3,
         color: Tokens.text,
         fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
       );
@@ -108,7 +135,7 @@ class Hairline extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(left: indent),
       height: Tokens.hairline,
-      color: Tokens.text.withValues(alpha: 0.08),
+      color: Tokens.ink.withValues(alpha: 0.08),
     );
   }
 }
@@ -226,8 +253,12 @@ class Paddle extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    this.color = Tokens.orange,
     super.key,
   });
+
+  /// The pod colour of this shift: orange up, rose down.
+  final Color color;
 
   /// What the press does, in the rider's words.
   final String label;
@@ -245,34 +276,33 @@ class Paddle extends StatelessWidget {
       button: true,
       enabled: enabled,
       child: Material(
-        color: enabled ? Tokens.raised : Tokens.raised.withValues(alpha: 0.4),
+        color: enabled ? color.withValues(alpha: 0.12) : Tokens.raised,
         borderRadius: BorderRadius.circular(Tokens.radius),
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(Tokens.radius),
           child: Container(
-            height: 64,
+            height: 68,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(Tokens.radius),
               border: Border.all(
-                color: Tokens.text.withValues(alpha: enabled ? 0.10 : 0.04),
+                color: enabled
+                    ? color.withValues(alpha: 0.35)
+                    : Tokens.ink.withValues(alpha: 0.05),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Icon(
-                  icon,
-                  size: 22,
-                  color: enabled ? Tokens.text : Tokens.muted,
-                ),
+                Icon(icon, size: 24, color: enabled ? color : Tokens.muted),
                 const SizedBox(width: 8),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                    color: enabled ? Tokens.text : Tokens.muted,
+                    color: enabled ? color : Tokens.muted,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ],
@@ -306,29 +336,34 @@ class Panel extends StatelessWidget {
     // assertion is right — the press feedback would have been invisible.
     return Padding(
       padding: const EdgeInsets.only(bottom: Tokens.gap),
-      child: Material(
-        color: Tokens.surface,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Tokens.radius),
-          side: BorderSide(color: Tokens.text.withValues(alpha: 0.06)),
+          boxShadow: Tokens.lift,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(Tokens.pad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (title != null) ...<Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(child: Text(title!, style: Type.section(context))),
-                    ?trailing,
-                  ],
-                ),
-                const SizedBox(height: Tokens.gap),
+        child: Material(
+          color: Tokens.surface,
+          clipBehavior: Clip.antiAlias,
+          borderRadius: BorderRadius.circular(Tokens.radius),
+          child: Padding(
+            padding: const EdgeInsets.all(Tokens.pad),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                if (title != null) ...<Widget>[
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(title!, style: Type.section(context)),
+                      ),
+                      ?trailing,
+                    ],
+                  ),
+                  const SizedBox(height: Tokens.gap),
+                ],
+                child,
               ],
-              child,
-            ],
+            ),
           ),
         ),
       ),
@@ -337,51 +372,60 @@ class Panel extends StatelessWidget {
 }
 
 /// The application's theme, built from the tokens above.
+///
+/// Light, because the screen sits in a lit room and the numbers have to read from
+/// a metre away. The four pod colours are the only accents: a Material seed
+/// colour would have produced a palette with no relation to the thing in the
+/// rider's hands.
 ThemeData openzclickTheme() {
   final ColorScheme scheme =
       ColorScheme.fromSeed(
-        seedColor: Tokens.signal,
-        brightness: Brightness.dark,
+        seedColor: Tokens.orange,
+        brightness: Brightness.light,
       ).copyWith(
-        primary: Tokens.signal,
-        onPrimary: Tokens.ink,
-        secondary: Tokens.steel,
-        onSecondary: Tokens.ink,
+        primary: Tokens.orange,
+        onPrimary: Colors.white,
+        secondary: Tokens.blue,
+        onSecondary: Colors.white,
         surface: Tokens.surface,
-        onSurface: Tokens.text,
+        onSurface: Tokens.ink,
         onSurfaceVariant: Tokens.muted,
-        error: Tokens.alarm,
-        onError: Tokens.ink,
-        outline: Tokens.text.withValues(alpha: 0.14),
+        error: Tokens.rose,
+        onError: Colors.white,
+        outline: Tokens.ink.withValues(alpha: 0.14),
+        outlineVariant: Tokens.ink.withValues(alpha: 0.08),
       );
 
   final ThemeData base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: Tokens.ink,
+    scaffoldBackgroundColor: Tokens.paper,
+    fontFamily: null,
   );
 
   return base.copyWith(
     appBarTheme: AppBarTheme(
-      backgroundColor: Tokens.ink,
+      backgroundColor: Tokens.paper,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: base.textTheme.titleLarge!.copyWith(
-        color: Tokens.text,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.2,
+        color: Tokens.ink,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: Tokens.surface,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: Tokens.signal.withValues(alpha: 0.16),
-      height: 68,
+      indicatorColor: Tokens.orange.withValues(alpha: 0.14),
+      elevation: 0,
+      height: 70,
       labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
         (Set<WidgetState> states) => base.textTheme.labelMedium!.copyWith(
           color: states.contains(WidgetState.selected)
-              ? Tokens.text
+              ? Tokens.ink
               : Tokens.muted,
           fontWeight: states.contains(WidgetState.selected)
               ? FontWeight.w600
@@ -392,7 +436,7 @@ ThemeData openzclickTheme() {
         (Set<WidgetState> states) => IconThemeData(
           size: 22,
           color: states.contains(WidgetState.selected)
-              ? Tokens.signal
+              ? Tokens.orange
               : Tokens.muted,
         ),
       ),
@@ -404,37 +448,36 @@ ThemeData openzclickTheme() {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Tokens.radius),
-        side: BorderSide(color: Tokens.text.withValues(alpha: 0.06)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: Tokens.signal,
-        foregroundColor: Tokens.ink,
-        minimumSize: const Size(0, 48),
+        backgroundColor: Tokens.orange,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(0, 52),
         textStyle: base.textTheme.titleSmall!.copyWith(
           fontWeight: FontWeight.w600,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Tokens.radius - 4),
+          borderRadius: BorderRadius.circular(Tokens.radius - 6),
         ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: Tokens.text,
+        foregroundColor: Tokens.ink,
         minimumSize: const Size(0, 48),
-        side: BorderSide(color: Tokens.text.withValues(alpha: 0.18)),
+        side: BorderSide(color: Tokens.ink.withValues(alpha: 0.16)),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Tokens.radius - 4),
+          borderRadius: BorderRadius.circular(Tokens.radius - 6),
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: Tokens.signal),
+      style: TextButton.styleFrom(foregroundColor: Tokens.orange),
     ),
     dividerTheme: DividerThemeData(
-      color: Tokens.text.withValues(alpha: 0.08),
+      color: Tokens.ink.withValues(alpha: 0.08),
       thickness: Tokens.hairline,
       space: Tokens.pad,
     ),
@@ -443,8 +486,8 @@ ThemeData openzclickTheme() {
       collapsedBackgroundColor: Colors.transparent,
       iconColor: Tokens.muted,
       collapsedIconColor: Tokens.muted,
-      textColor: Tokens.text,
-      collapsedTextColor: Tokens.text,
+      textColor: Tokens.ink,
+      collapsedTextColor: Tokens.ink,
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(top: 8),
       shape: const Border(),
@@ -455,23 +498,25 @@ ThemeData openzclickTheme() {
       contentPadding: EdgeInsets.zero,
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: Tokens.raised,
-      contentTextStyle: base.textTheme.bodyMedium!.copyWith(color: Tokens.text),
+      backgroundColor: Tokens.ink,
+      contentTextStyle: base.textTheme.bodyMedium!.copyWith(
+        color: Colors.white,
+      ),
       behavior: SnackBarBehavior.floating,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: Tokens.signal,
+      color: Tokens.orange,
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith<Color>(
         (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? Tokens.signal
-            : Tokens.muted,
+            ? Colors.white
+            : Tokens.surface,
       ),
       trackColor: WidgetStateProperty.resolveWith<Color>(
         (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? Tokens.signal.withValues(alpha: 0.35)
-            : Tokens.muted.withValues(alpha: 0.18),
+            ? Tokens.green
+            : Tokens.ink.withValues(alpha: 0.14),
       ),
     ),
   );

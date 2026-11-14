@@ -16,6 +16,9 @@ void main() {
     final FakePublisher publisher = FakePublisher();
     final AppState state = AppState(publisher: publisher);
     addTearDown(state.dispose);
+    // These tests are about the tabs: the first-start guide would sit in front
+    // of them, and it has its own tests.
+    state.completeOnboarding();
 
     await tester.pumpWidget(MaterialApp(home: HomeShell(state: state)));
     await tester.pumpAndSettle();
@@ -42,6 +45,9 @@ void main() {
     final FakePublisher publisher = FakePublisher();
     final AppState state = AppState(publisher: publisher);
     addTearDown(state.dispose);
+    // These tests are about the tabs: the first-start guide would sit in front
+    // of them, and it has its own tests.
+    state.completeOnboarding();
 
     await tester.pumpWidget(MaterialApp(home: HomeShell(state: state)));
     await publisher.start();
@@ -59,6 +65,9 @@ void main() {
     final FakePublisher publisher = FakePublisher();
     final AppState state = AppState(publisher: publisher);
     addTearDown(state.dispose);
+    // These tests are about the tabs: the first-start guide would sit in front
+    // of them, and it has its own tests.
+    state.completeOnboarding();
 
     await tester.pumpWidget(MaterialApp(home: HomeShell(state: state)));
     await tester.pumpAndSettle();
