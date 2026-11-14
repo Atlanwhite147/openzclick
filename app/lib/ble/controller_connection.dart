@@ -258,6 +258,20 @@ class ControllerConnection {
     _notify();
   }
 
+  /// Asks the host for a controller and connects to the one that came back.
+  ///
+  /// On a page the browser's chooser already is the choice: the rider picks a
+  /// device, and asking for a second tap on *Connect* is one tap too many. On a
+  /// host that scans a list itself this would connect to the first device it
+  /// saw, which is why it is only used where the chooser exists.
+  Future<void> scanAndConnect({
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    await scan(timeout: timeout);
+    if (_found.isEmpty) return;
+    await connect(_found.first.device);
+  }
+
   /// Whether [result] can be the controller this application drives.
   ///
   /// The advertised service is the reliable signal, but a device that keeps it

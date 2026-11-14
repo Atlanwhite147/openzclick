@@ -5,6 +5,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 
 import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
+import '../net/console_endpoint.dart';
 import '../net/desktop_injection.dart';
 import '../net/injection_publisher.dart';
 import '../net/key_profiles.dart';
@@ -484,6 +485,44 @@ class AppState extends ChangeNotifier {
   Future<void> connectConsole(String host, String code) async {
     await consoleClient?.connectConsole(host, code);
     notifyListeners();
+  }
+
+  /// One gesture, for a page: the pod, then the bridge, then ride.
+  ///
+  /// The three things a rider had to do in order — choose the controller, find
+  /// the bridge, start it — are one button because the page can do the finding
+  /// itself: a bridge serves this page, so the address is the page's own, and
+  /// the token is in its query string. What cannot be automated is the browser's
+  /// device chooser, and that is a choice, not a step.
+  ///
+  /// Returns a sentence for the screen when something stopped the chain, null
+  /// when the chain is complete or still running.
+  Future<String?> startRiding() async {
+    if (Capabilities.usesBluetoothChooser &&
+        controller.status != ControllerStatus.ready) {
+      await controller.scanAndConnect();
+      if (controller.status != ControllerStatus.ready) {
+        return controller.error ??
+            'The controller did not answer. Press a button on the pod, then try '
+                'again.';
+      }
+    }
+    if (Capabilities.isWeb && !Capabilities.canPublish) {
+      final ({String host, String code})? bridge = ConsoleEndpoint.fromOwnPage(
+        Uri.base,
+      );
+      if (bridge != null && !publisher.running) {
+        await connectConsole(bridge.host, bridge.code);
+        if (!publisher.running) {
+          return 'This page could not reach the bridge it came from. Reload the '
+              'page from the bridge, or open the Network tab and enter the '
+              'address.';
+        }
+      }
+    }
+    _syncKeepAlive();
+    notifyListeners();
+    return null;
   }
 
   /// Closes the connection to the bridge.

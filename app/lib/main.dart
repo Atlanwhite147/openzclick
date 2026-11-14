@@ -18,6 +18,7 @@ import 'state/app_state.dart';
 import 'ui/design.dart';
 import 'ui/gear_panel.dart';
 import 'ui/mywhoosh_guide.dart';
+import 'ui/one_tap.dart';
 import 'ui/onboarding.dart';
 import 'ui/parked_gear_card.dart';
 
@@ -238,7 +239,22 @@ class MyWhooshGuideScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
-        MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
+        // A page gets one button and nothing else in front of it: it either came
+        // from a bridge, in which case it knows the address, or it cannot reach
+        // one at all. The four steps stay, folded, for the rider who has to
+        // debug something.
+        if (Capabilities.isWeb) ...<Widget>[
+          OneTapRide(state: state),
+          const SizedBox(height: 4),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('The four steps'),
+            children: <Widget>[
+              MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
+            ],
+          ),
+        ] else
+          MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
         const SizedBox(height: 8),
         // The guide is shown once, so it has to be findable again: a rider who
         // skipped it to ride, then came back a week later, has no other door.

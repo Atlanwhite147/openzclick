@@ -77,4 +77,23 @@ abstract final class ConsoleEndpoint {
     if (host.isEmpty || code.isEmpty) return null;
     return (host: host, code: code);
   }
+
+  /// The bridge this page was served by, when it was served by one.
+  ///
+  /// A bridge serves its own console page on the port it already listens on, so
+  /// the page already knows the address it must dial: the host and port it came
+  /// from, and the token in its own query string. Nothing to type, nothing to
+  /// scan, which is the whole difference between one tap and five.
+  ///
+  /// Returns null for a hosted page (`https`, another origin) and for a page
+  /// opened without a token: dialling a stranger's address would be worse than
+  /// asking.
+  static ({String host, String code})? fromOwnPage(Uri page) {
+    if (page.scheme != 'http') return null;
+    final String code = (page.queryParameters['token'] ?? '').trim();
+    if (code.isEmpty) return null;
+    final String host = page.host;
+    if (host.isEmpty) return null;
+    return (host: page.hasPort ? '$host:${page.port}' : host, code: code);
+  }
 }
