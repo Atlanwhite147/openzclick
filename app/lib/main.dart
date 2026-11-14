@@ -8,6 +8,14 @@ import 'ui/design.dart';
 import 'ui/shell.dart';
 import 'net/console_endpoint.dart';
 
+/// Where every platform starts: the application root and nothing else.
+///
+/// This line is load-bearing and invisible to `flutter test`, which imports the
+/// root class directly. Losing it compiles, analyzes and tests clean, then fails
+/// every release build with a CMake "custom build exited with code 1" that names
+/// no cause — so `test/entry_point_test.dart` keeps it honest.
+void main() => runApp(const OpenZclickApp());
+
 class OpenZclickApp extends StatefulWidget {
   /// Creates the application.
   ///
