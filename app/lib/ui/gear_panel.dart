@@ -15,6 +15,7 @@ import 'package:flutter/material.dart' hide Action;
 import 'package:openzclick_core/openzclick_core.dart';
 
 import '../state/app_state.dart';
+import 'design.dart';
 
 /// Gear readout, the two shift buttons, and the settings behind them.
 class GearPanel extends StatelessWidget {
@@ -33,146 +34,140 @@ class GearPanel extends StatelessWidget {
         final GearEngine engine = state.engine;
         final bool erg = engine.mode == RidingMode.erg;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('Gear', style: theme.textTheme.labelMedium),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: <Widget>[
-                    Text(
-                      '${engine.gearNumber}',
-                      key: const Key('gear-number'),
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+        return Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(child: Text('Gear', style: Type.section(context))),
+                  _ModeBadge(erg: erg, ergWatts: engine.ergTargetWatts),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: <Widget>[
+                  Text(
+                    '${engine.gearNumber}',
+                    key: const Key('gear-number'),
+                    style: Type.readout(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('/ ${engine.gearCount}', style: Type.unit(context)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              GearLadder(gear: engine.gearNumber, count: engine.gearCount),
+              const SizedBox(height: 16),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Paddle(
+                      label: 'Shift up',
+                      icon: Icons.keyboard_arrow_up,
+                      onPressed: engine.atHighest ? null : state.shiftUp,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '/ ${engine.gearCount}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Paddle(
+                      label: 'Shift down',
+                      icon: Icons.keyboard_arrow_down,
+                      onPressed: engine.atLowest ? null : state.shiftDown,
                     ),
-                    const Spacer(),
-                    _ModeBadge(erg: erg, ergWatts: engine.ergTargetWatts),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: _ShiftButton(
-                        label: 'Shift up',
-                        icon: Icons.keyboard_arrow_up,
-                        onPressed: engine.atHighest ? null : state.shiftUp,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ShiftButton(
-                        label: 'Shift down',
-                        icon: Icons.keyboard_arrow_down,
-                        onPressed: engine.atLowest ? null : state.shiftDown,
-                      ),
-                    ),
-                  ],
-                ),
-                ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: EdgeInsets.zero,
-                  title: const Text('Gear set and riding mode'),
-                  children: <Widget>[
-                    _SettingRow(
-                      label: 'Gear set',
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: engine.profile.id,
-                          isDense: true,
-                          style: theme.textTheme.bodyMedium,
-                          onChanged: (String? id) {
-                            if (id != null) state.setProfile(id);
-                          },
-                          items: <DropdownMenuItem<String>>[
-                            for (final GearProfile profile
-                                in GearProfile.builtin)
-                              DropdownMenuItem<String>(
-                                value: profile.id,
-                                child: Text(profile.label),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    _SettingRow(
-                      label: 'Ratio',
-                      child: Text(
-                        engine.currentRatio.ratio.toStringAsFixed(2),
-                        style: const TextStyle(fontFamily: 'monospace'),
-                      ),
-                    ),
-                    _SettingRow(
-                      label: 'Chainring',
-                      child: Text(
-                        engine.bigChainringActive ? 'big' : 'small',
-                        style: const TextStyle(fontFamily: 'monospace'),
-                      ),
-                    ),
-                    _SettingRow(
-                      label: 'Mode',
-                      child: Text(
-                        erg ? 'ERG' : 'SIM',
-                        style: const TextStyle(fontFamily: 'monospace'),
-                      ),
-                    ),
-                    if (erg)
-                      _SettingRow(
-                        label: 'Target power',
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Text(
-                              '${engine.ergTargetWatts} W',
-                              style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                title: const Text('Gear set and riding mode'),
+                children: <Widget>[
+                  _SettingRow(
+                    label: 'Gear set',
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: engine.profile.id,
+                        isDense: true,
+                        style: theme.textTheme.bodyMedium,
+                        onChanged: (String? id) {
+                          if (id != null) state.setProfile(id);
+                        },
+                        items: <DropdownMenuItem<String>>[
+                          for (final GearProfile profile in GearProfile.builtin)
+                            DropdownMenuItem<String>(
+                              value: profile.id,
+                              child: Text(profile.label),
                             ),
-                            IconButton(
-                              onPressed: () => state.bumpErg(-5),
-                              icon: const Icon(Icons.remove),
-                              tooltip: '5 W less',
-                            ),
-                            IconButton(
-                              onPressed: () => state.bumpErg(5),
-                              icon: const Icon(Icons.add),
-                              tooltip: '5 W more',
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        OutlinedButton(
-                          onPressed: state.toggleChainring,
-                          child: const Text('Change chainring'),
-                        ),
-                        OutlinedButton(
-                          onPressed: state.toggleMode,
-                          child: Text(erg ? 'Switch to SIM' : 'Switch to ERG'),
-                        ),
-                      ],
                     ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  _SettingRow(
+                    label: 'Ratio',
+                    child: Text(
+                      engine.currentRatio.ratio.toStringAsFixed(2),
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  _SettingRow(
+                    label: 'Chainring',
+                    child: Text(
+                      engine.bigChainringActive ? 'big' : 'small',
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  _SettingRow(
+                    label: 'Mode',
+                    child: Text(
+                      erg ? 'ERG' : 'SIM',
+                      style: const TextStyle(fontFamily: 'monospace'),
+                    ),
+                  ),
+                  if (erg)
+                    _SettingRow(
+                      label: 'Target power',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            '${engine.ergTargetWatts} W',
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
+                          IconButton(
+                            onPressed: () => state.bumpErg(-5),
+                            icon: const Icon(Icons.remove),
+                            tooltip: '5 W less',
+                          ),
+                          IconButton(
+                            onPressed: () => state.bumpErg(5),
+                            icon: const Icon(Icons.add),
+                            tooltip: '5 W more',
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      OutlinedButton(
+                        onPressed: state.toggleChainring,
+                        child: const Text('Change chainring'),
+                      ),
+                      OutlinedButton(
+                        onPressed: state.toggleMode,
+                        child: Text(erg ? 'Switch to SIM' : 'Switch to ERG'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -181,34 +176,6 @@ class GearPanel extends StatelessWidget {
 }
 
 /// Tall button, because it is pressed while riding and looked at for a moment.
-class _ShiftButton extends StatelessWidget {
-  const _ShiftButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(72),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[Icon(icon, size: 28), Text(label)],
-      ),
-    );
-  }
-}
-
-/// Which mode the ladder is in, readable without opening anything.
 class _ModeBadge extends StatelessWidget {
   const _ModeBadge({required this.erg, required this.ergWatts});
 

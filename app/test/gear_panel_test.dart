@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/state/app_state.dart';
+import 'package:openzclick/ui/design.dart';
 import 'package:openzclick/ui/gear_panel.dart';
 
 Widget _wrap(AppState state) => MaterialApp(
   home: Scaffold(body: GearPanel(state: state)),
 );
 
-/// The label of the button, which is where its enabled state is readable.
+/// The label of the paddle, which is where its enabled state is readable.
+///
+/// A paddle, not a Material button: the two shift controls are drawn as the
+/// instrument's own paddles so that they do not read like every other button on
+/// the screen. The enabled state still lives in one place, `onPressed`.
 bool _enabled(WidgetTester tester, String label) {
-  final FilledButton button = tester.widget(
-    find.ancestor(of: find.text(label), matching: find.byType(FilledButton)),
+  final Paddle paddle = tester.widget(
+    find.ancestor(of: find.text(label), matching: find.byType(Paddle)),
   );
-  return button.onPressed != null;
+  return paddle.onPressed != null;
 }
 
 void main() {
@@ -23,7 +28,7 @@ void main() {
     addTearDown(state.dispose);
     await tester.pumpWidget(_wrap(state));
 
-    expect(find.byType(FilledButton), findsNWidgets(2));
+    expect(find.byType(Paddle), findsNWidgets(2));
     expect(find.text('Shift up'), findsOneWidget);
     expect(find.text('Shift down'), findsOneWidget);
   });

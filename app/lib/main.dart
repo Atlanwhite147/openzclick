@@ -15,6 +15,7 @@ import 'platform/capabilities.dart';
 import 'platform/version.dart';
 import 'settings/settings_store.dart';
 import 'state/app_state.dart';
+import 'ui/design.dart';
 import 'ui/gear_panel.dart';
 import 'ui/mywhoosh_guide.dart';
 import 'ui/parked_gear_card.dart';
@@ -63,13 +64,9 @@ class _OpenZclickAppState extends State<OpenZclickApp> {
     return MaterialApp(
       title: 'openzclick',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2F6FED),
-          brightness: Brightness.dark,
-        ),
-      ),
+      // One visual language for every platform: the instrument described in
+      // `ui/design.dart`, not Material's default card kit with a generic blue.
+      theme: openzclickTheme(),
       home: HomeShell(state: _state),
     );
   }
@@ -167,25 +164,19 @@ class _ReadinessChip extends StatelessWidget {
         final bool chain =
             !Capabilities.drivesTrainerItself || state.physicalSetup.isComplete;
         final bool ready = bridge && chain;
-        final ColorScheme colors = Theme.of(context).colorScheme;
         return Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Chip(
-            avatar: Icon(
-              ready
-                  ? Icons.check_circle
-                  : bridge
-                  ? Icons.pedal_bike_outlined
-                  : Icons.error_outline,
-              size: 18,
-              color: ready
-                  ? Colors.green
-                  : bridge
-                  ? colors.tertiary
-                  : colors.error,
-            ),
-            label: Text(ready ? 'Ready' : 'Not ready'),
-            labelStyle: Theme.of(context).textTheme.labelMedium,
+          padding: const EdgeInsets.only(right: 16),
+          // A lamp, not a chip: this is a state, and a chip reads like a label
+          // or a filter next to the tabs. It says the one thing a rider needs
+          // before starting, in the same vocabulary on every screen.
+          child: Lamp(
+            on: ready,
+            color: ready ? Tokens.good : Tokens.alarm,
+            label: ready
+                ? 'Ready'
+                : bridge
+                ? 'Waiting for the chain'
+                : 'Not ready',
           ),
         );
       },
