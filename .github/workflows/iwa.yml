@@ -76,23 +76,15 @@ jobs:
           # Not `| grep -q`: under `pipefail`, grep exits at the first match, the
           # producer dies of SIGPIPE, and the pipeline reports failure on a
           # signature that is perfectly correct.
-          INFO=$(npx --yes wbn-sign info app.swbn)
+          # The tool colourises its own verdict: the literal text "is correct: Yes"
+          # never appears in the output, "Yes" arrives wrapped in escape codes.
+          INFO=$(NO_COLOR=1 FORCE_COLOR=0 npx --yes wbn-sign info app.swbn \
+            | tr -d '\033' | sed 's/\[[0-9;]*m//g')
           case "$INFO" in
             *"is correct: Yes"*) ;;
             *) echo "signature invalide"; echo "$INFO"; exit 1 ;;
           esac
-          python3 - <<'EOF'
-          import base64, hashlib, json
-          data = open('app.swbn', 'rb').read()
-          digest = base64.b64encode(hashlib.sha256(data).digest()).decode()
-          json.dump(
-              {"versions": [{"version": "1.0.0", "src": "app.swbn",
-                             "integrity": "sha256-" + digest}]},
-              open('update_manifest.json', 'w'),
-              indent=1,
-          )
-          print(f"{len(data)} bytes, sha256-{digest}")
-          EOF
+          python3 tools/iwa_manifest.py app.swbn update_manifest.json 1.0.0
 
       - uses: actions/upload-artifact@v4
         with:
