@@ -1,0 +1,111 @@
+name: Web bundle
+
+# The Isolated Web App bundle: the same page, but in the one browser context
+# where Chrome grants a TCP server and multicast. It is the only way a browser
+# can be the bridge itself — a normal tab cannot listen on the network, and
+# MyWhoosh only accepts controllers over the network.
+#
+# The bundle id derives from the signing key, so the key is a repository secret
+# (`IWA_SIGNING_KEY`, an EC P-256 private key in PEM). Rotating it changes the
+# app's identity: Chrome treats a new id as a different application, and the old
+# install has to be removed by hand.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/iwa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Signing key
+        run: |
+          umask 077
+          printf '%s' "${{ secrets.IWA_SIGNING_KEY }}" > "$RUNNER_TEMP/appkey.pem"
+          test -s "$RUNNER_TEMP/appkey.pem"
+
+      # The id is a digest of the public key, and it has to be in the bundle's
+      # base URL before the bundle exists. A one-file probe gives it in seconds;
+      # bundling the 42 MB build twice to learn the same value would not.
+      - name: Bundle id from the key
+        run: |
+          mkdir -p probe
+          printf '<!doctype html><title>probe</title>' > probe/index.html
+          npx --yes wbn -d probe -b "isolated-app://probe/" -o probe.wbn
+          npx --yes wbn-sign sign probe.wbn "$RUNNER_TEMP/appkey.pem" -o probe.swbn
+          ID=$(npx --yes wbn-sign info probe.swbn | sed -n 's/.*Web bundle ID: //p' | head -1)
+          test -n "$ID"
+          echo "bundle id: $ID"
+          echo "IWA_ID=$ID" >> "$GITHUB_ENV"
+
+      - name: Build the page
+        working-directory: app
+        run: |
+          flutter pub get
+          # The default build loads CanvasKit from gstatic.com, which an Isolated
+          # Web App's content security policy refuses: the page would be blank.
+          flutter build web --release --base-href "/" --no-web-resources-cdn
+
+      - name: Bundle, sign, and describe
+        run: |
+          npx --yes wbn -d app/build/web -b "isolated-app://$IWA_ID/" -o app.wbn
+          npx --yes wbn-sign sign app.wbn "$RUNNER_TEMP/appkey.pem" -o app.swbn
+          npx --yes wbn-sign info app.swbn | grep -q "is correct: Yes"
+          python3 - <<'EOF'
+          import base64, hashlib, json
+          data = open('app.swbn', 'rb').read()
+          digest = base64.b64encode(hashlib.sha256(data).digest()).decode()
+          json.dump(
+              {"versions": [{"version": "1.0.0", "src": "app.swbn",
+                             "integrity": "sha256-" + digest}]},
+              open('update_manifest.json', 'w'),
+              indent=1,
+          )
+          print(f"{len(data)} bytes, sha256-{digest}")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openzclick-iwa
+          path: |
+            app.swbn
+            update_manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish on the latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            app.swbn
+            update_manifest.json
+          body: |
+            Unsigned iOS build, Android APK, Windows build, and the Isolated Web
+            App bundle, produced by this repository's workflows.
+
+            The bundle installs from `chrome://web-app-internals`, *Install IWA
+            from Update Manifest*, with the URL of `update_manifest.json` served
+            over `http` on your machine — see `docs/browser-bridge.md`.

@@ -43,12 +43,17 @@ one (`docs/console.md`).
 cd app
 flutter build web --release --base-href "/" --no-web-resources-cdn
 
-# 2. the signed bundle (the key names the app: keep it, the id derives from it)
-npx wbn-dump-id -k appkey.pem                       # the bundle id
-npx wbn -d build/web -b "isolated-app://<id>/" -o app.wbn
-npx wbn-sign sign app.wbn appkey.pem -o app.swbn
+# 2. the bundle id, derived from the key (it depends on the key alone)
+mkdir -p probe && printf '<!doctype html><title>probe</title>' > probe/index.html
+npx --yes wbn -d probe -b "isolated-app://probe/" -o probe.wbn
+npx --yes wbn-sign sign probe.wbn appkey.pem -o probe.swbn
+npx --yes wbn-sign info probe.swbn | sed -n 's/.*Web bundle ID: //p'
 
-# 3. the update manifest, with the integrity of the bundle
+# 3. the signed bundle, whose base URL has to carry that id
+npx --yes wbn -d build/web -b "isolated-app://<id>/" -o app.wbn
+npx --yes wbn-sign sign app.wbn appkey.pem -o app.swbn
+
+# 4. the update manifest, with the integrity of the bundle
 python3 - <<'EOF'
 import base64, hashlib, json
 data = open('app.swbn', 'rb').read()
@@ -58,6 +63,13 @@ json.dump({"versions": [{"version": "1.0.0", "src": "app.swbn",
           open('update_manifest.json', 'w'), indent=1)
 EOF
 ```
+
+The id is not a name anybody chooses: it is a digest of the public key, which is
+why the probe above exists — the base URL must carry it *before* the bundle is
+written, and bundling the 42 MB build twice to learn the same value would be a
+waste. The key is a repository secret (`IWA_SIGNING_KEY`) and `.github/workflows/iwa.yml`
+does all of this on every push, publishing `app.swbn` and `update_manifest.json`
+on the `latest` release.
 
 `--no-web-resources-cdn` is not optional: the default build loads CanvasKit from
 `gstatic.com`, which the IWA's content security policy refuses, and the page then
