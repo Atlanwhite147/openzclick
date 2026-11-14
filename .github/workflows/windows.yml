@@ -46,10 +46,21 @@ jobs:
           Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath build/openzclick-windows-x64.zip -Force
           Get-Item build/openzclick-windows-x64.zip | Select-Object Name, Length
 
+      # The zip is for the rider who wants to look inside; the installer is what
+      # makes this an installation rather than a folder to remember.
+      - name: Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compile the installer
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\openzclick.iss'
+        shell: pwsh
+
       - uses: actions/upload-artifact@v4
         with:
           name: openzclick-windows-x64
-          path: app/build/openzclick-windows-x64.zip
+          path: |
+            app/build/openzclick-windows-x64.zip
+            installer/Output/openzclick-setup.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -60,10 +71,14 @@ jobs:
           name: Latest build
           prerelease: true
           fail_on_unmatched_files: true
-          files: app/build/openzclick-windows-x64.zip
+          files: |
+            app/build/openzclick-windows-x64.zip
+            installer/Output/openzclick-setup.exe
           body: |
             Unattended builds of openzclick, produced by CI.
 
+            - `openzclick-setup.exe` - Windows installer: per-user, no administrator
+              prompt, shortcut and uninstaller included
             - `openzclick-windows-x64.zip` - Windows, unzip and run `openzclick.exe`
             - `app-release.apk` - Android, sideload directly (debug signing key)
             - `openzclick-unsigned.ipa` - iOS, sign with Sideloadly or AltStore
