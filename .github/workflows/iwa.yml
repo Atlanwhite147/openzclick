@@ -52,7 +52,11 @@ jobs:
           printf '<!doctype html><title>probe</title>' > probe/index.html
           npx --yes wbn -d probe -b "isolated-app://probe/" -o probe.wbn
           npx --yes wbn-sign sign probe.wbn "$RUNNER_TEMP/appkey.pem" -o probe.swbn
-          ID=$(npx --yes wbn-sign info probe.swbn | sed -n 's/.*Web bundle ID: //p' | head -1)
+          ID=$(NO_COLOR=1 FORCE_COLOR=0 npx --yes wbn-sign info probe.swbn \
+            | sed -n 's/.*Web bundle ID: //p' \
+            | tr -d '\033' \
+            | sed 's/\[[0-9;]*m//g' \
+            | head -1)
           test -n "$ID"
           echo "bundle id: $ID"
           echo "IWA_ID=$ID" >> "$GITHUB_ENV"
