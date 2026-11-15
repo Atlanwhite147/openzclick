@@ -94,7 +94,8 @@ The remaining ❌ on desktop is the shortest path to a first accepted pull reque
 | Platform | File | Notes |
 |---|---|---|
 | Web | [atlanwhite147.github.io/openzclick](https://atlanwhite147.github.io/openzclick/) | nothing to install: Chrome or Edge, the controller pairs over Web Bluetooth. MyWhoosh cannot find a plain page, see below |
-| Windows | [`openzclick-windows-x64.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-windows-x64.zip) | unzip anywhere, double click `openzclick.exe`. Windows may warn once about an unknown publisher: *More info*, then *Run anyway* |
+| Windows | [`openzclick-setup.exe`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-setup.exe) | double click: it installs for your user alone, so no administrator prompt, and puts a shortcut in the Start menu. Windows may warn once about an unknown publisher: *More info*, then *Run anyway* |
+| Windows, portable | [`openzclick-windows-x64.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-windows-x64.zip) | unzip anywhere, double click `openzclick.exe`; nothing is registered and nothing is left behind |
 | Android | [`app-release.apk`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/app-release.apk) | open the file on the phone and accept *install from this source*; updates install over the previous version |
 | iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | needs a computer: sign with Sideloadly or AltStore, 7 days with a free Apple ID |
 
@@ -104,7 +105,7 @@ Every file is rebuilt on every push to `main`. The Android package is signed wit
 
 You need no account, no cable and no driver. Everything is on the [releases page](https://github.com/Atlanwhite147/openzclick/releases/latest).
 
-1. **Start the application.** On Windows, unzip and double click `openzclick.exe`; on Android, install the APK. On a phone with neither, keep reading: the application runs on the machine with MyWhoosh and the phone only drives it.
+1. **Start the application.** On Windows, run `openzclick-setup.exe` and open the shortcut it leaves in the Start menu; on Android, install the APK. On a phone with neither, keep reading: the application runs on the machine with MyWhoosh and the phone only drives it.
 2. **Tap *Start* on the first screen.** It now listens for MyWhoosh. The screen says *listening* or *announced on your network*.
 3. **In MyWhoosh, open the device connection screen and tap the OpenBikeControl icon, top right.** MyWhoosh asks for confirmation: answer **Yes**. The icon turns blue.
 4. **Ride.** Your buttons shift. The application shows the client count going to 1, so you know MyWhoosh really attached.
