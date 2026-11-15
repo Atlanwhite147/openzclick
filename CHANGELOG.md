@@ -15,6 +15,30 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- **A Windows installer, and a build that proves it installs.** Unzipping an
+  archive into a folder the rider has to remember is not how anyone installs a
+  program. `installer/openzclick.iss` produces `openzclick-setup.exe`: per user,
+  so no administrator prompt, with a Start-menu entry, an optional desktop
+  shortcut, an optional autostart value under `HKCU`, and an uninstaller that
+  removes all of it. The payload is compressed as one solid block, so nothing
+  inside can be inspected from outside; the Windows workflow therefore runs the
+  installer silently on the runner, checks the executable, its size, the Flutter
+  engine and the registered uninstaller, then uninstalls and checks the directory
+  is empty. `installer/openzclick.iss`, `.github/workflows/windows.yml`.
+- **The interface is one file per screen.** `app/lib/main.dart` held the root, the
+  navigation shell, four screens and two console cards in 1212 lines. It holds 64
+  now: the shell in `ui/shell.dart`, one file per section under `ui/screens/`, the
+  console cards in `ui/console_cards.dart`, and `docs/ARCHITECTURE.md` carries the
+  layout with the reason for it.
+- **The lamp is also the way to the fix.** `Not ready` was a verdict with no exit:
+  the rider was told something was wrong and left to find the tab. Unlit, the lamp
+  is a button — Network when the bridge is stopped, Gears when the chain is
+  unanswered — with a tooltip saying which. Lit, it is a plain lamp again.
+- **An entry-point test.** Splitting `main.dart` dropped `void main()`: `flutter
+  analyze` was clean and the whole suite passed while every release build was
+  dead, and Windows reported it as a CMake custom build exiting with code 1,
+  naming no cause. `test/entry_point_test.dart` imports the library and asserts
+  that `main` exists, so the suite fails on that split.
 - **The report now says what the link itself did.** Frames say what the
   controller said; they cannot say whether the subscription to `0002` was ever
   accepted, when the plain session opened, or how long the link lived. Measured
