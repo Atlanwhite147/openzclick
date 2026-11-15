@@ -65,17 +65,25 @@ jobs:
           $setup = 'installer\Output\openzclick-setup.exe'
           $p = Start-Process $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$dir" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "installer exited $($p.ExitCode)" }
-          if (-not (Test-Path (Join-Path $dir 'openzclick.exe'))) { throw 'openzclick.exe is not where the installer said it would be' }
-          $exe = Get-Item (Join-Path $dir 'openzclick.exe')
-          Write-Host "installed: $($exe.FullName), $([math]::Round($exe.Length/1MB,2)) Mo"
-          if ($exe.Length -lt 1MB) { throw 'the installed executable is too small to be the application' }
-          $engine = Join-Path $dir 'flutter_windows.dll'
-          if (-not (Test-Path $engine)) { throw 'the Flutter engine was not installed' }
+
+          # A Flutter Windows executable is a small launcher: the compiled Dart
+          # lives in data\app.so and the engine in flutter_windows.dll. Sizing the
+          # launcher is therefore not a check of anything — an earlier version of
+          # this step demanded 1 MB and failed an installer that had worked.
+          $exe = Join-Path $dir 'openzclick.exe'
+          if (-not (Test-Path $exe)) { throw 'openzclick.exe is not where the installer said it would be' }
+          foreach ($needed in @('data\app.so', 'data\icudtl.dat', 'flutter_windows.dll')) {
+            if (-not (Test-Path (Join-Path $dir $needed))) { throw "$needed was not installed" }
+          }
+          $app = Get-Item (Join-Path $dir 'data\app.so')
+          Write-Host "installed: launcher $([math]::Round((Get-Item $exe).Length/1KB,0)) Ko, application $([math]::Round($app.Length/1MB,2)) Mo"
+          if ($app.Length -lt 1MB) { throw 'the compiled application is too small to be the program' }
+
           $uninstaller = Get-ChildItem $dir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'the installer registered no uninstaller' }
-          $u = Start-Process $uninstaller.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
-          Start-Sleep -Seconds 2
-          if (Test-Path (Join-Path $dir 'openzclick.exe')) { throw 'uninstall left the application behind' }
+          Start-Process $uninstaller.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait | Out-Null
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw 'uninstall left the application behind' }
           Write-Host 'uninstalled: nothing left'
 
       - uses: actions/upload-artifact@v4
