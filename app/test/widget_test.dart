@@ -48,11 +48,13 @@ void main() {
     expect(gearShown(tester), '7');
   });
 
-  testWidgets('there are four tabs, and none of them is a developer tool', (
+  testWidgets('there are five tabs, and the developer tools are not in front', (
     WidgetTester tester,
   ) async {
     // The test bench sat in the navigation bar beside the gear, which is what
     // made the application look like something to configure rather than use.
+    // It now shares one tab with the tap and key settings, which are touched
+    // once at most; no rider crosses them to start a ride.
     // The application disposes the state it was handed, so the test does not.
     final AppState state = AppState();
     // Past the first-start guide: these tests are about the shell.
@@ -60,8 +62,14 @@ void main() {
     await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
     expect(find.text('Diagnostics'), findsNothing);
+    expect(find.text('Advanced'), findsOneWidget);
+
+    // The bench is on that tab, and still exists.
+    await tester.tap(find.text('Advanced'));
+    await tester.pumpAndSettle();
+    expect(find.text('Protocol test bench'), findsOneWidget);
   });
 
   test('a single tap on up shifts up', () async {

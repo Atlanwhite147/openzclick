@@ -4,6 +4,7 @@ import '../platform/capabilities.dart';
 import '../state/app_state.dart';
 import 'design.dart';
 import 'onboarding.dart';
+import 'screens/advanced_screen.dart';
 import 'screens/controllers_screen.dart';
 import 'screens/gears_screen.dart';
 import 'screens/network_screen.dart';
@@ -23,16 +24,17 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  // Four destinations, not five. The test bench is a developer's tool: it sat
-  // in the navigation bar next to the buttons a rider presses every ride, and
-  // that alone made the application look like something to configure. It now
-  // lives at the bottom of the Network tab, where the rest of the technical
-  // material already was.
+  // Five destinations. The test bench is a developer's tool: it sat in the
+  // navigation bar next to the buttons a rider presses every ride, and that
+  // alone made the application look like something to configure. It now lives
+  // on the Advanced tab, with the other things touched once and never again:
+  // tap positions, key tables, the bench.
   static const List<String> _titles = <String>[
     'Start',
     'Gears',
     'Controllers',
     'Network',
+    'Advanced',
   ];
 
   @override
@@ -46,6 +48,7 @@ class _HomeShellState extends State<HomeShell> {
       TrainerScreen(state: state),
       ControllersScreen(state: state),
       TargetScreen(state: state, onOpenGuide: () => setState(() => _index = 0)),
+      AdvancedScreen(state: state),
     ];
 
     // The first-start guide takes the whole screen, once. It is not an overlay on
@@ -98,6 +101,7 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Controllers',
           ),
           NavigationDestination(icon: Icon(Icons.lan), label: 'Network'),
+          NavigationDestination(icon: Icon(Icons.tune), label: 'Advanced'),
         ],
       ),
     );

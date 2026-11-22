@@ -3,7 +3,7 @@ import 'package:openzclick_core/src/shifting/gear_profile.dart';
 import 'package:openzclick_core/src/shifting/gear_ratio.dart';
 import 'package:test/test.dart';
 
-GearProfile _profile({bool withChainring = true, int count = 3}) => GearProfile(
+GearProfile _profile({int count = 3}) => GearProfile(
       id: 'test',
       label: 'Test',
       gears: List<GearRatio>.generate(
@@ -11,7 +11,6 @@ GearProfile _profile({bool withChainring = true, int count = 3}) => GearProfile(
         (int index) => GearRatio(0.5 + index * 0.5),
         growable: false,
       ),
-      bigChainringFactor: withChainring ? const GearRatio(1.5) : null,
     );
 
 void main() {
@@ -74,29 +73,12 @@ void main() {
       final engine = GearEngine(profile: GearProfile.road12, initialGear: 3);
       expect(engine.currentRatio.ratio, GearProfile.road12.gears[3].ratio);
     });
-  });
 
-  group('GearEngine - virtual chainring', () {
-    test('multiplies the ratio without changing the cog index', () {
-      final engine = GearEngine(profile: GearProfile.road12, initialGear: 2);
-      final double before = engine.currentRatio.ratio;
-
-      engine.toggleChainring();
-      expect(engine.bigChainringActive, isTrue);
-      expect(engine.gearIndex, 2);
-      expect(engine.currentRatio.ratio, closeTo(before * 1.35, 1e-12));
-
-      engine.toggleChainring();
-      expect(engine.bigChainringActive, isFalse);
-      expect(engine.gearIndex, 2);
-      expect(engine.currentRatio.ratio, closeTo(before, 1e-12));
-    });
-
-    test('no effect if the profile has no virtual chainring', () {
-      final engine = GearEngine(profile: _profile(withChainring: false));
-      engine.toggleChainring();
-      expect(engine.bigChainringActive, isFalse);
-      expect(engine.currentRatio.ratio, 0.5);
+    test('a custom profile exposes its own gear count', () {
+      final engine = GearEngine(profile: _profile(count: 7), initialGear: 6);
+      expect(engine.gearCount, 7);
+      expect(engine.atHighest, isTrue);
+      expect(engine.currentRatio.ratio, closeTo(0.5 + 6 * 0.5, 1e-12));
     });
   });
 
@@ -166,23 +148,23 @@ void main() {
       }
     });
 
-    test('the virtual chainring increases the resistance', () {
-      final engine = GearEngine(profile: GearProfile.road12, initialGear: 6);
+    test('grows with the engaged ratio', () {
+      final engine = GearEngine(profile: GearProfile.road12, initialGear: 0);
       const double grade = 5;
       const double weight = 75;
       const double speed = 25;
-      final double without = engine.targetResistance(
+      final double lowest = engine.targetResistance(
         gradePercent: grade,
         riderWeightKg: weight,
         speedKmh: speed,
       );
-      engine.toggleChainring();
-      final double with1 = engine.targetResistance(
+      engine.setGear(engine.gearCount - 1);
+      final double highest = engine.targetResistance(
         gradePercent: grade,
         riderWeightKg: weight,
         speedKmh: speed,
       );
-      expect(with1, greaterThan(without));
+      expect(highest, greaterThan(lowest));
     });
 
     test('grows with speed', () {

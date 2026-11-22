@@ -599,12 +599,6 @@ class AppState extends ChangeNotifier {
     });
   }
 
-  /// Toggles the virtual chainring.
-  void toggleChainring() {
-    engine.toggleChainring();
-    notifyListeners();
-  }
-
   /// Switches between simulation and ERG.
   /// Moves the ERG target by [watts].
   void bumpErg(int watts) {

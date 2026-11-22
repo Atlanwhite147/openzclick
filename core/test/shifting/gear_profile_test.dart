@@ -46,14 +46,6 @@ void main() {
       expect(profile.highest, same(profile.gears.last));
     });
 
-    test('virtual chainring declared on the built-in profiles', () {
-      for (final GearProfile profile in GearProfile.builtin) {
-        expect(profile.hasBigChainring, isTrue, reason: profile.id);
-        expect(profile.bigChainringFactor!.ratio, greaterThan(1.0),
-            reason: profile.id);
-      }
-    });
-
     test('gear list is unmodifiable', () {
       final GearProfile profile = GearProfile(
         id: 'test',
@@ -90,7 +82,7 @@ void main() {
       );
     });
 
-    test('rejects a non-finite ratio or an invalid chainring factor', () {
+    test('rejects a non-finite ratio', () {
       expect(
         () => GearProfile(
           id: 'infini',
@@ -99,15 +91,6 @@ void main() {
             const GearRatio(1.0),
             const GearRatio(double.infinity)
           ],
-        ),
-        throwsArgumentError,
-      );
-      expect(
-        () => GearProfile(
-          id: 'facteur',
-          label: 'Facteur',
-          gears: _ratios(2),
-          bigChainringFactor: const GearRatio(double.infinity),
         ),
         throwsArgumentError,
       );

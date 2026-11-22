@@ -115,13 +115,6 @@ class GearPanel extends StatelessWidget {
                     ),
                   ),
                   _SettingRow(
-                    label: 'Chainring',
-                    child: Text(
-                      engine.bigChainringActive ? 'big' : 'small',
-                      style: const TextStyle(fontFamily: 'monospace'),
-                    ),
-                  ),
-                  _SettingRow(
                     label: 'Mode',
                     child: Text(
                       erg ? 'ERG' : 'SIM',
@@ -156,10 +149,6 @@ class GearPanel extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: <Widget>[
-                      OutlinedButton(
-                        onPressed: state.toggleChainring,
-                        child: const Text('Change chainring'),
-                      ),
                       OutlinedButton(
                         onPressed: state.toggleMode,
                         child: Text(erg ? 'Switch to SIM' : 'Switch to ERG'),

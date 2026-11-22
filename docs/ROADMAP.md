@@ -33,7 +33,7 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
   do, Web Bluetooth pairing through the device chooser, and a publication card
   that explains instead of pretending.
 - Windows and web builds in CI, next to Android and iOS.
-- Console relay: a page drives a bridge over a WebSocket, from the Target screen,
+- Console relay: a page drives a bridge over a WebSocket, from the Network screen,
   with a code the bridge displays. Verified in Chrome: a button of the page
   reaches the bridge, and a gear changed on the bridge moves the page.
 - Windows keyboard and pointer injection through `SendInput`, with the buffer

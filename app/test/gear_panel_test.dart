@@ -105,7 +105,7 @@ void main() {
     await tester.tap(find.text('Gear set and riding mode'));
     await tester.pumpAndSettle();
     expect(find.text('Ratio'), findsOneWidget);
-    expect(find.text('Change chainring'), findsOneWidget);
+    expect(find.text('Change chainring'), findsNothing);
   });
 
   testWidgets('pressing shift up moves the number on screen', (

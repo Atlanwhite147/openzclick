@@ -1,5 +1,5 @@
-/// Virtual shifting engine: tracks the cog index, the virtual chainring, the
-/// riding mode and the resistance to send to the trainer.
+/// Virtual shifting engine: tracks the cog index, the riding mode and the
+/// resistance to send to the trainer.
 ///
 /// No I/O, no clock: the engine is purely functional and reproducible, which
 /// makes it testable without hardware.
@@ -62,7 +62,6 @@ class GearEngine {
   final GearProfile profile;
 
   int _gearIndex;
-  bool _bigChainring = false;
   RidingMode _mode;
   int _ergWatts = defaultErgWatts;
 
@@ -89,17 +88,8 @@ class GearEngine {
   /// Current riding mode.
   RidingMode get mode => _mode;
 
-  /// True if the virtual chainring is engaged.
-  bool get bigChainringActive => _bigChainring;
-
-  /// Effective ratio: the cog ratio, multiplied by the virtual chainring when
-  /// it is engaged. The cog index is never changed by the chainring.
-  GearRatio get currentRatio {
-    final GearRatio base = profile.gears[_gearIndex];
-    final GearRatio? factor = profile.bigChainringFactor;
-    if (!_bigChainring || factor == null) return base;
-    return base.scaledBy(factor.ratio);
-  }
+  /// Effective ratio of the engaged cog.
+  GearRatio get currentRatio => profile.gears[_gearIndex];
 
   /// True if the smallest development is engaged.
   bool get atLowest => _gearIndex == 0;
@@ -138,14 +128,6 @@ class GearEngine {
     return true;
   }
 
-  /// Toggles the virtual chainring.
-  ///
-  /// No effect if the profile does not declare a virtual chainring.
-  void toggleChainring() {
-    if (!profile.hasBigChainring) return;
-    _bigChainring = !_bigChainring;
-  }
-
   /// Changes the riding mode; no effect if the mode is unchanged.
   void setMode(RidingMode mode) {
     _mode = mode;
@@ -168,9 +150,8 @@ class GearEngine {
   /// Resistance to apply to the trainer, in simulated watts.
   ///
   /// In [RidingMode.sim] mode, power grows with grade, weight, speed and the
-  /// engaged ratio (virtual chainring included); it is bounded to
-  /// `[0, 1500]` W. A negative grade (descent) can cancel the resistance but
-  /// never returns a negative value.
+  /// engaged ratio; it is bounded to `[0, 1500]` W. A negative grade (descent)
+  /// can cancel the resistance but never returns a negative value.
   ///
   /// In [RidingMode.erg] mode, the returned value is the current ERG target,
   /// that is, the power the trainer must hold.

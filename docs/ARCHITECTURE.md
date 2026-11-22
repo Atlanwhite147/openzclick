@@ -20,7 +20,7 @@ main.dart              bootstrap only: the application root and the state
 ui/shell.dart          the four sections, their navigation, the readiness lamp
 ui/screens/            one file per section, no shared state of their own
   start_screen         the four steps, and the single button the web gets
-  gears_screen         the gear panel, and the chain question
+  gears_screen         the gear panel, and the parked-gear question
   controllers_screen   pairing, the pod's side, the device report
   network_screen       publication, the console relay, the key editor
 ui/console_cards.dart  the bridge console and the page console
@@ -29,7 +29,7 @@ ui/onboarding.dart     the first-start guide
 ui/one_tap.dart        the page's single action
 ui/gear_panel.dart     the readout, the ladder, the two paddles
 ui/mywhoosh_guide.dart the four-step card MyWhoosh needs
-ui/parked_gear_card.dart the chain question
+ui/parked_gear_card.dart the parked-gear question
 ```
 
 The split is not decoration: a screen that shares a file with the navigation
@@ -41,7 +41,7 @@ where to look — the section is the file name.
 
 1. An input backend (BLE, keyboard, HID device) produces a `ButtonEvent`.
 2. `Keymap` translates the button id into an `Action`.
-3. `GearEngine` updates the state (gear index, chainring, mode).
+3. `GearEngine` updates the state (gear index, mode).
 4. Every active `Transport` receives the action: network (`0x01` message), BLE peripheral, local injection, or trainer proxy (resistance write).
 
 ## States and errors

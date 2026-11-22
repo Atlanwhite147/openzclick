@@ -11,7 +11,7 @@ Build free software that connects physical controls (gamepad buttons, shifters, 
 Three problems to solve:
 
 1. **Reading**: capture button presses from BLE controllers that speak proprietary protocols.
-2. **Translation**: turn those presses into normalized actions, with gear logic (ratios, virtual chainring).
+2. **Translation**: turn those presses into normalized actions, with gear logic (ratios).
 3. **Delivery**: carry those actions to the target application over the channel it understands (network, Bluetooth, or interface simulation) and, when necessary, drive the home trainer's resistance directly.
 
 ## 2. Scope
@@ -116,7 +116,7 @@ Some manufacturers lock their firmware to their own application: the controller 
 ### 6.1 Model
 
 - Virtual gears `1..N` (N configurable, typically 1 to 30).
-- Each gear = a **ratio** (development), optionally a virtual chainring (two chainrings, switched by a button combination).
+- Each gear = a **ratio** (development).
 - `SIM` mode: resistance follows virtual gradient x ratio.
 - `ERG` mode: resistance follows a target power; the buttons become +/- watts.
 - Mode switching via a dedicated button, without leaving the saddle.
@@ -255,7 +255,7 @@ Field protocols are **unauthenticated**. Expected measures:
 project/
 +- core/                 # protocol, codec, gear engine (no I/O)
 |  +- protocol/          # messages 0x01..0x04, button IDs
-|  +- shifting/          # ratios, virtual chainring, SIM/ERG modes
+|  +- shifting/          # ratios, gear profiles, SIM/ERG modes
 |  +- mapping/           # button -> action, keymaps
 +- transports/
 |  +- mdns_tcp/

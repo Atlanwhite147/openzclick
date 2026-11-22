@@ -1,5 +1,4 @@
-/// Transmission profile: an ordered list of ratios and, optionally, a virtual
-/// chainring that multiplies the current ratio without changing cogs.
+/// Transmission profile: an ordered list of ratios.
 ///
 /// The built-in profiles follow the contract's normalisation constraint: all
 /// ratios lie between `0.45` and `3.2`.
@@ -29,22 +28,14 @@ class GearProfile {
   /// [maxGearCount] elements.
   final List<GearRatio> gears;
 
-  /// Virtual chainring factor, or `null` if the profile offers none.
-  ///
-  /// When enabled, the current ratio is multiplied by this factor without
-  /// changing the cog index.
-  final GearRatio? bigChainringFactor;
-
   /// Builds a profile while validating its invariants.
   ///
   /// Throws [ArgumentError] if the identifier is empty, if the gear count
-  /// falls outside the allowed range, if a ratio is not finite, or if the
-  /// chainring factor is not strictly positive.
+  /// falls outside the allowed range, or if a ratio is not finite.
   GearProfile({
     required this.id,
     required this.label,
     required List<GearRatio> gears,
-    this.bigChainringFactor,
   }) : gears = List<GearRatio>.unmodifiable(gears) {
     if (id.trim().isEmpty) {
       throw ArgumentError.value(id, 'id', 'Profile id must not be empty');
@@ -62,18 +53,10 @@ class GearProfile {
             'Every ratio must be finite and strictly positive');
       }
     }
-    final factor = bigChainringFactor;
-    if (factor != null && (!factor.ratio.isFinite || factor.ratio <= 0)) {
-      throw ArgumentError.value(factor.ratio, 'bigChainringFactor',
-          'Chainring factor must be finite and positive');
-    }
   }
 
   /// Number of gears in the profile.
   int get gearCount => gears.length;
-
-  /// True if the profile offers a virtual chainring.
-  bool get hasBigChainring => bigChainringFactor != null;
 
   /// First ratio (the easiest).
   GearRatio get lowest => gears.first;
@@ -107,19 +90,16 @@ class GearProfile {
       id: 'road-12',
       label: 'Road 12 gears',
       gears: _progression(0.45, 3.2, 12),
-      bigChainringFactor: const GearRatio(1.35),
     ),
     GearProfile(
       id: 'hill-24',
       label: 'Hill 24 gears',
       gears: _progression(0.45, 2.6, 24),
-      bigChainringFactor: const GearRatio(1.2),
     ),
     GearProfile(
       id: 'flat-8',
       label: 'Flat 8 gears',
       gears: _progression(0.9, 3.2, 8),
-      bigChainringFactor: const GearRatio(1.4),
     ),
   ];
 
