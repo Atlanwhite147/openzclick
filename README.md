@@ -3,7 +3,8 @@
 # openzclick
 
 **Use your indoor cycling controller buttons with any training app.**<br>
-Gears go up and down, left and right can be sent, the smart trainer follows.
+Runs on Windows, today, with MyWhoosh: the gradient goes to the trainer, the
+buttons change the gear, the shift reaches the game.
 
 </div>
 
