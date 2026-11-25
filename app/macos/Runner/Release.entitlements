@@ -4,5 +4,13 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- The bridge announces itself over mDNS and listens on a TCP port so a
+	     training application, or the console on a phone, can reach it. The debug
+	     entitlement had this and the release one did not, which is the kind of
+	     difference a developer never sees and a rider always does. -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>

@@ -1,0 +1,104 @@
+name: macOS build
+
+# The one-codebase claim in the README covers macOS, and `app/macos/` has been
+# in the tree since the project was created, but no workflow ever built it: the
+# latest release shipped the Windows, Android and iOS artifacts and nothing a
+# Mac could open. This job closes that gap.
+#
+# What a Mac gets: the controller pairing, the gears, the network publication
+# and the console. What it does not get is keyboard injection. macOS has no
+# backend in `lib/net/desktop_injection_native.dart` (it returns `null`, and the
+# switch stays disabled with a reason), so the release is honest about it rather
+# than failing on the first press. See issue #2.
+#
+# The bundle is unsigned. Gatekeeper will refuse it on first launch until the
+# rider allows it in System Settings, exactly like the unsigned IPA needs
+# Sideloadly. The README says so.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/macos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      # --no-codesign: no Apple developer identity is available to CI. Without
+      # it the build fails at the codesign step, because a macOS release is a
+      # signed bundle, not a bare executable like the Windows and Linux ones.
+      # The same flag is what `ios.yml` uses for its unsigned IPA.
+      # The .app lands in build/macos/Build/Products/Release/openzclick.app.
+      - name: Build release
+        working-directory: app
+        run: flutter build macos --release --no-codesign
+
+      # ditto, not zip: it preserves the resource forks, the symlinks and the
+      # executable bits that a .app bundle needs. A plain `zip -r` produces an
+      # archive that unpacks into an application macOS calls damaged.
+      - name: Package
+        working-directory: app
+        run: |
+          ditto -c -k --keepParent \
+            build/macos/Build/Products/Release/openzclick.app \
+            build/openzclick-macos.zip
+          ls -lh build/openzclick-macos.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openzclick-macos
+          path: app/build/openzclick-macos.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish or refresh the latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: app/build/openzclick-macos.zip
+          body: |
+            Unattended builds of openzclick, produced by CI.
+
+            - `openzclick-macos.zip` - macOS (Apple silicon and Intel): unzip,
+              drag `openzclick.app` into Applications. Unsigned, so the first
+              launch is refused by Gatekeeper: open System Settings > Privacy &
+              Security, scroll down and press **Open Anyway**. Controller
+              pairing, gears, network publication and the console work. Keyboard
+              injection does not: macOS has no backend yet.
+            - `openzclick-setup.exe` - Windows installer: per-user, no administrator
+              prompt, shortcut and uninstaller included
+            - `openzclick-windows-x64.zip` - Windows, unzip and run `openzclick.exe`
+            - `app-release.apk` - Android, sideload directly (debug signing key)
+            - `openzclick-unsigned.ipa` - iOS, sign with Sideloadly or AltStore
