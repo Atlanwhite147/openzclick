@@ -53,25 +53,53 @@ jobs:
         working-directory: app
         run: flutter test
 
-      # --no-codesign: no Apple developer identity is available to CI. Without
-      # it the build fails at the codesign step, because a macOS release is a
-      # signed bundle, not a bare executable like the Windows and Linux ones.
-      # The same flag is what `ios.yml` uses for its unsigned IPA.
-      # The .app lands in build/macos/Build/Products/Release/openzclick.app.
+      # macOS has no `--no-codesign` flag: `flutter build macos` never accepted
+      # it (flutter/flutter#169034 added it, was reverted). Passing it fails with
+      # "Could not find an option named --no-codesign" before the build starts,
+      # which is what the first run of this workflow did.
+      #
+      # Flutter forwards FLUTTER_XCODE_* to xcodebuild, so signing is disabled
+      # where Xcode reads it. The Runner target already carries
+      # CODE_SIGN_IDENTITY = "-" (ad hoc), which is what a machine with no Apple
+      # identity can produce.
       - name: Build release
         working-directory: app
-        run: flutter build macos --release --no-codesign
+        env:
+          FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
+          FLUTTER_XCODE_CODE_SIGN_IDENTITY: "-"
+          FLUTTER_XCODE_CODE_SIGNING_REQUIRED: "NO"
+          FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
+          FLUTTER_XCODE_DEVELOPMENT_TEAM: ""
+        run: flutter build macos --release
 
       # ditto, not zip: it preserves the resource forks, the symlinks and the
       # executable bits that a .app bundle needs. A plain `zip -r` produces an
       # archive that unpacks into an application macOS calls damaged.
+      #
+      # The steps fail loudly rather than upload an empty or truncated archive:
+      # a .app that built but packaged wrong would otherwise reach the release
+      # and be discovered by a rider.
       - name: Package
         working-directory: app
         run: |
-          ditto -c -k --keepParent \
-            build/macos/Build/Products/Release/openzclick.app \
-            build/openzclick-macos.zip
+          set -euo pipefail
+          APP=build/macos/Build/Products/Release/openzclick.app
+          if [ ! -d "$APP" ]; then
+            echo "no bundle at $APP; what did build do?" >&2
+            ls -la build/macos/Build/Products/ 2>/dev/null >&2 || true
+            exit 1
+          fi
+          # The compiled Dart lives in Frameworks/App.framework; a bundle missing
+          # it is an empty shell, not the application.
+          if [ ! -d "$APP/Contents/Frameworks/App.framework" ]; then
+            echo "the bundle has no App.framework: nothing was compiled into it" >&2
+            find "$APP/Contents" -maxdepth 2 >&2 || true
+            exit 1
+          fi
+          ditto -c -k --keepParent "$APP" build/openzclick-macos.zip
           ls -lh build/openzclick-macos.zip
+          # An archive smaller than the bundle it came from is a packaging bug.
+          echo "bundle: $(du -sh "$APP" | cut -f1), archive: $(du -sh build/openzclick-macos.zip | cut -f1)"
 
       - uses: actions/upload-artifact@v4
         with:
