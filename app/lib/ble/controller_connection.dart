@@ -221,6 +221,14 @@ class ControllerConnection {
     );
 
     try {
+      // Asked before the scan, because the plugin builds its CBCentralManager
+      // the first time it is spoken to: on macOS a bundle without
+      // NSBluetoothAlwaysUsageDescription makes the system kill the process at
+      // that instant, and no Dart catch can see it. Nothing here can prevent
+      // that; reading the state first means the ordinary failures (radio off,
+      // adapter unavailable) are reported as sentences instead of rising as a
+      // platform exception.
+      await _checkAdapter(isWeb: kIsWeb);
       await FlutterBluePlus.startScan(
         // Never filtered by service. A service filter only matches what the
         // device puts in its advertising packet, and a controller that omits
@@ -252,10 +260,45 @@ class ControllerConnection {
       return;
     }
 
+    // A radio that was off when the scan began reports asynchronously, through
+    // the results stream: the exception must stay visible somewhere other than
+    // a field this method overwrites two lines later.
+    if (status == ControllerStatus.failed) return;
+
     await Future<void>.delayed(timeout);
     scanFoundNothing = _found.isEmpty;
     status = ControllerStatus.idle;
     _notify();
+  }
+
+  /// Reads the adapter state before a scan, so a radio that is off, absent or
+  /// refused is a sentence rather than a platform exception.
+  ///
+  /// Asked from the platform, not from `adapterStateNow`, which stays `unknown`
+  /// until the plugin has built its native side once.
+  static Future<void> _checkAdapter({required bool isWeb}) async {
+    // The shipped message names the case rather than an enum value, because the
+    // sentence the rider reads is derived from it and macOS reports `off` for a
+    // radio that does not exist on some hosts.
+    final BluetoothAdapterState adapter = await FlutterBluePlus.adapterState
+        .firstWhere(
+          (BluetoothAdapterState s) => s != BluetoothAdapterState.unknown,
+        )
+        .timeout(
+          const Duration(seconds: 3),
+          onTimeout: () => BluetoothAdapterState.unknown,
+        );
+    if (adapter == BluetoothAdapterState.off) {
+      throw StateError('bluetoothadapter is turned off');
+    }
+    if (adapter == BluetoothAdapterState.unavailable) {
+      throw StateError('the Bluetooth adapter is unavailable on this host');
+    }
+    if (adapter == BluetoothAdapterState.unauthorized) {
+      throw StateError(
+        'notAuthorized: Bluetooth permission was refused for this application',
+      );
+    }
   }
 
   /// Asks the host for a controller and connects to the one that came back.

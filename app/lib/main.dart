@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart' hide Action;
 
 import 'settings/settings_store.dart';
+import 'ble/bluetooth_warm_up.dart';
 import 'state/app_state.dart';
 import 'ui/design.dart';
 import 'ui/shell.dart';
@@ -14,7 +15,12 @@ import 'net/console_endpoint.dart';
 /// root class directly. Losing it compiles, analyzes and tests clean, then fails
 /// every release build with a CMake "custom build exited with code 1" that names
 /// no cause — so `test/entry_point_test.dart` keeps it honest.
-void main() => runApp(const OpenZclickApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Beside the start-up, not inside the press: see bluetooth_warm_up.dart.
+  unawaited(warmUpBluetooth());
+  runApp(const OpenZclickApp());
+}
 
 class OpenZclickApp extends StatefulWidget {
   /// Creates the application.

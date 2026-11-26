@@ -24,6 +24,15 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
+	<!-- CoreBluetooth refuses to start, and TCC kills the process outright, when
+	     the application asks for a scan without a purpose string. Leaving this out
+	     is silent: the rider presses Scan, the window disappears, and nothing is
+	     written anywhere. It must stay in this file and the key is read from the
+	     bundle, so the release has to be rebuilt for a fix to reach a Mac. -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>openzclick reads your Zwift Click or two-button controller over Bluetooth to change gears and read the buttons you press.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>openzclick reads your Zwift Click or two-button controller over Bluetooth to change gears and read the buttons you press.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>

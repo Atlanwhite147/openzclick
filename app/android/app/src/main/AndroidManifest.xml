@@ -11,11 +11,14 @@
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
-    <!-- Android 12+ -->
+    <!-- Android 12+ : scanning and connecting to the controller. Advertising is
+         NOT declared: the application never advertises a BLE service, and a
+         permission that is asked of the rider and used by nothing is a refusal
+         waiting to happen. The plugin asks for SCAN, CONNECT (and FINE_LOCATION
+         for the Android 11 path) itself, right before startScan. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
     <!-- Android 11 and below -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

@@ -42,11 +42,30 @@ String explainControllerError(
     return 'This browser exposes no Bluetooth. Use Chrome or Edge, and check '
         'that the machine has a radio.';
   }
+  // Before "turned off": a radio that does not exist is not a radio that is off,
+  // and the advice differs. macOS also reports `off` for a host with no adapter,
+  // which is why the sentence names both cases rather than guessing.
+  if (raw.contains('unavailable') || raw.contains('no adapter')) {
+    return 'This machine reports no Bluetooth. Check that the adapter exists and '
+        'is not switched off, then try again.';
+  }
   if (raw.contains('bluetoothadapter') || raw.contains('turned off')) {
     return 'Bluetooth is off. Turn it on, then try again.';
   }
+  // CoreBluetooth's own wording, which reaches Dart when macOS refuses the
+  // application or the radio: `bluetooth must be turned on. (unauthorized)` is
+  // the one a Mac gives a bundle whose Bluetooth permission the user refused.
+  if (!isWeb &&
+      (raw.contains('not powered on') ||
+          raw.contains('neauthorized') ||
+          raw.contains('Not authorized'))) {
+    return 'macOS refused Bluetooth for this application. Install a build that '
+        'declares why it needs Bluetooth, and allow it in System Settings > '
+        'Privacy & Security > Bluetooth.';
+  }
   if (raw.contains('notAuthorized') ||
       raw.contains('Not authorized') ||
+      raw.contains('turned on. (unauthorized') ||
       raw.contains('permission')) {
     return 'Permission to use Bluetooth was refused. Allow it for this '
         'application, then try again.';

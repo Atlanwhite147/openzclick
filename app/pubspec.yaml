@@ -51,6 +51,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # The fake radio of the tests replaces this object; it is what
+  # flutter_blue_plus talks to, and a scan can only be exercised through it.
+  flutter_blue_plus_platform_interface: ^9.0.4
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
