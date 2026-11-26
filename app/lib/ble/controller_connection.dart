@@ -130,7 +130,14 @@ class ControllerConnection {
   final List<StreamSubscription<List<int>>> _frameSubscriptions =
       <StreamSubscription<List<int>>>[];
   Timer? _supervision;
-  final ControllerLinkWatchdog _watchdog = ControllerLinkWatchdog();
+
+  /// The plain session opens first: `RideOn 02 03`, then the two activation
+  /// frames, then a keepalive every three seconds. Every implementation that
+  /// works with this family does the same, and the reference measurement is
+  /// `zwiftboard` (MIT) on a Click v2.
+  final ControllerLinkWatchdog _watchdog = ControllerLinkWatchdog(
+    plainFallbackAfter: Duration.zero,
+  );
 
   /// What the link should do about its own age, so a controller that closes a
   /// session on a timer is restarted before the rider notices.
@@ -473,6 +480,15 @@ class ControllerConnection {
       // Rebuilt once the subscriptions exist, so the tree states what is
       // actually notifying rather than what was advertised before.
       gattTree = _describe(services);
+
+      // Logged whatever it says: three implementations match channels by UUID
+      // and none by handle, and a session that subscribes on one characteristic
+      // and writes on another is silent without ever failing.
+      _event(
+        'channels: listen 0002 on ${asyncChannel.uuid}, '
+        'write on ${writeTarget.uuid}, '
+        'reply ${syncReply?.uuid ?? 'absent'}',
+      );
       _connectionSubscription = target.connectionState.listen((
         BluetoothConnectionState state,
       ) {
@@ -485,8 +501,12 @@ class ControllerConnection {
         }
       });
 
-      // Ask for an encrypted session first; some firmware only answers the
-      // plain handshake, which the supervision below sends after a delay.
+      // The keys are still derived, because a firmware that answers the
+      // encrypted request sends ciphertext afterwards and the decoder has to
+      // know it. The request is not written first: no working implementation
+      // waits for a key exchange, and the pod gives the encrypted request a bare
+      // `RideOn` echo and then goes quiet. The plain opening goes first, from
+      // the supervision tick.
       _keyPair = ControllerCrypto.generateKeyPair();
       _crypto = null;
       encrypted = false;
@@ -494,17 +514,17 @@ class ControllerConnection {
       _plainFrameReported = false;
       _secondsSinceConnect = 0;
       _watchdog.onConnected();
-      // Through [_write], so the handshake request lands in the report: a link
-      // that never answers is diagnosed from exactly these bytes.
-      await _write(
-        ControllerHandshake.encryptedRequest(_keyPair!.publicKeyBytes),
-      );
 
       _supervision?.cancel();
       _supervision = Timer.periodic(
         const Duration(seconds: 1),
         (_) => _supervise(),
       );
+      // The plain opening goes out now, not on the first tick: `RideOn 02 03`,
+      // `00 08 00`, `00 08 10`, then `FF 04 00`, then `RideOn` every three
+      // seconds. On the tick it was a second late, and a pod that hears nothing
+      // in that second is the pod that goes quiet.
+      unawaited(_startPlainSession());
 
       status = ControllerStatus.ready;
       _attempts = 0;
@@ -570,12 +590,12 @@ class ControllerConnection {
       return;
     }
 
-    // A Click v2 answers the encrypted request with a bare `RideOn` echo and
-    // then waits for the rest of an exchange that will never come: it streams
-    // its buttons only after the plain handshake. The watchdog cannot ask for
-    // that fallback, because a frame did arrive and it reads a frame as an
-    // answer; the criterion is the derived session, not the bytes.
-    if (_crypto == null && !_plainHandshakeSent && _secondsSinceConnect >= 3) {
+    // Not gated on `_crypto`: a session that derived keys still needs the plain
+    // opening, because that is the frame the controller answers with its button
+    // stream. It is now the first thing written (the watchdog asks for it on
+    // its first tick); this line is the belt for a tick that raced the end of
+    // `connect`.
+    if (!_plainHandshakeSent && _secondsSinceConnect >= 1) {
       unawaited(_startPlainSession());
     }
   }
@@ -593,17 +613,21 @@ class ControllerConnection {
     _event('opening the plain session');
     for (final List<int> frame in ControllerHandshake.activationSequence()) {
       final bool sent = await _tryWrite(frame);
+      // A refused frame is logged and the sequence carries on: the opening is
+      // four frames meant to be heard in order, and abandoning it on the first
+      // refusal leaves the pod with half an opening and no way to notice. The
+      // supervision reconnects on its own cadence if the link is really gone.
       if (!sent) {
-        // A failed write is the only observable sign that the session ended.
-        _event('activation write failed: ${_hexOf(frame)}');
-        _scheduleReconnect();
-        return;
+        _event('activation write refused, continuing: ${_hexOf(frame)}');
       }
-      await Future<void>.delayed(const Duration(milliseconds: 30));
+      // 100 ms between the activation frames: the interval `zwiftboard`
+      // measured on a Click v2. Shorter, and the controller drops the second.
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     // The opening is not finished at `RideOn 02 03`: the controller waits for
-    // `FF 04 00` before it holds the session open.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // `FF 04 00` before it holds the session open. Written straight away, not
+    // after a 300 ms pause: that pause was this application's own idea, and a
+    // pod that hears nothing in the window goes back to sleep.
     final bool armed = await _tryWrite(ControllerHandshake.startAfterOpening);
     _event('plain session opened${armed ? '' : ', arming frame refused'}');
   }
@@ -634,10 +658,6 @@ class ControllerConnection {
     await _attemptReconnect();
   }
 
-  Future<void> _write(List<int> frame) async {
-    await _tryWrite(frame);
-  }
-
   /// Restarts a controller that has announced it stopped talking.
   ///
   /// The frame is `0x18` on the write characteristic, the one `clickbridge`
@@ -663,19 +683,43 @@ class ControllerConnection {
   /// not take is the only reliable sign that the session ended, since an idle
   /// controller is silent by design.
   Future<bool> _tryWrite(List<int> frame) async {
-    _record(frame, FrameDirection.outbound, _writeTarget?.uuid.toString());
+    final BluetoothCharacteristic? target = _writeTarget;
+    if (target == null) {
+      // A null target used to make `await null` succeed, so this method claimed
+      // a write nobody made: the reason a link can report every frame as sent
+      // while the controller hears none of them.
+      error = 'no write characteristic was selected for this link';
+      _event('write refused: $error');
+      _notify();
+      return false;
+    }
     try {
       // Bounded: a WinRT write to a device that has gone away can hang for ever,
       // and this loop is what carries the whole link. Measured on 2026-11-12: a
       // session that stopped being written at +23 s and reported nothing after
       // it, with the status still saying "connected".
-      await _writeTarget?.write(frame).timeout(_writeTimeout);
+      //
+      // Without response when the characteristic says so, which is how this
+      // controller declares its command channel (`00000003`): a write request on
+      // a characteristic that only takes responseless writes is refused by the
+      // host stack before any PDU reaches the air, and the link log shows a
+      // frame that was never sent.
+      final bool withoutResponse =
+          !target.properties.write && target.properties.writeWithoutResponse;
+      await target
+          .write(frame, withoutResponse: withoutResponse)
+          .timeout(_writeTimeout);
+      // Recorded once it went out, not before: a report has to say what the
+      // controller heard, not what this code hoped to send.
+      _record(frame, FrameDirection.outbound, target.uuid.toString());
       return true;
     } on TimeoutException {
       error = 'the write did not return within ${_writeTimeout.inSeconds} s';
+      _event('write timed out: $error');
       _notify();
       return false;
     } catch (e) {
+      _event('write failed: $e');
       error = explainControllerError(
         e,
         isWeb: kIsWeb,

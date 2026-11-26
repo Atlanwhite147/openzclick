@@ -325,6 +325,34 @@ void main() {
       expect(buttons, const ClickButtonMask(up: true, down: false));
     });
 
+    test('the Click v1 frame 0x37 is read as a plus press', () {
+      // `ClickKeyPadStatus`, from the protobuf schema QZ uses: command code
+      // `0x37`, field 1 `Button_Plus`, field 2 `Button_Minus`, the value 0
+      // meaning pressed and 1 meaning released. A straight capture, not a
+      // rebuilt mask: this is the frame a pod that only speaks v1 sends.
+      final ControllerMessage? plus = decodeFrame(
+        <int>[0x37, 0x08, 0x00, 0x10, 0x01],
+      );
+      expect(plus, isA<ClickMessage>());
+      expect(
+        (plus! as ClickMessage).buttons,
+        const ClickButtonMask(up: true, down: false),
+      );
+
+      final ControllerMessage? minus = decodeFrame(
+        <int>[0x37, 0x08, 0x01, 0x10, 0x00],
+      );
+      expect(
+        (minus! as ClickMessage).buttons,
+        const ClickButtonMask(up: false, down: true),
+      );
+
+      final ControllerMessage? resting = decodeFrame(
+        <int>[0x37, 0x08, 0x01, 0x10, 0x01],
+      );
+      expect((resting! as ClickMessage).buttons, ClickButtonMask.released);
+    });
+
     test('the B button is the one that shifts down', () {
       final int mask = 0xFFFFFFFF & ~(1 << ControllerButtonBits.b);
       final ClickButtonMask? buttons = ControllerCodec.parseButtonMask(

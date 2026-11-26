@@ -51,7 +51,10 @@ class ControllerLinkWatchdog {
   /// Creates a watchdog.
   ///
   /// [plainFallbackAfter] is how long the host waits for an answer to the
-  /// encrypted handshake before falling back to the plain one.
+  /// encrypted handshake before falling back to the plain one. Zero means the
+  /// plain session is the very first thing written, which is what every working
+  /// implementation does: `zwiftboard`, `clickbridge` and QZ all open with
+  /// `RideOn 02 03` and never wait for a key exchange.
   /// [unlockHintAfter] is how long a completely silent link is tolerated before
   /// blaming the controller lock.
   /// [keepaliveInterval] is the cadence of the plain `RideOn` that holds the
@@ -136,7 +139,10 @@ class ControllerLinkWatchdog {
     _sinceConnect += elapsed;
     _sinceKeepalive += elapsed;
 
-    if (!_plainSent && !_frameSeen && _sinceConnect >= plainFallbackAfter) {
+    // The plain opening is what makes the controller stream: the encrypted
+    // request is optional, the `RideOn` is not. A zero delay sends it at once,
+    // before any answer could have arrived.
+    if (_sinceConnect >= plainFallbackAfter && !_plainSent) {
       _plainSent = true;
       _sinceKeepalive = Duration.zero;
       return ControllerLinkAction.sendPlainHandshake;

@@ -34,15 +34,24 @@ void main() {
       );
     });
 
-    test('an acknowledged handshake cancels the fallback', () {
+    test('an acknowledged handshake does not cancel the plain opening', () {
+      // A `RideOn` echo is not a session: every implementation that receives
+      // buttons opens with `RideOn 02 03` whatever the controller answered
+      // first. Only the write itself, `onPlainHandshakeSent`, arms the cadence.
       watchdog.onFrame();
       expect(
         watchdog.onElapsed(const Duration(seconds: 5)),
-        isNull,
-        reason: 'the controller answered, no fallback needed',
+        ControllerLinkAction.sendPlainHandshake,
       );
-      expect(watchdog.plainSent, isFalse);
       expect(watchdog.frameSeen, isTrue);
+      // Once the opening is out, the keepalive cadence owns the link: a
+      // `RideOn` every three seconds, acknowledged or not, is what holds a
+      // session that drops about a minute after its last write.
+      watchdog.onPlainHandshakeSent();
+      expect(
+        watchdog.onElapsed(const Duration(seconds: 3)),
+        ControllerLinkAction.sendKeepalive,
+      );
     });
 
     test('total silence is blamed on the controller lock, once', () {

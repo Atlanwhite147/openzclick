@@ -31,6 +31,18 @@ All notable changes to this project are documented here. The format follows [Kee
   the controller is recorded: the same capture showed four characteristic reads
   per connection, three of them from a full discovery whose result was thrown
   away.
+- **The session opens with the plain exchange, immediately.** `RideOn 02 03`,
+  `00 08 00`, `00 08 10` at 100 ms, then `FF 04 00`, then `RideOn` every three
+  seconds. The encrypted request is no longer written first and the opening no
+  longer waits for a key echo or a three-second fallback: with zero GATT writes
+  in the macOS capture, that wait was the whole bug. Keys are still derived, so a
+  firmware that answers in ciphertext is still read.
+- **A write that goes nowhere is no longer reported as sent.** A null command
+  characteristic used to make `await null` succeed; it is now an explicit
+  refusal. Frames are recorded after they went out, not before, and the write is
+  sent without response when the characteristic only accepts that (`00000003`).
+- **A refused activation frame no longer abandons the opening:** it is logged and
+  the sequence continues.
 - The CI format check named the two files that had drifted
   (`bluetooth_warm_up.dart`, `controller_scan_failure_test.dart`); both are
   formatted.
