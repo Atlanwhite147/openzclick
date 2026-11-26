@@ -10,12 +10,12 @@ name: Web build
 # while both deployments report success, which is exactly how it stayed broken
 # without anyone noticing.
 
+# Built on request only. This workflow used to run on every push to `main`,
+# which built six platforms for changes that usually touch one. Run it by hand:
+#   gh workflow run "Web build" -R Atlanwhite147/openzclick --ref main
+# The `latest` release keeps this workflow's assets until it runs again: a
+# release upload never deletes an asset it did not upload.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - '.github/workflows/web.yml'
   workflow_dispatch:
 
 permissions:

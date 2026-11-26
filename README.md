@@ -100,7 +100,17 @@ itself to an application as a trainer is not written yet (see *Becoming the trai
 | macOS | [`openzclick-macos.zip`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-macos.zip) | unzip, drag `openzclick.app` into *Applications*. Unsigned: the first launch is refused, so open *System Settings › Privacy & Security*, scroll down and press **Open Anyway**. Controller, gears, network and console work; keyboard injection is not implemented on macOS |
 | iOS | [`openzclick-unsigned.ipa`](https://github.com/Atlanwhite147/openzclick/releases/download/latest/openzclick-unsigned.ipa) | needs a computer: sign with Sideloadly or AltStore, 7 days with a free Apple ID |
 
-Every file is rebuilt on every push to `main`. The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
+Only macOS is built automatically, along with the page on GitHub Pages. The other files are built on request and stay on the release until their own workflow runs again:
+
+```bash
+gh workflow run "Windows build" -R Atlanwhite147/openzclick --ref main
+gh workflow run "Android build" -R Atlanwhite147/openzclick --ref main
+gh workflow run "iOS build"     -R Atlanwhite147/openzclick --ref main
+gh workflow run "Web build"     -R Atlanwhite147/openzclick --ref main
+gh workflow run "Web bundle"    -R Atlanwhite147/openzclick --ref main   # the Isolated Web App
+```
+
+The Android package is signed with the repository community key (`app/android/keystore/openzclick-test.jks`, password `openzclick`), which is public by design and must never be used for a store release.
 
 ## Ride with MyWhoosh in four steps
 

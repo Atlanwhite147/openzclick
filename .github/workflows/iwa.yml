@@ -10,12 +10,12 @@ name: Web bundle
 # app's identity: Chrome treats a new id as a different application, and the old
 # install has to be removed by hand.
 
+# Built on request only. This workflow used to run on every push to `main`,
+# which built six platforms for changes that usually touch one. Run it by hand:
+#   gh workflow run "Web bundle" -R Atlanwhite147/openzclick --ref main
+# The `latest` release keeps this workflow's assets until it runs again: a
+# release upload never deletes an asset it did not upload.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - '.github/workflows/iwa.yml'
   workflow_dispatch:
 
 permissions:
@@ -106,8 +106,26 @@ jobs:
             app.swbn
             update_manifest.json
           body: |
-            Unsigned iOS build, Android APK, Windows build, and the Isolated Web
-            App bundle, produced by this repository's workflows.
+            Unattended builds of openzclick, produced by CI. Each file is
+            built on request except the macOS one and the page.
+
+            - `openzclick-macos.zip` - macOS (Apple silicon and Intel): unzip,
+              drag `openzclick.app` into Applications. Unsigned, so the first
+              launch is refused by Gatekeeper: open System Settings > Privacy &
+              Security, scroll down and press **Open Anyway**. Controller
+              pairing, gears, network publication and the console work. Keyboard
+              injection does not: macOS has no backend yet.
+            - `openzclick-setup.exe` - Windows installer: per-user, no administrator
+              prompt, shortcut and uninstaller included
+            - `openzclick-windows-x64.zip` - Windows, unzip and run `openzclick.exe`
+            - `app-release.apk` - Android, sideload directly (debug signing key)
+            - `openzclick-unsigned.ipa` - iOS, sign with Sideloadly or AltStore
+            - `app.swbn` and `update_manifest.json` - the Isolated Web App bundle
+
+            An asset stays on this release until its own workflow runs again: a
+            release upload replaces only the file of the same name. The release
+            body, though, is replaced whole by whichever workflow publishes last,
+            so every publishing workflow carries this same list.
 
             The bundle installs from `chrome://web-app-internals`, *Install IWA
             from Update Manifest*, with the URL of `update_manifest.json` served
