@@ -345,14 +345,22 @@ class ControllerConnection {
     BluetoothDevice target,
   ) async {
     List<BluetoothService> services = <BluetoothService>[];
-    for (int attempt = 1; attempt <= 3; attempt++) {
+    // One call is what the measurement supports: the macOS capture of
+    // 2026-11-26 showed four characteristic reads per connection, i.e. three
+    // discovery passes in which only the last was used. Each pass is a place
+    // where the stack can answer late or cancel the connection
+    // (`Cancelling Unused`), so the retries are made short and count now.
+    for (int attempt = 1; attempt <= 2; attempt++) {
       services = await target.discoverServices();
       final bool found = services.any(
         (BluetoothService service) =>
             sameUuid(service.uuid.toString(), ControllerUuids.service),
       );
-      if (found) return services;
-      if (attempt < 3) {
+      if (found) {
+        if (attempt > 1) _event('services found on discovery pass $attempt');
+        return services;
+      }
+      if (attempt < 2) {
         await Future<void>.delayed(Duration(milliseconds: 700 * attempt));
       }
     }
@@ -502,6 +510,11 @@ class ControllerConnection {
       _attempts = 0;
       _notify();
     } catch (e) {
+      // Named, not summarised: a link that fails between the subscriptions and
+      // the handshake leaves no other trace. The macOS capture of 2026-11-26
+      // showed a connection cancelled 20 s after it came up with not one write,
+      // and this line is what tells the two causes apart.
+      _event('connect failed: $e');
       status = ControllerStatus.failed;
       error = explainControllerError(
         e,

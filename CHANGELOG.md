@@ -22,6 +22,15 @@ All notable changes to this project are documented here. The format follows [Kee
   reported itself ready. Frames are now read as ciphertext first, then as plain
   frames, and the link log says so once per link ("clear frames on a session
   with keys: read as plain").
+- **A failed connection now says why.** The `catch` of `connect()` writes
+  `connect failed: <exception>` in the link log before turning the error into a
+  rider-facing sentence; the macOS capture of 2026-11-26 showed a session
+  cancelled 20 s after it came up with not one GATT write, and nothing in the
+  log said which step threw.
+- **Two discovery passes instead of three,** and the pass that actually found
+  the controller is recorded: the same capture showed four characteristic reads
+  per connection, three of them from a full discovery whose result was thrown
+  away.
 - The CI format check named the two files that had drifted
   (`bluetooth_warm_up.dart`, `controller_scan_failure_test.dart`); both are
   formatted.
