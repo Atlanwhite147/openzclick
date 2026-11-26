@@ -91,18 +91,21 @@ void main() {
     expect(link.error, contains('no Bluetooth'));
   });
 
-  test('a scan that ends normally goes back to idle, saying nothing was found', () async {
-    radio(BmAdapterStateEnum.on);
-    final ControllerConnection link = ControllerConnection();
-    addTearDown(link.dispose);
+  test(
+    'a scan that ends normally goes back to idle, saying nothing was found',
+    () async {
+      radio(BmAdapterStateEnum.on);
+      final ControllerConnection link = ControllerConnection();
+      addTearDown(link.dispose);
 
-    await link.scan(timeout: const Duration(milliseconds: 50));
+      await link.scan(timeout: const Duration(milliseconds: 50));
 
-    expect(platform.startScanCalls, 1);
-    expect(link.status, ControllerStatus.idle);
-    expect(link.error, isNull);
-    expect(link.scanFoundNothing, isTrue);
-  });
+      expect(platform.startScanCalls, 1);
+      expect(link.status, ControllerStatus.idle);
+      expect(link.error, isNull);
+      expect(link.scanFoundNothing, isTrue);
+    },
+  );
 
   test('macOS ships a purpose string for Bluetooth in the bundle', () {
     // Without this key the system kills the process the instant CoreBluetooth
@@ -119,8 +122,7 @@ void main() {
     expect(
       text,
       contains('<key>NSBluetoothAlwaysUsageDescription</key>'),
-      reason:
-          'without it TCC terminates openzclick at the first scan on macOS',
+      reason: 'without it TCC terminates openzclick at the first scan on macOS',
     );
     // A key with an empty string is refused the same way by the system.
     final String? value = RegExp(

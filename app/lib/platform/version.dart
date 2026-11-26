@@ -8,4 +8,4 @@
 library;
 
 /// Version of this build, matching `version:` in `app/pubspec.yaml`.
-const String appVersion = '0.3.0+3';
+const String appVersion = '0.3.1+4';

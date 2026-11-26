@@ -17,7 +17,9 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 Future<void> warmUpBluetooth() async {
   try {
     await FlutterBluePlus.adapterState
-        .firstWhere((BluetoothAdapterState s) => s != BluetoothAdapterState.unknown)
+        .firstWhere(
+          (BluetoothAdapterState s) => s != BluetoothAdapterState.unknown,
+        )
         .timeout(const Duration(seconds: 3));
   } catch (_) {
     // A host without a radio, or a plugin without a platform: Scan will say it.

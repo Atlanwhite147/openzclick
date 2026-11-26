@@ -144,6 +144,10 @@ class ControllerConnection {
   /// buttons. A single echo therefore says nothing about the session.
   bool _plainHandshakeSent = false;
 
+  /// True once a frame arrived in clear on a session that holds derived keys,
+  /// so the event is written once per link rather than once per press.
+  bool _plainFrameReported = false;
+
   /// Whole seconds elapsed since the link came up.
   int _secondsSinceConnect = 0;
   bool _reconnecting = false;
@@ -479,6 +483,7 @@ class ControllerConnection {
       _crypto = null;
       encrypted = false;
       _plainHandshakeSent = false;
+      _plainFrameReported = false;
       _secondsSinceConnect = 0;
       _watchdog.onConnected();
       // Through [_write], so the handshake request lands in the report: a link
@@ -695,6 +700,16 @@ class ControllerConnection {
         ? Duration.zero
         : DateTime.now().difference(start);
     _linkLog.add(LinkEvent(elapsed: elapsed, label: label));
+  }
+
+  /// Notes, once per link, that the pod streams in clear after the handshake.
+  ///
+  /// A finding rather than an error: the button path reads those frames, and
+  /// the log has to say which of the two paths produced the presses.
+  void _notePlainFrameAfterHandshake() {
+    if (_plainFrameReported) return;
+    _plainFrameReported = true;
+    _event('clear frames on a session with keys: read as plain');
   }
 
   /// Programmes the next attempt, without ever giving up.
@@ -915,14 +930,27 @@ class ControllerConnection {
 
     _watchdog.onFrame();
 
-    List<int> payload = frame;
+    // A failed decryption is not a frame to drop: a Click v2 answers the
+    // encrypted request with `RideOn` and then streams its buttons *in clear*
+    // on the next session, so a session that derived keys still receives plain
+    // frames. Reading only the ciphertext silently discarded every press, with
+    // no trace anywhere: `Last buttons` stayed `none` on a link that reported
+    // itself ready. The ciphertext is tried first, the frame itself second.
+    ControllerMessage? message;
     if (_crypto != null) {
       final List<int>? decrypted = _crypto!.decryptFrame(frame);
-      if (decrypted == null) return;
-      payload = decrypted;
+      if (decrypted != null) {
+        message = ControllerCodec.decode(decrypted);
+      } else {
+        message = ControllerCodec.decode(frame);
+        if (message != null) {
+          _notePlainFrameAfterHandshake();
+        }
+      }
+    } else {
+      message = ControllerCodec.decode(frame);
     }
 
-    final ControllerMessage? message = ControllerCodec.decode(payload);
     if (message is ClickMessage) {
       _buttons.add(message.buttons);
     } else if (message is BatteryMessage) {

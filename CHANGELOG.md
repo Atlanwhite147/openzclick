@@ -14,6 +14,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- **Buttons no longer vanish on a session that holds keys.** A controller that
+  answered the encrypted handshake with `RideOn` and then streamed its frames in
+  clear had every press silently dropped: the decryption failed, the frame was
+  discarded with no trace, and `Last buttons` stayed `none` on a link that
+  reported itself ready. Frames are now read as ciphertext first, then as plain
+  frames, and the link log says so once per link ("clear frames on a session
+  with keys: read as plain").
+- The CI format check named the two files that had drifted
+  (`bluetooth_warm_up.dart`, `controller_scan_failure_test.dart`); both are
+  formatted.
+
 ### Added
 - **A Windows installer, and a build that proves it installs.** Unzipping an
   archive into a folder the rider has to remember is not how anyone installs a
