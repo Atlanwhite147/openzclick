@@ -29,13 +29,10 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
   quietly pair the left one — the only one Zwift locks.
 - The "needs unlock" hint: a controller that stays silent says what to do
   instead of showing a link that looks alive.
-- Browser build: one codebase, a capability layer that names what a page cannot
-  do, Web Bluetooth pairing through the device chooser, and a publication card
-  that explains instead of pretending.
-- Windows and web builds in CI, next to Android and iOS.
-- Console relay: a page drives a bridge over a WebSocket, from the Network screen,
-  with a code the bridge displays. Verified in Chrome: a button of the page
-  reaches the bridge, and a gear changed on the bridge moves the page.
+- Windows build in CI, next to Android and iOS.
+- Console relay: a phone drives a bridge over a WebSocket, from the Network
+  screen, with a code the bridge displays. Verified: a button of the page reaches
+  the bridge, and a gear changed on the bridge moves the page.
 - Windows keyboard and pointer injection through `SendInput`, with the buffer
   layout tested in plain Dart and a zero return from the call raised as a
   failure instead of counted as a gear change (`docs/injection.md`).
@@ -46,29 +43,24 @@ Open source, MIT, no paid tier. The project stays useful only if it runs where p
   Device Information strings, GATT tree and the last 40 frames with direction
   and timing — because no development machine here has a Bluetooth radio.
 - The bridge serves its own console over `http` on its relay port, so a phone can
-  reach it: a hosted page is `https://` and a browser will not open a `ws://`
-  socket from one.
-- The bridge can be the page itself: Direct Sockets in an installed web app give
-  a real mDNS announcement (341 bytes) and a real TCP server on port 47123,
-  verified end to end in Chrome 145.
+  reach it: a browser will not open a `ws://` socket from an `https://` document.
 - Trainer gearing by wheel size: one command per gear, the parked gear of the
   bike asked once and stored, the wheel window a riding application may impose
   honoured, and Cycling Power published next to FTMS (`docs/trainer-proxy.md`).
 
 ## Next, in order
 
-### 1. What the browser cannot do, and the three ways around it
-A page in a tab cannot open a listening socket, announce a service or act as a
-Bluetooth peripheral, so a plain page can never be the bridge a training
-application discovers. Two routes are done: the page is the console of a bridge on
-the local network, over a WebSocket (`docs/console.md`), and the page is the bridge
-itself when Chrome installs it as an Isolated Web App and grants Direct Sockets
-(`docs/browser-bridge.md`, verified end to end on Chrome 145). What remains:
+### 1. A phone drives the bridge, it never is one
+A phone cannot open a listening socket, announce a service or act as a Bluetooth
+peripheral, so it can never be the bridge a training application discovers. The
+route that works is the console: the bridge serves a small page on its relay port
+and the phone drives it over a WebSocket (`docs/console.md`). What remains:
 
-- drive the smart trainer directly over FTMS with Web Bluetooth: the gears become
-  wheel sizes, no bridge at all, which covers applications that do not handle
+- drive the smart trainer directly over FTMS from a phone, without a bridge at
+  all: the gears become wheel sizes, which covers applications that do not handle
   shifting. The arithmetic and the frames are already written
-  (`docs/trainer-proxy.md`); what remains is a Web Bluetooth link to the machine.
+  (`docs/trainer-proxy.md`); what remains is a Bluetooth link from the phone to
+  the machine.
 
 ### 2. What the training applications do with injected events
 `SendInput` itself is measured: on a Windows PC, a console on another machine

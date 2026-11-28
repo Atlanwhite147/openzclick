@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openzclick/main.dart';
+import 'package:openzclick/settings/display_mode.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
@@ -18,7 +19,7 @@ void main() {
     WidgetTester tester,
   ) async {
     // The application disposes the state it was handed, so the test does not.
-    final AppState state = AppState();
+    final AppState state = AppState()..setDisplayMode(DisplayMode.advanced);
     // Past the first-start guide: these tests are about the shell.
     state.completeOnboarding();
     await tester.pumpWidget(OpenZclickApp(state: state));
@@ -34,7 +35,7 @@ void main() {
     WidgetTester tester,
   ) async {
     // The application disposes the state it was handed, so the test does not.
-    final AppState state = AppState();
+    final AppState state = AppState()..setDisplayMode(DisplayMode.advanced);
     // Past the first-start guide: these tests are about the shell.
     state.completeOnboarding();
     await tester.pumpWidget(OpenZclickApp(state: state));
@@ -56,7 +57,7 @@ void main() {
     // It now shares one tab with the tap and key settings, which are touched
     // once at most; no rider crosses them to start a ride.
     // The application disposes the state it was handed, so the test does not.
-    final AppState state = AppState();
+    final AppState state = AppState()..setDisplayMode(DisplayMode.advanced);
     // Past the first-start guide: these tests are about the shell.
     state.completeOnboarding();
     await tester.pumpWidget(OpenZclickApp(state: state));
@@ -64,10 +65,16 @@ void main() {
 
     expect(find.byType(NavigationDestination), findsNWidgets(5));
     expect(find.text('Diagnostics'), findsNothing);
-    expect(find.text('Advanced'), findsOneWidget);
+    // "Advanced" now names two things: the tab, and the switch in the top bar
+    // that leads back to Simple. The tab is the one inside the navigation bar.
+    final Finder advancedTab = find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.text('Advanced'),
+    );
+    expect(advancedTab, findsOneWidget);
 
     // The bench is on that tab, and still exists.
-    await tester.tap(find.text('Advanced'));
+    await tester.tap(advancedTab);
     await tester.pumpAndSettle();
     expect(find.text('Protocol test bench'), findsOneWidget);
   });

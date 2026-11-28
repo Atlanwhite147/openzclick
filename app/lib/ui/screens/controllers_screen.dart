@@ -4,7 +4,6 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
 import '../../ble/controller_connection.dart';
-import '../../platform/capabilities.dart';
 import '../../state/app_state.dart';
 import '../design.dart';
 import '../../platform/version.dart';
@@ -98,53 +97,13 @@ class ControllersScreen extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            if (!Capabilities.webBluetoothPossible)
-              // The API does not exist on a plain http page, so the press would
-              // fail with a plugin stack trace. Saying why is cheaper than
-              // letting the rider conclude the application is broken.
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(
-                      Icons.info_outline,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'This page cannot use Bluetooth: browsers only allow '
-                        'it on https or on localhost. The bridge still works — '
-                        'pair the controller in the openzclick application on a '
-                        'computer, or on the bridge itself.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (Capabilities.usesBluetoothChooser)
-              // Web Bluetooth opens the browser's own device picker: there is
-              // no list to scan, and a "Scan" button that opens a chooser is
-              // named for what the rider will see.
-              FilledButton.icon(
-                onPressed: busy ? null : link.scan,
-                icon: const Icon(Icons.bluetooth_searching),
-                label: const Text('Choose a controller'),
-              )
-            else
-              FilledButton.icon(
-                onPressed: busy ? null : link.scan,
-                icon: const Icon(Icons.search),
-                label: Text(busy ? 'Looking...' : 'Scan for controllers'),
-              ),
+            FilledButton.icon(
+              onPressed: busy ? null : link.scan,
+              icon: const Icon(Icons.search),
+              label: Text(busy ? 'Looking...' : 'Scan for controllers'),
+            ),
             const SizedBox(height: 8),
-            if (link.found.isEmpty &&
-                !busy &&
-                !ready &&
-                !Capabilities.usesBluetoothChooser)
+            if (link.found.isEmpty && !busy && !ready)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(

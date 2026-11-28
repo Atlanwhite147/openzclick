@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:openzclick_core/openzclick_core.dart';
 
@@ -222,11 +221,7 @@ class ControllerConnection {
       },
       onError: (Object e) {
         status = ControllerStatus.failed;
-        error = explainControllerError(
-          e,
-          isWeb: kIsWeb,
-          secureContext: Capabilities.webBluetoothPossible,
-        );
+        error = explainControllerError(e);
         _notify();
       },
     );
@@ -239,7 +234,7 @@ class ControllerConnection {
       // that; reading the state first means the ordinary failures (radio off,
       // adapter unavailable) are reported as sentences instead of rising as a
       // platform exception.
-      await _checkAdapter(isWeb: kIsWeb);
+      await _checkAdapter();
       await FlutterBluePlus.startScan(
         // Never filtered by service. A service filter only matches what the
         // device puts in its advertising packet, and a controller that omits
@@ -248,25 +243,11 @@ class ControllerConnection {
         // [_looksLikeController], which reads both the announced services and
         // the name.
         withServices: const <Guid>[],
-        // A page only ever receives the services it names here, so a browser
-        // that asked for the vendor service alone could never show the battery
-        // or the firmware: measured on the right pod on 2026-11-12, where the
-        // same controller answered `180a` and `180f` on Windows and the web
-        // report read "the controller exposes no 0x180a service". The three are
-        // asked together, and the vendor one stays first because it is the only
-        // one a controller is guaranteed to have.
-        webOptionalServices: kIsWeb
-            ? ControllerUuids.requested.map(Guid.new).toList()
-            : const <Guid>[],
         timeout: timeout,
       );
     } catch (e) {
       status = ControllerStatus.failed;
-      error = explainControllerError(
-        e,
-        isWeb: kIsWeb,
-        secureContext: Capabilities.webBluetoothPossible,
-      );
+      error = explainControllerError(e);
       _notify();
       return;
     }
@@ -287,7 +268,7 @@ class ControllerConnection {
   ///
   /// Asked from the platform, not from `adapterStateNow`, which stays `unknown`
   /// until the plugin has built its native side once.
-  static Future<void> _checkAdapter({required bool isWeb}) async {
+  static Future<void> _checkAdapter() async {
     // The shipped message names the case rather than an enum value, because the
     // sentence the rider reads is derived from it and macOS reports `off` for a
     // radio that does not exist on some hosts.
@@ -536,11 +517,7 @@ class ControllerConnection {
       // and this line is what tells the two causes apart.
       _event('connect failed: $e');
       status = ControllerStatus.failed;
-      error = explainControllerError(
-        e,
-        isWeb: kIsWeb,
-        secureContext: Capabilities.webBluetoothPossible,
-      );
+      error = explainControllerError(e);
       _notify();
     }
   }
@@ -720,11 +697,7 @@ class ControllerConnection {
       return false;
     } catch (e) {
       _event('write failed: $e');
-      error = explainControllerError(
-        e,
-        isWeb: kIsWeb,
-        secureContext: Capabilities.webBluetoothPossible,
-      );
+      error = explainControllerError(e);
       _notify();
       return false;
     }

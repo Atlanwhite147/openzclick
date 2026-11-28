@@ -19,28 +19,14 @@ library;
 
 /// Sentence describing [error], and what to do about it.
 ///
-/// [isWeb] and [hasRadio] narrow the advice: the same plugin error means
-/// different things in a page and in a desktop build.
-String explainControllerError(
-  Object? error, {
-  bool isWeb = false,
-  bool hasRadio = true,
-  bool secureContext = true,
-}) {
+/// [hasRadio] narrows the advice: a radio that was never found is not a radio
+/// that is switched off.
+String explainControllerError(Object? error, {bool hasRadio = true}) {
   final String raw = error?.toString() ?? '';
 
-  // No Web Bluetooth at all: the page is on plain http, or the browser does not
-  // expose the API. Each has its own remedy, so they are separate cases.
-  if (raw.contains('Null check operator') ||
-      raw.contains('navigator.bluetooth') ||
-      raw.contains('is not available')) {
-    if (!isWeb) return 'No Bluetooth radio was found on this device.';
-    if (!secureContext) {
-      return 'This page cannot use Bluetooth: browsers only allow it over '
-          'https, or over http://localhost.';
-    }
-    return 'This browser exposes no Bluetooth. Use Chrome or Edge, and check '
-        'that the machine has a radio.';
+  // The plugin reports a missing adapter this way on some hosts.
+  if (raw.contains('Null check operator') || raw.contains('is not available')) {
+    return 'No Bluetooth radio was found on this device.';
   }
   // Before "turned off": a radio that does not exist is not a radio that is off,
   // and the advice differs. macOS also reports `off` for a host with no adapter,
@@ -55,10 +41,9 @@ String explainControllerError(
   // CoreBluetooth's own wording, which reaches Dart when macOS refuses the
   // application or the radio: `bluetooth must be turned on. (unauthorized)` is
   // the one a Mac gives a bundle whose Bluetooth permission the user refused.
-  if (!isWeb &&
-      (raw.contains('not powered on') ||
-          raw.contains('neauthorized') ||
-          raw.contains('Not authorized'))) {
+  if (raw.contains('not powered on') ||
+      raw.contains('neauthorized') ||
+      raw.contains('Not authorized')) {
     return 'macOS refused Bluetooth for this application. Install a build that '
         'declares why it needs Bluetooth, and allow it in System Settings > '
         'Privacy & Security > Bluetooth.';
@@ -79,7 +64,7 @@ String explainControllerError(
   if (raw.contains('state changed') || raw.contains('disconnected')) {
     return 'The controller disconnected. Pair it again.';
   }
-  if (!hasRadio && !isWeb) {
+  if (!hasRadio) {
     return 'No Bluetooth radio was found on this device.';
   }
   if (raw.isEmpty) return 'The controller could not be reached.';

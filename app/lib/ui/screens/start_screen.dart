@@ -2,15 +2,13 @@ import 'package:flutter/material.dart' hide Action;
 
 import '../../state/app_state.dart';
 import '../mywhoosh_guide.dart';
-import '../one_tap.dart';
-import '../../platform/capabilities.dart';
 
 class MyWhooshGuideScreen extends StatelessWidget {
   /// Creates the screen for [state].
   ///
-  /// [onOpenNetwork] jumps to the Network tab, where a browser connects to a
-  /// bridge. Without it the web build only describes what to do somewhere else
-  /// and leaves the rider to find it.
+  /// [onOpenNetwork] jumps to the Network tab, where the bridge is started.
+  /// Without it the guide only describes the steps and leaves the rider to find
+  /// them.
   const MyWhooshGuideScreen({
     required this.state,
     this.onOpenNetwork,
@@ -28,22 +26,7 @@ class MyWhooshGuideScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
-        // A page gets one button and nothing else in front of it: it either came
-        // from a bridge, in which case it knows the address, or it cannot reach
-        // one at all. The four steps stay, folded, for the rider who has to
-        // debug something.
-        if (Capabilities.isWeb) ...<Widget>[
-          OneTapRide(state: state),
-          const SizedBox(height: 4),
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: const Text('The four steps'),
-            children: <Widget>[
-              MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
-            ],
-          ),
-        ] else
-          MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
+        MyWhooshGuideCard(state: state, onOpenNetwork: onOpenNetwork),
         const SizedBox(height: 8),
         // The guide is shown once, so it has to be findable again: a rider who
         // skipped it to ride, then came back a week later, has no other door.

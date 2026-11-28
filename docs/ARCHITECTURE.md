@@ -19,14 +19,13 @@ Golden rule: `core` knows neither Flutter, nor Bluetooth, nor the file system at
 main.dart              bootstrap only: the application root and the state
 ui/shell.dart          the four sections, their navigation, the readiness lamp
 ui/screens/            one file per section, no shared state of their own
-  start_screen         the four steps, and the single button the web gets
+  start_screen         the four steps
   gears_screen         the gear panel, and the parked-gear question
   controllers_screen   pairing, the pod's side, the device report
   network_screen       publication, the console relay, the key editor
-ui/console_cards.dart  the bridge console and the page console
+ui/console_cards.dart  the bridge console, its QR code and its code
 ui/design.dart         colours, spacing, type, and the shared widgets
 ui/onboarding.dart     the first-start guide
-ui/one_tap.dart        the page's single action
 ui/gear_panel.dart     the readout, the ladder, the two paddles
 ui/mywhoosh_guide.dart the four-step card MyWhoosh needs
 ui/parked_gear_card.dart the parked-gear question

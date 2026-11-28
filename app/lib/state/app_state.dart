@@ -5,13 +5,13 @@ import 'package:openzclick_core/openzclick_core.dart';
 
 import '../ble/controller_connection.dart';
 import '../net/android_injection.dart';
-import '../net/console_endpoint.dart';
 import '../net/desktop_injection.dart';
 import '../net/injection_publisher.dart';
 import '../net/key_profiles.dart';
 import '../net/publisher.dart';
 import '../platform/android_keepalive.dart';
 import '../platform/capabilities.dart';
+import '../settings/display_mode.dart';
 import '../settings/settings_store.dart';
 
 /// Shared application state: one gear engine, one keymap, one controller link.
@@ -156,7 +156,6 @@ class AppState extends ChangeNotifier {
 
   StreamSubscription<ClickButtonMask>? _buttonSubscription;
   StreamSubscription<Action>? _consoleSubscription;
-  StreamSubscription<Map<String, Object?>>? _bridgeSubscription;
 
   /// Creates the state, optionally with a specific profile.
   ///
@@ -193,12 +192,6 @@ class AppState extends ChangeNotifier {
     // A console is an input like any other: its buttons take exactly the same
     // path as the ones of the physical controller.
     _consoleSubscription = this.publisher.consoleActions.listen(_onAction);
-    final ConsoleClient? client = consoleClient;
-    if (client != null) {
-      // The other way round: this host is the console, so the bridge decides
-      // the gear and the page follows, instead of drifting beside it.
-      _bridgeSubscription = client.bridgeStates.listen(_onBridgeState);
-    }
   }
 
   /// Battery of the pod in use, and the one warning that follows it.
@@ -255,28 +248,6 @@ class AppState extends ChangeNotifier {
 
   /// Publication supplied by a test, `null` on a real run.
   final PublisherPort? _publisherOverride;
-
-  /// Applies a state published by the bridge this page is the console of.
-  void _onBridgeState(Map<String, Object?> state) {
-    final Object? rawGear = state['gearIndex'];
-    if (rawGear is! int) return;
-    final Object? rawProfile = state['profileId'];
-    final GearProfile profile = rawProfile is String
-        ? GearProfile.byId(rawProfile) ?? engine.profile
-        : engine.profile;
-    final Object? rawMode = state['mode'];
-    final RidingMode mode = rawMode == RidingMode.erg.name
-        ? RidingMode.erg
-        : RidingMode.sim;
-    if (profile.id == engine.profile.id &&
-        rawGear == engine.gearIndex &&
-        mode == engine.mode) {
-      return;
-    }
-    engine = GearEngine(profile: profile, initialGear: rawGear, mode: mode);
-    _persist();
-    notifyListeners();
-  }
 
   /// Applies an action coming from the gesture detector.
   Future<void> _onAction(Action action) async {
@@ -436,6 +407,24 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Which presentation of the interface the rider asked for.
+  ///
+  /// Simple until the rider says otherwise, and remembered: it describes the
+  /// person, not the ride, so it is neither reset by an unplugged pod nor by a
+  /// gear change.
+  DisplayMode displayMode = DisplayMode.simple;
+
+  /// True when the full tab bar is in use.
+  bool get advanced => displayMode == DisplayMode.advanced;
+
+  /// Switches presentation, and remembers it for the next launch.
+  void setDisplayMode(DisplayMode mode) {
+    if (mode == displayMode) return;
+    displayMode = mode;
+    _persist();
+    notifyListeners();
+  }
+
   /// Shows the guide again, from the first screen.
   void replayOnboarding() {
     onboardingDone = false;
@@ -452,6 +441,7 @@ class AppState extends ChangeNotifier {
       return;
     }
     onboardingDone = snapshot.onboardingDone;
+    displayMode = snapshot.displayMode;
 
     final GearProfile profile =
         GearProfile.byId(snapshot.profileId) ?? GearProfile.road12;
@@ -478,64 +468,6 @@ class AppState extends ChangeNotifier {
     _syncConsole(Action.none);
     notifyListeners();
   }
-
-  /// Connects this page to a bridge, as its console.
-  ///
-  /// Only the browser build is a console: the native one serves consoles.
-  Future<void> connectConsole(String host, String code) async {
-    await consoleClient?.connectConsole(host, code);
-    notifyListeners();
-  }
-
-  /// One gesture, for a page: the pod, then the bridge, then ride.
-  ///
-  /// The three things a rider had to do in order — choose the controller, find
-  /// the bridge, start it — are one button because the page can do the finding
-  /// itself: a bridge serves this page, so the address is the page's own, and
-  /// the token is in its query string. What cannot be automated is the browser's
-  /// device chooser, and that is a choice, not a step.
-  ///
-  /// Returns a sentence for the screen when something stopped the chain, null
-  /// when the chain is complete or still running.
-  Future<String?> startRiding() async {
-    if (Capabilities.usesBluetoothChooser &&
-        controller.status != ControllerStatus.ready) {
-      await controller.scanAndConnect();
-      if (controller.status != ControllerStatus.ready) {
-        return controller.error ??
-            'The controller did not answer. Press a button on the pod, then try '
-                'again.';
-      }
-    }
-    if (Capabilities.isWeb && !Capabilities.canPublish) {
-      final ({String host, String code})? bridge = ConsoleEndpoint.fromOwnPage(
-        Uri.base,
-      );
-      if (bridge != null && !publisher.running) {
-        await connectConsole(bridge.host, bridge.code);
-        if (!publisher.running) {
-          return 'This page could not reach the bridge it came from. Reload the '
-              'page from the bridge, or open the Network tab and enter the '
-              'address.';
-        }
-      }
-    }
-    _syncKeepAlive();
-    notifyListeners();
-    return null;
-  }
-
-  /// Closes the connection to the bridge.
-  Future<void> disconnectConsole() async {
-    await consoleClient?.disconnectConsole();
-    notifyListeners();
-  }
-
-  /// The bridge this page is the console of, `null` on a native host.
-  ConsoleClient? get consoleClient => switch (publisher) {
-    final ConsoleClient client => client,
-    _ => null,
-  };
 
   /// Records where the chain sits on the bike.
   ///
@@ -594,6 +526,7 @@ class AppState extends ChangeNotifier {
           parkedChainringTeeth: physicalSetup.parkedChainringTeeth,
           parkedCogTeeth: physicalSetup.parkedCogTeeth,
           onboardingDone: onboardingDone,
+          displayMode: displayMode,
         ),
       );
     });
@@ -638,7 +571,6 @@ class AppState extends ChangeNotifier {
     publisher.dispose();
     _buttonSubscription?.cancel();
     _consoleSubscription?.cancel();
-    _bridgeSubscription?.cancel();
     controller.dispose();
     super.dispose();
   }

@@ -7,7 +7,6 @@ import 'ble/bluetooth_warm_up.dart';
 import 'state/app_state.dart';
 import 'ui/design.dart';
 import 'ui/shell.dart';
-import 'net/console_endpoint.dart';
 
 /// Where every platform starts: the application root and nothing else.
 ///
@@ -45,17 +44,9 @@ class _OpenZclickAppState extends State<OpenZclickApp> {
     unawaited(_start());
   }
 
-  /// Restores the settings, then dials the bridge a QR code pointed at.
-  ///
-  /// A scanned code opens the page with `?bridge=…&code=…`: nothing is typed, and
-  /// the console connects before the rider sees the screen.
+  /// Restores the settings saved by the last run.
   Future<void> _start() async {
     await _state.restore(PrefsSettingsStore());
-    final ({String host, String code})? target = ConsoleEndpoint.fromQuery(
-      Uri.base.queryParameters,
-    );
-    if (target == null) return;
-    await _state.connectConsole(target.host, target.code);
   }
 
   @override

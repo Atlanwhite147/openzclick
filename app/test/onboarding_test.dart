@@ -62,17 +62,20 @@ void main() {
     expect(done, isTrue);
   });
 
-  testWidgets('a step that names a screen can go there', (
+  testWidgets('the guide leads to the simple screen, not to a tab', (
     WidgetTester tester,
   ) async {
+    // The first step used to open the Controllers tab. A first launch now lands
+    // on the single simple screen, where the same press is one button, so the
+    // guide names that press rather than a tab that a novice never sees.
     final AppState state = AppState();
     addTearDown(state.dispose);
     int? opened;
     await tester.pumpWidget(_wrap(state, onTab: (int tab) => opened = tab));
 
-    await tester.tap(find.text('Open Controllers'));
-    await tester.pumpAndSettle();
-    expect(opened, 2);
+    expect(find.text('Pair a controller'), findsNothing);
+    expect(find.text('Open Controllers'), findsNothing);
+    expect(opened, isNull);
   });
 
   testWidgets('the flag is what decides, and it survives', (

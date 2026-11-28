@@ -8,6 +8,8 @@ library;
 import 'package:openzclick_core/openzclick_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'display_mode.dart';
+
 /// Snapshot of what the application stores on disk.
 class SettingsSnapshot {
   /// Builds a snapshot.
@@ -24,6 +26,7 @@ class SettingsSnapshot {
     this.parkedChainringTeeth,
     this.parkedCogTeeth,
     this.onboardingDone = false,
+    this.displayMode = DisplayMode.simple,
   });
 
   /// Identifier of the gear profile.
@@ -73,6 +76,13 @@ class SettingsSnapshot {
 
   /// Cog the chain sits on, `null` until the rider confirms it.
   final int? parkedCogTeeth;
+
+  /// Simple or advanced interface, chosen by the rider.
+  ///
+  /// Stored because it is a preference about the person, not about the ride: a
+  /// rider who picked advanced wants it back on the next launch, and nobody
+  /// wants to be asked the same question every morning.
+  final DisplayMode displayMode;
 }
 
 /// Persistence port: the application depends on this, never on a plugin.
@@ -98,6 +108,7 @@ class PrefsSettingsStore implements SettingsStore {
   static const String _parkedChainringKey = 'openzclick.parked.chainring';
   static const String _parkedCogKey = 'openzclick.parked.cog';
   static const String _onboardingKey = 'openzclick.onboarding';
+  static const String _displayModeKey = 'openzclick.displayMode';
 
   @override
   Future<SettingsSnapshot?> load() async {
@@ -144,6 +155,7 @@ class PrefsSettingsStore implements SettingsStore {
       parkedChainringTeeth: prefs.getInt(_parkedChainringKey),
       parkedCogTeeth: prefs.getInt(_parkedCogKey),
       onboardingDone: prefs.getBool(_onboardingKey) ?? false,
+      displayMode: DisplayMode.fromId(prefs.getString(_displayModeKey)),
     );
   }
 
@@ -154,6 +166,7 @@ class PrefsSettingsStore implements SettingsStore {
     await prefs.setInt(_gearKey, snapshot.gearIndex);
     await prefs.setBool(_publishKey, snapshot.publishOnStart);
     await prefs.setBool(_onboardingKey, snapshot.onboardingDone);
+    await prefs.setString(_displayModeKey, snapshot.displayMode.id);
     await prefs.setBool(_injectKey, snapshot.injectOnStart);
     await prefs.setString(_keyProfileKey, snapshot.keyProfileId);
     await prefs.setInt(_shiftsPerPressKey, snapshot.shiftsPerPress);

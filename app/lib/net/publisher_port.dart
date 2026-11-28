@@ -1,9 +1,9 @@
 /// What the application needs from a publication towards a training app.
 ///
-/// One output, one transport: the native implementation opens a TCP server and
-/// announces it over mDNS, the browser one dials a bridge instead. The console
-/// part lives here too, because the interface shows it in the same card on both
-/// hosts: a native bridge *serves* consoles, a page *is* one.
+/// One output, one transport: the implementation opens a TCP server and
+/// announces it over mDNS. The console part lives here too, because the
+/// interface shows it in the same card: a bridge *serves* consoles, a phone
+/// drives it from the page the bridge itself serves.
 library;
 
 import 'package:openzclick_core/openzclick_core.dart';
@@ -75,31 +75,4 @@ abstract interface class PublisherPort {
     required String mode,
     required String lastAction,
   });
-}
-
-/// A publisher that is itself the console of a bridge running elsewhere.
-///
-/// A page cannot listen: it dials. Everything the interface needs to show the
-/// connection lives here, so the target screen has one card to read.
-abstract interface class ConsoleClient {
-  /// True when the WebSocket to the bridge is open.
-  bool get consoleConnected;
-
-  /// Address of the bridge, `null` when not connected.
-  String? get consoleAddress;
-
-  /// Last connection fault, `null` when the last attempt succeeded.
-  String? get consoleError;
-
-  /// State published by the bridge, applied by the gear engine.
-  Stream<Map<String, Object?>> get bridgeStates;
-
-  /// Dials the console endpoint of a bridge.
-  ///
-  /// [host] accepts `192.168.1.24`, `192.168.1.24:47124` or a full `ws://` URL,
-  /// because a rider copies whatever the bridge screen shows.
-  Future<void> connectConsole(String host, String code);
-
-  /// Closes the connection to the bridge.
-  Future<void> disconnectConsole();
 }

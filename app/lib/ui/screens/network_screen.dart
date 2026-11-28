@@ -86,14 +86,12 @@ class TargetScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            // A page that owns sockets *is* the bridge: it has no relay to show.
-            // A native host serves one, and a plain page dials one.
-            if (Capabilities.isWeb && Capabilities.canPublish)
-              const SizedBox.shrink()
-            else if (Capabilities.canPublish)
+            // The bridge serves its console itself; a host that cannot publish
+            // is iOS without Apple's entitlement, and shows nothing here.
+            if (Capabilities.canPublish)
               BridgeConsoleCard(state: state)
             else
-              ConsoleClientCard(state: state),
+              const SizedBox.shrink(),
             ListTile(
               dense: true,
               title: const Text('Last action'),

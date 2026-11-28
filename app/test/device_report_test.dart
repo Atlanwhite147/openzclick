@@ -63,23 +63,6 @@ void main() {
       expect(report().render(), contains('no answer on 0x180a'));
     });
 
-    test('the browser is not blamed on the device it could not see', () {
-      // Measured on the right pod: the same controller answered `180a` over
-      // Windows and listed none in the browser, because a page only receives
-      // the services it named. Reporting "the controller exposes no 0x180a"
-      // sends a maintainer after a firmware difference that does not exist.
-      final DeviceReport web = DeviceReport(
-        generatedAt: DateTime.utc(2026, 11, 12, 12, 36, 28),
-        appVersion: '0.3.0+3',
-        host: 'web',
-        deviceName: 'Zwift Click',
-        status: 'ready',
-      );
-      final String text = web.render();
-      expect(text, contains('the page did not ask for 0x180a'));
-      expect(text, isNot(contains('the controller exposes no 0x180a')));
-    });
-
     test('spells out the GATT tree, properties included', () {
       final String text = report(
         services: const <GattServiceInfo>[

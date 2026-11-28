@@ -1,16 +1,16 @@
-# Driving a bridge from a browser
+# Driving a bridge from a phone
 
-A page cannot open a listening socket, cannot announce a service over mDNS, and cannot act as a Bluetooth peripheral. A browser can therefore never be the bridge a training application discovers. What it can do is the opposite: dial the bridge running on the machine where that application runs, and drive it.
+A phone cannot open a listening socket, cannot announce a service over mDNS, and cannot act as a Bluetooth peripheral. It can therefore never be the bridge a training application discovers. What it can do is the opposite: dial the bridge running on the machine where that application runs, and drive it.
 
-That is the console. It is the only route that also works on an iPhone, where no browser exposes Web Bluetooth: the buttons on the page travel over a WebSocket, and the bridge publishes them exactly as it publishes a controller press.
+That is the console. The buttons on the page travel over a WebSocket, and the bridge publishes them exactly as it publishes a controller press. It works on an iPhone as on any other phone: it needs a browser, nothing else.
 
 ```
-phone or laptop browser          bridge (Windows, macOS, Linux, Android)
+phone browser                   bridge (Windows, macOS, Linux, Android)
 ┌───────────────────────┐        ┌──────────────────────────────────────┐
-│ openzclick web page   │  ws    │ console relay   :47124 /console      │
-│ controller over Web   │───────▶│        │                             │
-│ Bluetooth, or buttons │◀───────│        ▼                             │
-│ and gears on screen   │  state │ gear engine ──▶ mDNS + TCP :47123    │
+│ console served by the │  ws    │ console relay   :47124 /console      │
+│ bridge                │───────▶│        │                             │
+│ buttons and gear      │◀───────│        ▼                             │
+│ on screen             │  state │ gear engine ──▶ mDNS + TCP :47123    │
 └───────────────────────┘        └──────────────┬───────────────────────┘
                                                 │ OpenBikeControl frames
                                                 ▼
@@ -19,7 +19,7 @@ phone or laptop browser          bridge (Windows, macOS, Linux, Android)
 
 ## On the bridge
 
-Start the publication on the Network screen. The card **Browser console** then shows a QR code, the address to open and the four letter code:
+Start the publication on the Network screen. The card **Phone console** then shows a QR code, the address to open and the four letter code:
 
 ```
 http://192.168.1.24:47124/?token=abcd
@@ -35,7 +35,7 @@ A published page is served over `https://`. A browser refuses to open a `ws://` 
 
 Serving the document from the bridge removes the rule at its root: the page and the socket share an origin, a host and a port, so nothing is mixed. It also means the address a phone opens is the one the bridge already knows.
 
-The cost is that Web Bluetooth needs a secure context, so the page served by the bridge has no controller scanning. That is not a regression on a phone (iOS exposes no Web Bluetooth at all) and the bridge has its own Bluetooth, which is what pairs the controller. The hosted page keeps the full interface for a laptop, where it is served over `https://` and can scan.
+The page the bridge serves is deliberately minimal: the gear, two shift buttons and the link state. It has no controller scanning, and does not need one: the bridge has Bluetooth, and it is the bridge that pairs the controller.
 
 Three rules make that code the only thing to protect:
 
@@ -45,17 +45,17 @@ Three rules make that code the only thing to protect:
 
 The relay listens on `47124`, next to the TCP port `47123` the application uses. It carries only what the interface shows: `{"action":"shiftUp"}` in one direction, `{"type":"state","gearIndex":9,...}` in the other.
 
-## On the page
+## On the phone
 
 Open the address the bridge shows, or scan its QR code. The console it serves carries the gear, two shift buttons and the link state, and nothing else: it is deliberately one file with no dependency and no build step, because a phone on a home network may have no internet at all and a page that needs the network to draw two buttons fails exactly when it is needed.
 
-The hosted page is the other door, for a laptop: **Network**, then the address and the code. The address may be a bare IP (`192.168.1.24`), an IP with a port (`192.168.1.24:47124`) or a full `ws://` URL, because a rider copies whatever the bridge shows.
+The address may be typed by hand (`192.168.1.24:47124`); the code then has to be typed too, and the address may be a bare IP, an IP with a port or a full `ws://` URL, because a rider copies whatever the bridge shows.
 
 Once connected:
 
 - the buttons of the page reach the bridge, which shifts its gear and tells every console where it landed;
 - the gear the page displays follows the bridge, so a console left open on a shelf never drifts from the real state;
-- the controller paired by the page over Web Bluetooth is another input of the console: its presses take the same path.
+- the controller stays paired with the bridge, so its presses and the page's take the same path.
 
 ## Checking the link without a controller
 

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../net/publisher_port.dart';
-import '../platform/capabilities.dart';
-import '../platform/links.dart';
 import '../state/app_state.dart';
 import 'parked_gear_card.dart';
 
@@ -24,7 +21,7 @@ class MyWhooshGuideCard extends StatelessWidget {
   /// Shared application state.
   final AppState state;
 
-  /// Jumps to the Network tab where a browser connects to a bridge.
+  /// Jumps to the Network tab, where the bridge is started.
   final VoidCallback? onOpenNetwork;
 
   @override
@@ -33,9 +30,6 @@ class MyWhooshGuideCard extends StatelessWidget {
       listenable: state,
       builder: (BuildContext context, _) {
         final PublisherPort publisher = state.publisher;
-        if (!Capabilities.canPublish) {
-          return GuideElsewhere(state: state, onOpenNetwork: onOpenNetwork);
-        }
         final bool running = publisher.running;
         final bool connected = publisher.peers > 0;
         final String? address = publisher.address;
@@ -146,8 +140,8 @@ class MyWhooshGuideCard extends StatelessWidget {
 ///
 /// A rider who starts riding with this unanswered finds the ride harder than
 /// the gear number says and concludes the gears are broken. It appears on both
-/// the bridge screen and the browser screen, because the browser build never
-/// reaches the four steps and would otherwise never mention it.
+/// the bridge screen and the guide, because a rider who skipped it would
+/// otherwise never be asked.
 class _ParkedGearNotice extends StatelessWidget {
   const _ParkedGearNotice({required this.state});
 
@@ -297,107 +291,6 @@ class _Troubleshooting extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// A plain page is not the bridge: say where the bridge has to run.
-///
-/// Public so the browser-only branch can be rendered on its own in a test: on a
-/// native host this card is never built, and the download link it carries exists
-/// precisely for the rider who has no application yet.
-class GuideElsewhere extends StatelessWidget {
-  /// Creates the card for [state].
-  const GuideElsewhere({required this.state, this.onOpenNetwork, super.key});
-
-  /// Shared application state.
-  final AppState state;
-
-  /// Jumps to the Network tab, where a code is typed by hand.
-  final VoidCallback? onOpenNetwork;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Row(
-              children: <Widget>[
-                Icon(Icons.info_outline),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Ride with MyWhoosh',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'MyWhoosh needs the openzclick application running on a computer '
-              'or an Android phone: that application is the bridge it '
-              'discovers. This page then drives that bridge from here, which is '
-              'the only route that works on an iPhone.',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '1. Install openzclick where MyWhoosh runs, and press Start there.'
-              '\n2. It shows a code. Scan it, or type the address it displays.',
-              style: TextStyle(fontSize: 13),
-            ),
-            // The step above used to name a file nobody could find: a rider
-            // reading this page has no way to guess that "install" means a
-            // download page. Opening a link would need a launcher plugin for
-            // every platform, so the address is shown and can be copied.
-            const SizedBox(height: 8),
-            const SelectableText(
-              downloadsUrl,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(
-                    const ClipboardData(text: downloadsUrl),
-                  );
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Download link copied')),
-                  );
-                },
-                icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Copy the download link'),
-              ),
-            ),
-            if (onOpenNetwork != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FilledButton.icon(
-                  onPressed: onOpenNetwork,
-                  icon: const Icon(Icons.link),
-                  label: const Text('Connect to my bridge'),
-                ),
-              ),
-            if (!state.physicalSetup.isComplete)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: _ParkedGearNotice(state: state),
-              ),
-            const SizedBox(height: 8),
-            const Text(
-              'Chrome on a computer can also run this page as an installed '
-              'application, and start the bridge by itself.',
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

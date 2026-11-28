@@ -46,7 +46,7 @@ Tout ce qui suit vient **en plus** de ça.
 | « Copy device report » (GATT, trames) | Controllers | Outil de support, pas de rider |
 | Last buttons / pastilles de couleurs des boutons | Controllers | Documente le pod, ne sert pas à rouler |
 | Pastille de batterie | Controllers | Correctif utile, mais c'est du diagnostic |
-| Console navigateur + QR code + code à 4 chiffres | Network | Une deuxième façon de piloter le pont |
+| Console téléphone + QR code + code à 4 chiffres | Network | Une deuxième façon de piloter le pont |
 
 ## E. Onboarding et guidage
 
@@ -55,7 +55,6 @@ Tout ce qui suit vient **en plus** de ça.
 | Guide de premier démarrage (4 écrans, « Skip ») | Au lancement |
 | « Show the first-start guide again » | Start |
 | Carte « Not using MyWhoosh ? » (6 autres applis) | Start |
-| « One tap ride » (bouton unique qui scanne, connecte, démarre) | Start, version web |
 | Voyant Ready / Not ready cliquable qui renvoie vers l'onglet à corriger | Barre du haut, partout |
 
 ## F. Le cas le plus discutable

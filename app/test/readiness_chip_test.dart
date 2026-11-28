@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:openzclick/settings/display_mode.dart';
 import 'package:openzclick/ui/shell.dart';
 import 'package:openzclick/platform/capabilities.dart';
 import 'package:openzclick/state/app_state.dart';
@@ -14,7 +15,8 @@ void main() {
     // Without this the answer to "why is nothing happening" lives on a tab the
     // rider has to guess.
     final FakePublisher publisher = FakePublisher();
-    final AppState state = AppState(publisher: publisher);
+    final AppState state = AppState(publisher: publisher)
+      ..setDisplayMode(DisplayMode.advanced);
     addTearDown(state.dispose);
     // These tests are about the tabs: the first-start guide would sit in front
     // of them, and it has its own tests.
@@ -43,7 +45,8 @@ void main() {
     expect(Capabilities.drivesTrainerItself, isFalse);
 
     final FakePublisher publisher = FakePublisher();
-    final AppState state = AppState(publisher: publisher);
+    final AppState state = AppState(publisher: publisher)
+      ..setDisplayMode(DisplayMode.advanced);
     addTearDown(state.dispose);
     // These tests are about the tabs: the first-start guide would sit in front
     // of them, and it has its own tests.
@@ -63,7 +66,8 @@ void main() {
     // A red icon and a bare question read as "you cannot ride yet". The setting
     // only matters where the bridge drives the trainer itself.
     final FakePublisher publisher = FakePublisher();
-    final AppState state = AppState(publisher: publisher);
+    final AppState state = AppState(publisher: publisher)
+      ..setDisplayMode(DisplayMode.advanced);
     addTearDown(state.dispose);
     // These tests are about the tabs: the first-start guide would sit in front
     // of them, and it has its own tests.
@@ -84,8 +88,11 @@ void main() {
   ) async {
     // "Not ready" without a next step is a dead end: the rider is told something
     // is wrong and left to find the tab. The lamp says where to go.
+    // The lamp is a feature of the advanced interface: the simple screen says
+    // the same thing in a sentence, and has its own tests.
     final FakePublisher publisher = FakePublisher();
-    final AppState state = AppState(publisher: publisher);
+    final AppState state = AppState(publisher: publisher)
+      ..setDisplayMode(DisplayMode.advanced);
     addTearDown(state.dispose);
     state.completeOnboarding();
 

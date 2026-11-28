@@ -15,6 +15,16 @@ Thanks for taking the time to help. This project stays useful only if it keeps w
 3. **Everything is tested.** New behaviour comes with unit tests; a bug fix comes with a test that fails before and passes after.
 4. **Additions stay honest.** Do not claim support for a device or an application that has not been exercised. The README status table says what was actually run.
 
+## Tests
+
+Every module runs without a radio or a network. The counts below are what the suites report today:
+
+| Module | Covers | Tests |
+|---|---|---|
+| `core/` | protocol, session, link supervision, gear engine, wheel-size scaling, mapping, gestures | 319 |
+| `transports/` | mDNS responder, TCP server, console relay and the page it serves, FTMS trainer proxy, Wahoo wheel commands, Cycling Power; Bluetooth stays an interface | 137 |
+| `app/` | pairing, gears, parked-gear setup, publishing, console, injection, device report, diagnostics on Android, iOS, Windows and macOS | 181 |
+
 ## Development loop
 
 ```bash

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Action;
 
 import '../platform/capabilities.dart';
+import '../settings/display_mode.dart';
 import '../state/app_state.dart';
 import 'design.dart';
 import 'onboarding.dart';
@@ -8,8 +9,17 @@ import 'screens/advanced_screen.dart';
 import 'screens/controllers_screen.dart';
 import 'screens/gears_screen.dart';
 import 'screens/network_screen.dart';
+import 'screens/simple_screen.dart';
 import 'screens/start_screen.dart';
 
+/// The frame around every screen, and the switch between the two interfaces.
+///
+/// One application, two audiences. A rider who is not a programmer wants one
+/// screen: pair, start, read the state, and a few practical notes. A rider who
+/// debugs a link wants the ladder, the key tables and the bench. The old answer
+/// was a tab bar where the settings outnumbered the ride, which made the whole
+/// thing read as an application to configure; the choice is now explicit, in the
+/// top bar, and remembered.
 class HomeShell extends StatefulWidget {
   /// Creates the shell for [state].
   const HomeShell({required this.state, super.key});
@@ -24,11 +34,11 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  // Five destinations. The test bench is a developer's tool: it sat in the
-  // navigation bar next to the buttons a rider presses every ride, and that
-  // alone made the application look like something to configure. It now lives
-  // on the Advanced tab, with the other things touched once and never again:
-  // tap positions, key tables, the bench.
+  // The five destinations of the advanced interface. The test bench is a
+  // developer's tool: it sat in the navigation bar next to the buttons a rider
+  // presses every ride, and that alone made the application look like something
+  // to configure. It now lives on the Advanced tab, with the other things
+  // touched once and never again.
   static const List<String> _titles = <String>[
     'Start',
     'Gears',
@@ -40,16 +50,6 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final AppState state = widget.state;
-    final List<Widget> pages = <Widget>[
-      MyWhooshGuideScreen(
-        state: state,
-        onOpenNetwork: () => setState(() => _index = 3),
-      ),
-      TrainerScreen(state: state),
-      ControllersScreen(state: state),
-      TargetScreen(state: state, onOpenGuide: () => setState(() => _index = 0)),
-      AdvancedScreen(state: state),
-    ];
 
     // The first-start guide takes the whole screen, once. It is not an overlay on
     // top of a half-configured application: a rider meeting the tabs before
@@ -68,15 +68,42 @@ class _HomeShellState extends State<HomeShell> {
             },
           );
         }
-        return _shell(state, pages);
+        return state.advanced ? _advanced(state) : _simple(state);
       },
     );
   }
 
-  Widget _shell(AppState state, List<Widget> pages) {
+  /// One screen, no tabs, the switch in the top bar.
+  Widget _simple(AppState state) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_index]),
+        title: const Text('openzclick'),
+        actions: <Widget>[
+          _ModeSelector(mode: state.displayMode, onChanged: state.setDisplayMode),
+        ],
+      ),
+      body: SimpleScreen(state: state),
+    );
+  }
+
+  /// The full interface, unchanged, with the switch in the same place.
+  Widget _advanced(AppState state) {
+    // Clamped: the rider may have narrowed the bar from the simple screen while
+    // this index pointed past the end of nothing.
+    final int index = _index.clamp(0, _titles.length - 1);
+    final List<Widget> pages = <Widget>[
+      MyWhooshGuideScreen(
+        state: state,
+        onOpenNetwork: () => setState(() => _index = 3),
+      ),
+      TrainerScreen(state: state),
+      ControllersScreen(state: state),
+      TargetScreen(state: state, onOpenGuide: () => setState(() => _index = 0)),
+      AdvancedScreen(state: state),
+    ];
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_titles[index]),
         actions: <Widget>[
           _ReadinessChip(
             state: state,
@@ -84,11 +111,12 @@ class _HomeShellState extends State<HomeShell> {
             // tab fixes it. Tapping it goes there.
             onGoTo: (int tab) => setState(() => _index = tab),
           ),
+          _ModeSelector(mode: state.displayMode, onChanged: state.setDisplayMode),
         ],
       ),
-      body: IndexedStack(index: _index, children: pages),
+      body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
+        selectedIndex: index,
         onDestinationSelected: (int value) => setState(() => _index = value),
         destinations: const <NavigationDestination>[
           NavigationDestination(icon: Icon(Icons.play_circle), label: 'Start'),
@@ -103,6 +131,50 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(icon: Icon(Icons.lan), label: 'Network'),
           NavigationDestination(icon: Icon(Icons.tune), label: 'Advanced'),
         ],
+      ),
+    );
+  }
+}
+
+/// The Simple / Advanced switch, in the top bar of both interfaces.
+///
+/// Deliberately not an icon: an icon asks a rider to know what it hides, and the
+/// whole point of this switch is that the choice is explicit. Two words, the
+/// active one on the raised background, the same place on every screen.
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector({required this.mode, required this.onChanged});
+
+  final DisplayMode mode;
+  final void Function(DisplayMode) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: SegmentedButton<DisplayMode>(
+        key: const Key('display-mode'),
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          textStyle: WidgetStatePropertyAll<TextStyle>(
+            Theme.of(
+              context,
+            ).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        segments: const <ButtonSegment<DisplayMode>>[
+          ButtonSegment<DisplayMode>(
+            value: DisplayMode.simple,
+            label: Text('Simple'),
+          ),
+          ButtonSegment<DisplayMode>(
+            value: DisplayMode.advanced,
+            label: Text('Advanced'),
+          ),
+        ],
+        selected: <DisplayMode>{mode},
+        onSelectionChanged: (Set<DisplayMode> selection) =>
+            onChanged(selection.first),
       ),
     );
   }
@@ -151,7 +223,7 @@ class _ReadinessChip extends StatelessWidget {
           label: label,
         );
         return Padding(
-          padding: const EdgeInsets.only(right: 16),
+          padding: const EdgeInsets.only(right: 8),
           // A lamp, not a chip: this is a state, and a chip reads like a label
           // or a filter next to the tabs. It says the one thing a rider needs
           // before starting, in the same vocabulary on every screen.

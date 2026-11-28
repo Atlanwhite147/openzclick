@@ -2,4 +2,4 @@
 library;
 
 export 'publisher_port.dart';
-export 'web_publisher.dart' if (dart.library.io) 'network_publisher.dart';
+export 'network_publisher.dart';

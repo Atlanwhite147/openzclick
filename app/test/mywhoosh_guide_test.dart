@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Action;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openzclick/main.dart';
+import 'package:openzclick/settings/display_mode.dart';
 import 'package:openzclick/state/app_state.dart';
 import 'package:openzclick/ui/mywhoosh_guide.dart';
 
@@ -166,10 +167,13 @@ void main() {
     expect(find.text('Answer now'), findsOneWidget);
   });
 
-  testWidgets('the guide is the first screen, so it is seen without looking', (
+  testWidgets('the guide is the first tab of the advanced interface', (
     WidgetTester tester,
   ) async {
-    final AppState state = AppState();
+    // The simple screen is what a rider meets first now, and it carries the
+    // steps in its own words. This card stays where it was, on the Start tab of
+    // the advanced interface, for the rider who wants the long version.
+    final AppState state = AppState()..setDisplayMode(DisplayMode.advanced);
     state.completeOnboarding();
     await tester.pumpWidget(OpenZclickApp(state: state));
     await tester.pumpAndSettle();

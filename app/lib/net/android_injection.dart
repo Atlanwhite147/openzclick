@@ -12,7 +12,7 @@ class AndroidInjection implements KeyInjector {
 
   /// True when the platform can inject taps.
   static bool get supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      defaultTargetPlatform == TargetPlatform.android;
 
   /// True when the user has enabled the accessibility service.
   static Future<bool> isReady() async {

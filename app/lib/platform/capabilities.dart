@@ -1,46 +1,30 @@
 /// What the host running the application can actually do.
 ///
-/// A native host gets `dart:io`: sockets, multicast, synthetic input. A browser
-/// is a sandbox: no listening socket, no mDNS announcement, no synthetic input,
-/// and Bluetooth only through a device chooser. The interface asks these flags
-/// instead of `Platform` directly, which is what lets the same widgets compile
-/// and run in a browser, and why a greyed out switch can say why.
+/// The interface asks these flags instead of `Platform` directly, which is why a
+/// greyed out switch can say why.
 library;
 
 import 'package:flutter/foundation.dart';
 
-import '../net/sockets/sockets.dart';
-
 /// Capabilities of the current host.
 abstract final class Capabilities {
-  /// True in a browser, where only Web Bluetooth and local storage exist.
-  static bool get isWeb => kIsWeb;
-
   /// True on Android.
-  static bool get isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
   /// True on iOS.
-  static bool get isIOS =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  static bool get isIOS => defaultTargetPlatform == TargetPlatform.iOS;
 
   /// True on Linux.
-  static bool get isLinux =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+  static bool get isLinux => defaultTargetPlatform == TargetPlatform.linux;
 
   /// True when the host can announce a service over mDNS.
   ///
-  /// iOS needs an entitlement Apple grants by hand; a browser has no multicast
-  /// at all.
-  static bool get canAnnounce => !isWeb && !isIOS;
+  /// iOS needs an entitlement Apple grants by hand.
+  static bool get canAnnounce => !isIOS;
 
   /// True when the host can listen on a TCP port and be reached by a training
   /// application.
-  ///
-  /// Every native host can. A browser can only when the page is an Isolated Web
-  /// App, because that is the one context where Chrome grants a TCP server; any
-  /// other page is limited to dialling a bridge.
-  static bool get canPublish => !isWeb || directSocketsAvailable;
+  static bool get canPublish => true;
 
   /// True when the host can synthesise input for another application.
   static bool get canInject => isAndroid || isLinux;
@@ -60,50 +44,13 @@ abstract final class Capabilities {
   /// returns true, asking a rider where the chain sits must not block them.
   static bool get drivesTrainerItself => false;
 
-  /// True when Bluetooth pairing goes through the browser's device chooser
-  /// rather than a list the application scans and filters itself.
-  static bool get usesBluetoothChooser => isWeb;
-
-  /// True when this page could use Web Bluetooth at all.
-  ///
-  /// The API only exists in a secure context: `https`, or `localhost`. A page
-  /// served over plain `http` on a LAN address — which is exactly what a bridge
-  /// serves so its console can reach it without mixed content — has no
-  /// `navigator.bluetooth` at all. Saying so before the rider taps the button
-  /// costs nothing and prevents the one reading nobody wants, "the application
-  /// is broken".
-  static bool get webBluetoothPossible {
-    if (!isWeb) return true;
-    final Uri base = Uri.base;
-    if (base.scheme == 'https') return true;
-    return base.host == 'localhost' || base.host == '127.0.0.1';
-  }
-
-  /// True when a page may open a socket to a bridge on the network.
-  ///
-  /// A browser refuses a `ws://` socket from an `https://` document: the mixed
-  /// content rule fires before the bridge sees a byte. So the hosted page can
-  /// never dial, and pretending otherwise sends a rider to check a code that is
-  /// correct. The bridge serves its own page over `http` for exactly this
-  /// reason; a native host dials without asking anyone.
-  static bool get canDialBridge => canDialFrom(Uri.base);
-
-  /// Same rule as [canDialBridge], for a page address given explicitly.
-  ///
-  /// Pure, so the rule is tested on the host: a test cannot make the page it
-  /// runs in switch to https.
-  static bool canDialFrom(Uri page, {bool? web}) =>
-      !(web ?? isWeb) || page.scheme != 'https';
-
   /// Short name of the host, for diagnostics.
-  static String get hostName => isWeb
-      ? 'web'
-      : switch (defaultTargetPlatform) {
-          TargetPlatform.android => 'android',
-          TargetPlatform.iOS => 'ios',
-          TargetPlatform.linux => 'linux',
-          TargetPlatform.macOS => 'macos',
-          TargetPlatform.windows => 'windows',
-          TargetPlatform.fuchsia => 'fuchsia',
-        };
+  static String get hostName => switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'android',
+    TargetPlatform.iOS => 'ios',
+    TargetPlatform.linux => 'linux',
+    TargetPlatform.macOS => 'macos',
+    TargetPlatform.windows => 'windows',
+    TargetPlatform.fuchsia => 'fuchsia',
+  };
 }

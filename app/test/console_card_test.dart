@@ -86,7 +86,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Browser console'), findsOneWidget);
+    expect(find.text('Phone console'), findsOneWidget);
     // The QR code must land on the page the bridge serves itself, in http on
     // the bridge's own port. A hosted page is https://, and a browser refuses
     // to open the console socket (ws://) from one: the scan used to produce a

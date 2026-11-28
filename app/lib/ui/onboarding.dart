@@ -42,20 +42,15 @@ const List<OnboardingStep> onboardingSteps = <OnboardingStep>[
   OnboardingStep(
     title: 'Wake the pod and connect it',
     body:
-        'Press the + button on the right pod, then open Controllers and tap '
-        'Connect. The list names the pod it found: the left one only works after '
-        'a pairing in Zwift, the right one needs nothing.',
-    action: 'Open Controllers',
-    tab: 2,
+        'Press the + button on the right pod, then tap Pair controller. The pod '
+        'blinks for about thirty seconds: that is when it can be found.',
+    action: 'Pair a controller',
   ),
   OnboardingStep(
-    title: 'Announce the buttons on the network',
+    title: 'Start the bridge',
     body:
-        'In Network, switch the publication on. The application becomes a '
-        'controller that training apps can find on your Wi-Fi, under the name '
-        'openzclick.',
-    action: 'Open Network',
-    tab: 3,
+        'One press on Start riding. The application becomes a controller your '
+        'training application can find on your Wi-Fi, under the name openzclick.',
   ),
   OnboardingStep(
     title: 'Point MyWhoosh at it',
@@ -67,9 +62,10 @@ const List<OnboardingStep> onboardingSteps = <OnboardingStep>[
   OnboardingStep(
     title: 'Ride',
     body:
-        'The two paddles on the Gears screen shift, and so do the pod buttons. '
-        'The pod blinks and drops out for two seconds about once a minute: the '
-        'application resets it to keep it alive, and it comes back by itself.',
+        'The two pod buttons shift. The pod blinks and drops out for two seconds '
+        'about once a minute: the application resets it to keep it alive, and it '
+        'comes back by itself. Everything else is behind the Advanced switch at '
+        'the top, and none of it is needed to ride.',
   ),
 ];
 
