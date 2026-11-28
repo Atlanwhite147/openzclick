@@ -6,6 +6,7 @@ import 'package:openzclick_core/openzclick_core.dart';
 import '../../ble/controller_connection.dart';
 import '../../state/app_state.dart';
 import '../design.dart';
+import '../report_bug_button.dart';
 import '../../platform/version.dart';
 
 class ControllersScreen extends StatelessWidget {
@@ -189,6 +190,13 @@ class ControllersScreen extends StatelessWidget {
                 icon: const Icon(Icons.description_outlined, size: 18),
                 label: const Text('Copy device report'),
               ),
+            ),
+            // The same report, one press further: the issue page opens with it
+            // filled in. Next to the copy button because they are the same
+            // object, one for a thread and one for the tracker.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ReportBugButton(state: state),
             ),
             const SizedBox(height: 4),
             Text(

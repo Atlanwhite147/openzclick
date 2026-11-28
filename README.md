@@ -24,17 +24,21 @@ This is the one path tested on real hardware. Follow it in order.
    [releases page](https://github.com/Atlanwhite147/openzclick/releases/latest)
    and double click it. If Windows says *Windows protected your PC*, press
    **More info**, then **Run anyway**. No administrator password to type.
-2. **Open openzclick** from the Start menu and press the green **Start**
-   button. The window says it is waiting for MyWhoosh.
-3. **In MyWhoosh**, go to the device connection screen before you start a ride.
-   Tap the round OpenBikeControl icon in the top right corner, then answer
-   **Yes**. The icon turns blue.
-4. **In openzclick**, open the **Controllers** tab and press **Scan**. Press a
-   button on your controller so it wakes up, and select its name when it
-   appears. Then ride: your buttons change gear.
+2. **Open openzclick** from the Start menu. It opens in **Simple** mode, one
+   screen with one button.
+3. **Connect the Click first.** Press a button on your controller so it wakes up,
+   then press **Pair controller** and wait for it to say *Connected*.
+4. **Then open MyWhoosh**, with the **Open MyWhoosh** button or from the Start
+   menu, and go to the device connection screen before you start a ride. Tap the
+   round OpenBikeControl icon in the top right corner, then answer **Yes**. The
+   icon turns blue.
+5. **Ride**: your buttons change gear.
 
-Two signs the link is up: the icon in MyWhoosh is blue, and the client count in
-openzclick reads 1. The **Gears** tab checks the link without pedalling.
+The order matters: the controller is connected before MyWhoosh looks for it.
+
+Two signs the link is up: the icon in MyWhoosh is blue, and openzclick says
+*MyWhoosh connected*. Switch to **Advanced** in the top bar for the gear ladder
+and the bench; nothing there is needed to ride.
 
 ## Other platforms
 

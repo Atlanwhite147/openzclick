@@ -317,6 +317,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Rebuilds the listeners after the harness set a field directly.
+  ///
+  /// Used only by `social_harness.dart`, compiled with
+  /// `--dart-define=OZ_SOCIAL_HARNESS=true`: the screenshots need a controller
+  /// that answers, and there is no radio on the machine that takes them.
+  void nudge() => notifyListeners();
+
   /// Shifts up.
   void shiftUp() => _shift(up: true, action: Action.shiftUp);
 

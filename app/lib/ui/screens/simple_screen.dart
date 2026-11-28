@@ -15,16 +15,38 @@ library;
 import 'package:flutter/material.dart' hide Action;
 
 import '../../ble/controller_connection.dart';
+import '../../platform/training_app_launcher.dart';
 import '../../state/app_state.dart';
 import '../design.dart';
+import '../report_bug_button.dart';
 
 /// Pair, start, ride, with the practical notes folded away.
-class SimpleScreen extends StatelessWidget {
+class SimpleScreen extends StatefulWidget {
   /// Creates the screen for [state].
   const SimpleScreen({required this.state, super.key});
 
   /// Shared application state.
   final AppState state;
+
+  @override
+  State<SimpleScreen> createState() => _SimpleScreenState();
+}
+
+class _SimpleScreenState extends State<SimpleScreen> {
+  /// True once a press on Open MyWhoosh found nothing to open.
+  ///
+  /// Only then is a line drawn: before the press there is nothing to say, and a
+  /// rider who has MyWhoosh installed should never read a warning about it.
+  bool _launchFailed = false;
+
+  AppState get state => widget.state;
+
+  /// Opens MyWhoosh, and says so quietly when it could not.
+  Future<void> _openMyWhoosh(BuildContext context) async {
+    final bool opened = await TrainingAppLauncher.open();
+    if (!mounted || opened) return;
+    setState(() => _launchFailed = true);
+  }
 
   /// True while the pod is being looked for or connected to.
   static bool _busy(ControllerConnection link) =>
@@ -137,6 +159,25 @@ class SimpleScreen extends StatelessWidget {
                 color: battery <= 20 ? Tokens.alarm : Tokens.good,
               ),
             ],
+            // The second step of a real session, and the only one that needed
+            // leaving the application. Only where it really opens something.
+            if (TrainingAppLauncher.supported) ...<Widget>[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openMyWhoosh(context),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Open MyWhoosh'),
+                ),
+              ),
+              if (_launchFailed)
+                Text(
+                  'MyWhoosh did not open. Start it from the Start menu.',
+                  style: Theme.of(context).textTheme.bodySmall!
+                      .copyWith(color: Tokens.muted),
+                ),
+            ],
             const SizedBox(height: 24),
             const Card(
               child: ListTile(
@@ -154,7 +195,14 @@ class SimpleScreen extends StatelessWidget {
               title: const Text('How to ride with MyWhoosh'),
               children: <Widget>[
                 const SizedBox(height: 4),
-                const _Note('Start the bridge here, then open MyWhoosh.'),
+                // The order of a real session, as a rider described it: the
+                // controller first, the training application second.
+                const _Note(
+                  'Press a button on the pod, then tap Pair controller.',
+                ),
+                const _Note(
+                  'Open MyWhoosh, then go to its device connection screen.',
+                ),
                 const _Note(
                   'Tap the OpenBikeControl icon in MyWhoosh, top right, and '
                   'answer Yes to the question.',
@@ -185,6 +233,11 @@ class SimpleScreen extends StatelessWidget {
                 const SizedBox(height: 4),
               ],
             ),
+            // Last line of the page, and the smallest thing on it: a rider who
+            // has a working setup must not be invited to file a bug, and one
+            // who does not will scroll to the end anyway.
+            const SizedBox(height: 16),
+            Center(child: ReportBugButton(state: state, dense: true)),
           ],
         );
       },

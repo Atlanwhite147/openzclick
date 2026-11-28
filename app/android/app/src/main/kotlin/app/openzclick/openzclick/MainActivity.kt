@@ -55,6 +55,50 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        // Opens MyWhoosh for the rider: the simple screen offers the press
+        // instead of asking them to leave the application and find an icon.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "openzclick/launcher")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "open" -> {
+                        val packageName = call.argument<String>("package")
+                        if (packageName == null) {
+                            result.success(false)
+                        } else {
+                            val intent = packageManager.getLaunchIntentForPackage(packageName)
+                            if (intent == null) {
+                                // Not installed: no shortcut, and no dialog.
+                                result.success(false)
+                            } else {
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                try {
+                                    startActivity(intent)
+                                    result.success(true)
+                                } catch (e: Exception) {
+                                    result.success(false)
+                                }
+                            }
+                        }
+                    }
+                    "openUri" -> {
+                        val url = call.argument<String>("url")
+                        if (url == null) {
+                            result.success(false)
+                        } else {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                                result.success(true)
+                            } catch (e: Exception) {
+                                result.success(false)
+                            }
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         // Taps towards the training application, performed by the accessibility
         // service the user has to enable once.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, InjectionService.CHANNEL)

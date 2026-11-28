@@ -168,7 +168,41 @@ class DeviceInformation {
       serial == null &&
       firmware == null &&
       hardware == null;
+
+  /// The same strings, without the serial number.
+  ///
+  /// The serial is per unit: it identifies one rider's pod, and it is not a
+  /// revision anybody can act on. The model and the firmware are, and stay.
+  DeviceInformation anonymized() => DeviceInformation(
+    manufacturer: manufacturer,
+    model: model,
+    serial: serial == null ? null : 'redacted',
+    firmware: firmware,
+    hardware: hardware,
+  );
 }
+
+/// Replaces every MAC address in [text] with `redacted`.
+///
+/// Windows Bluetooth errors name the adapter or the device they failed on, and
+/// that string reaches the report verbatim. One regular expression here is
+/// cheaper than hoping no platform ever puts an address in an error message.
+///
+/// Two shapes, because a Windows error embeds the address inside another word:
+/// `BluetoothLE#BluetoothLEf4:12:34:56:78:9a-aa:bb` puts the first pair against
+/// a letter, where a word boundary never matches. The first alternative
+/// therefore takes a run of at least four pairs, separators included, wherever
+/// it sits; the second takes a bare 12-digit hex run, which is the same address
+/// written without separators. Both are length-bounded so that a firmware
+/// version (`1.1.0`), a characteristic (`0002`) and the bytes of a frame are
+/// left alone.
+String redactMacAddresses(String text) => text.replaceAll(
+  RegExp(
+    r'[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){3,}'
+    r'|(?<![0-9A-Fa-f])[0-9A-Fa-f]{12}(?![0-9A-Fa-f])',
+  ),
+  'redacted',
+);
 
 /// Everything an issue needs to be reproducible.
 class DeviceReport {
@@ -250,6 +284,46 @@ class DeviceReport {
   /// `device is not connected`, with no way to tell a refused subscription from
   /// a link the pod closed.
   final List<LinkEvent> events;
+
+  /// Same report, with everything that identifies a rider removed.
+  ///
+  /// The copy a rider is offered to send us, and the reason this exists: the
+  /// report was built for a maintainer who already had the machine, so it
+  /// carried the device identifier as the platform returns it (a MAC address on
+  /// Windows) and the Device Information serial number. Neither is needed to
+  /// read a fault, and both are the rider's.
+  ///
+  /// What is kept is what a maintainer reproduces a bug from: the version, the
+  /// host platform, the model and firmware, the service and characteristic
+  /// tree, the frames, the link events. What goes: the device identifier, the
+  /// serial number, and any MAC-shaped string that reached the free text of an
+  /// error.
+  ///
+  /// The device name stays: it is the advertisement, shared by every pod of that
+  /// model, and telling a v1 from a v2 is the first question a report answers.
+  DeviceReport anonymized() {
+    return DeviceReport(
+      generatedAt: generatedAt,
+      appVersion: appVersion,
+      host: host,
+      deviceName: deviceName,
+      // Replaced, not blanked: a maintainer still needs to see that two lines
+      // in the same report are the same device.
+      deviceId: deviceId == null ? null : 'redacted',
+      side: side,
+      status: status,
+      encrypted: encrypted,
+      needsUnlock: needsUnlock,
+      batteryPercent: batteryPercent,
+      // An error can quote a device path, and a Windows Bluetooth error names
+      // the MAC it failed on.
+      error: error == null ? null : redactMacAddresses(error!),
+      information: information.anonymized(),
+      services: services,
+      frames: frames,
+      events: events,
+    );
+  }
 
   /// Renders the report as plain text.
   ///
