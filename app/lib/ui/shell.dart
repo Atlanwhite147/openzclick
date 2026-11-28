@@ -79,7 +79,10 @@ class _HomeShellState extends State<HomeShell> {
       appBar: AppBar(
         title: const Text('openzclick'),
         actions: <Widget>[
-          _ModeSelector(mode: state.displayMode, onChanged: state.setDisplayMode),
+          _ModeSelector(
+            mode: state.displayMode,
+            onChanged: state.setDisplayMode,
+          ),
         ],
       ),
       body: SimpleScreen(state: state),
@@ -111,7 +114,10 @@ class _HomeShellState extends State<HomeShell> {
             // tab fixes it. Tapping it goes there.
             onGoTo: (int tab) => setState(() => _index = tab),
           ),
-          _ModeSelector(mode: state.displayMode, onChanged: state.setDisplayMode),
+          _ModeSelector(
+            mode: state.displayMode,
+            onChanged: state.setDisplayMode,
+          ),
         ],
       ),
       body: IndexedStack(index: index, children: pages),
@@ -157,9 +163,8 @@ class _ModeSelector extends StatelessWidget {
         style: ButtonStyle(
           visualDensity: VisualDensity.compact,
           textStyle: WidgetStatePropertyAll<TextStyle>(
-            Theme.of(
-              context,
-            ).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w600),
+            Theme.of(context).textTheme.labelMedium!
+                .copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         segments: const <ButtonSegment<DisplayMode>>[

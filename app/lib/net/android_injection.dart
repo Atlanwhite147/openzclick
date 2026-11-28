@@ -11,8 +11,7 @@ class AndroidInjection implements KeyInjector {
   static const MethodChannel _channel = MethodChannel('openzclick/injection');
 
   /// True when the platform can inject taps.
-  static bool get supported =>
-      defaultTargetPlatform == TargetPlatform.android;
+  static bool get supported => defaultTargetPlatform == TargetPlatform.android;
 
   /// True when the user has enabled the accessibility service.
   static Future<bool> isReady() async {

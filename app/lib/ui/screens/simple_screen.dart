@@ -85,14 +85,15 @@ class SimpleScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Text(_detail(live: live, bridge: bridge, paired: paired, busy: busy)),
+            Text(
+              _detail(live: live, bridge: bridge, paired: paired, busy: busy),
+            ),
             if (problem != null && !live) ...<Widget>[
               const SizedBox(height: 10),
               Text(
                 problem,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium!.copyWith(color: Tokens.alarm),
+                style: Theme.of(context).textTheme.bodyMedium!
+                    .copyWith(color: Tokens.alarm),
               ),
             ],
             if (link.needsUnlock) ...<Widget>[
@@ -105,7 +106,9 @@ class SimpleScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: busy ? null : () => _act(context, state, live, paired),
+                onPressed: busy
+                    ? null
+                    : () => _act(context, state, live, paired),
                 icon: Icon(
                   live
                       ? Icons.check_circle
@@ -156,10 +159,10 @@ class SimpleScreen extends StatelessWidget {
                   'Tap the OpenBikeControl icon in MyWhoosh, top right, and '
                   'answer Yes to the question.',
                 ),
-                const _Note('Wait for the line above to say MyWhoosh connected.'),
                 const _Note(
-                  'Ride: the + button shifts up, B shifts down.',
+                  'Wait for the line above to say MyWhoosh connected.',
                 ),
+                const _Note('Ride: the + button shifts up, B shifts down.'),
                 const SizedBox(height: 4),
               ],
             ),
